@@ -1,0 +1,95 @@
+<!--
+ * Resource_Monitor is Copyright © 2018 Giuseppe Silvestro
+ *
+ * This file is part of Resource_Monitor.
+ *
+ * Resource_Monitor is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Resource_Monitor is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Resource_Monitor.  If not, see <http://www.gnu.org/licenses/>.
+-->
+
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions">
+    <schema id="org.gnome.shell.extensions.Resource_Monitor" path="/org/gnome/shell/extensions/Resource_Monitor/">
+    <key type="i" name="timer">
+      <range min="1" max="30"/>
+      <default>2</default>
+      <summary>Update Interval</summary>
+      <description/>
+    </key>
+    <key type="b" name="display-icons">
+      <default>true</default>
+      <summary>Display Icons</summary>
+      <description/>
+    </key>
+    <key type="b" name="enable-cpu">
+      <default>true</default>
+      <summary>Display CPU</summary>
+      <description/>
+    </key>
+    <key type="b" name="enable-ram">
+      <default>true</default>
+      <summary>Display Ram</summary>
+      <description/>
+    </key>
+    <key type="b" name="enable-disk">
+      <default>true</default>
+      <summary>Display Disk</summary>
+      <description/>
+    </key>
+    <key type="b" name="enable-hide">
+      <default>false</default>
+      <summary>Auto Hide Net</summary>
+      <description/>
+    </key>
+    <key type="b" name="enable-eth">
+      <default>true</default>
+      <summary>Display Eth</summary>
+      <description/>
+    </key>
+    <key type="b" name="enable-wlan">
+      <default>true</default>
+      <summary>Display Wlan</summary>
+      <description/>
+    </key>
+    <key type="i" name="label-cpu">
+      <range min="22" max="40"/>
+      <default>35</default>
+      <summary>Width Cpu</summary>
+      <description/>
+    </key>
+    <key type="i" name="label-ram">
+      <range min="22" max="40"/>
+      <default>35</default>
+      <summary>Width Ram</summary>
+      <description/>
+    </key>
+    <key type="i" name="label-disk">
+      <range min="22" max="85"/>
+      <default>65</default>
+      <summary>Width Disk</summary>
+      <description/>
+    </key>
+    <key type="i" name="label-eth">
+      <range min="22" max="85"/>
+      <default>65</default>
+      <summary>Width Eth</summary>
+      <description/>
+    </key>
+    <key type="i" name="label-wlan">
+      <range min="22" max="85"/>
+      <default>65</default>
+      <summary>Width Wlan</summary>
+      <description/>
+    </key>
+  </schema>
+</schemalist>
