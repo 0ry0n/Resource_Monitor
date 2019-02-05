@@ -1,12 +1,12 @@
 /*
- * Resource_Monitor is Copyright © 2018 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2019 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
  * Resource_Monitor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * any later version.
  *
  * Resource_Monitor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -20,12 +20,6 @@
 .unit {
   padding-top: .6em;
   font-size: 10px;
-}
-
-.labelSmall {
-  min-width: 35px;
-  text-align: right;
-  font-size: 11pt;
 }
 
 .label {

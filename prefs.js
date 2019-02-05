@@ -1,12 +1,12 @@
 /*
- * Resource_Monitor is Copyright © 2018 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2019 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
  * Resource_Monitor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * any later version.
  *
  * Resource_Monitor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,7 +23,7 @@ const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
 let settings;
-const schema = 'org.gnome.shell.extensions.Resource_Monitor';
+const schema = 'com.github.Ory0n.Resource_Monitor';
 
 function updateTimer(object, value) {
   settings.set_int('timer', value.get_value());
@@ -75,6 +75,10 @@ function labelEth(object, value) {
 
 function labelWlan(object, value) {
   settings.set_int('label-wlan', value.get_value());
+}
+
+function selectDisk(object, value) {
+  settings.set_string('select-disk', value.get_active_text());
 }
 
 function init() {
@@ -170,6 +174,41 @@ function PatternsPrefs() {
   hBoxDisk.pack_start(titleDisk, true, true, 0);
   hBoxDisk.add(valueDisk);
   vBox.add(hBoxDisk);
+
+  // ComboBox Hdd
+  let hBoxSelectDisk = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
+  let titleSelectDisk = new Gtk.Label({ label: 'Chose Disk', xalign: 0 });
+  let comboSelectDisk = new Gtk.ComboBoxText({});
+
+	let file = GLib.file_get_contents('/proc/diskstats');
+	let line = ('' + file[1]).split('\n');
+  let tmp = settings.get_string('select-disk');
+  let x = 1;
+
+  comboSelectDisk.insert_text(0, 'All');
+  if(tmp == 'All')
+    comboSelectDisk.set_active(0);
+
+	for (let i = 0; i < line.length; i++)
+	{
+		if (line[i].match(/^\s*\d+\s*\d+\ssd[a-z]\d*\s/))
+		{
+			let values = line[i].match(/sd[a-z]\d*/);
+      comboSelectDisk.insert_text(x, values + '');
+      if(tmp == values + '')
+        comboSelectDisk.set_active(x);
+
+      x++;
+		}
+	}
+
+  let buttonSelectDisk = new Gtk.Button({ label: 'Apply' });
+  buttonSelectDisk.connect('clicked', Lang.bind(this, selectDisk, comboSelectDisk));
+
+  hBoxSelectDisk.pack_start(titleSelectDisk, true, true, 0);
+  hBoxSelectDisk.add(comboSelectDisk);
+  hBoxSelectDisk.add(buttonSelectDisk);
+  vBox.add(hBoxSelectDisk);
 
   // Width Disk
   let hBoxLabelDisk = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });

@@ -1,12 +1,12 @@
 /*
- * Resource_Monitor is Copyright © 2018 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2019 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
  * Resource_Monitor is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
+ * any later version.
  *
  * Resource_Monitor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -36,6 +36,7 @@ let cpu, ram, disk, eth, wlan;
 
 let cpuTotOld = 0, cpuIdleOld = 0;
 let diskReadTotOld = 0, diskWriteTotOld = 0, diskIdleOld = 0;
+let selectDisk;
 let client, onEth, onWlan;
 let ethUpTotOld = 0, ethDownTotOld = 0, ethIdleOld = 0;
 let wlanUpTotOld = 0, wlanDownTotOld = 0, wlanIdleOld = 0;
@@ -44,7 +45,7 @@ let timer;
 let timeVal;
 
 let settings;
-const schema = 'org.gnome.shell.extensions.Resource_Monitor';
+const schema = 'com.github.Ory0n.Resource_Monitor';
 
 let displayIcons, enCpu, enRam, enDisk, enHide, enEth, enWlan;
 
@@ -126,6 +127,7 @@ function connectWidget() {
 	settings.connect('changed::label-disk', Lang.bind(this, diskLabelChange))
 	settings.connect('changed::label-eth', Lang.bind(this, ethLabelChange))
 	settings.connect('changed::label-wlan', Lang.bind(this, wlanLabelChange))
+	settings.connect('changed::select-disk', Lang.bind(this, selectDiskChange))
 }
 
 function refreshCpu() {
@@ -200,14 +202,30 @@ function refreshDisk() {
 
 	idle = new Date().getTime() / 1000;
 
-	for (let i = 0; i < line.length; i++)
-	{
-		if (line[i].match(/^\s*\d+\s*\d+\s[a-z]+\s/))
+	if(selectDisk == 'All') {
+		for (let i = 0; i < line.length; i++)
 		{
-			let values = line[i].match(/^\s*\d+\s*\d+\s[a-z]+\s(.*)$/)[1].split(' ');
+			if (line[i].match(/^\s*\d+\s*\d+\ssd[a-z]\s/))
+			{
+				let values = line[i].match(/^\s*\d+\s*\d+\ssd[a-z]\s(.*)$/)[1].split(' ');
 
-			rTot += parseInt(values[2]);
-			wTot += parseInt(values[6]);
+				rTot += parseInt(values[2]);
+				wTot += parseInt(values[6]);
+			}
+		}
+	} else {
+		for (let i = 0; i < line.length; i++)
+		{
+			let regexp = new RegExp('^\\s*\\d+\\s*\\d+\\s' + selectDisk + '\\s');
+
+			if (line[i].match(regexp))
+			{
+				let regexp1 = new RegExp('^\\s*\\d+\\s*\\d+\\s' + selectDisk + '\\s(.*)$');
+				let values = line[i].match(regexp1)[1].split(' ');
+
+				rTot += parseInt(values[2]);
+				wTot += parseInt(values[6]);
+			}
 		}
 	}
 
@@ -301,7 +319,7 @@ function refreshEth() {
 		ethUnit.set_text('B');
 	}
 
-	eth.set_text(up.toFixed(1) + '|' + down.toFixed(1));
+	eth.set_text(down.toFixed(1) + '|' + up.toFixed(1));
 }
 
 function refreshWlan() {
@@ -346,7 +364,7 @@ function refreshWlan() {
 		wlanUnit.set_text('B');
 	}
 
-	wlan.set_text(up.toFixed(1) + '|' + down.toFixed(1));
+	wlan.set_text(down.toFixed(1) + '|' + up.toFixed(1));
 }
 
 function refresh() {
@@ -483,6 +501,13 @@ function ethLabelChange() {
 	eth.set_width(settings.get_int('label-eth'));
 }
 
+function selectDiskChange() {
+	selectDisk = settings.get_string('select-disk');
+	diskIdleOld = 0;
+	diskReadTotOld = 0;
+	diskWriteTotOld = 0;
+}
+
 function wlanChange() {
 	enWlan = settings.get_boolean('enable-wlan') && onWlan;
 	if(enWlan) {
@@ -515,6 +540,7 @@ function setUp() {
 	diskLabelChange();
 	ethLabelChange();
 	wlanLabelChange();
+	selectDiskChange();
 
 	refreshCpu();
 	refreshRam();
