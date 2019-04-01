@@ -49,6 +49,8 @@ const schema = 'com.github.Ory0n.Resource_Monitor';
 
 let displayIcons, enCpu, enRam, enDisk, enHide, enEth, enWlan;
 
+let sig0, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8, sig9, sig10, sig11, sig12, sig13, sigButton;
+
 function getSchema() {
 	if (Gio.Settings.list_schemas().indexOf(schema) == -1)
         throw ("Schema \"%s\" not found.").format(schema);
@@ -67,6 +69,8 @@ function openSystemMonitor() {
 
 function initializeUI() {
 	button = new St.Button({ style_class: 'panel-button'});
+
+	sigButton = button.connect('button-press-event', Lang.bind(this, openSystemMonitor));
 
 	box = new St.BoxLayout();
 	//system-run-symbolic
@@ -111,23 +115,38 @@ function initializeUI() {
 	button.set_child(box);
 }
 
-function connectWidget() {
-	button.connect('button-press-event', openSystemMonitor);
+function connectSettings() {
+	sig0 = settings.connect('changed::timer', Lang.bind(this, timeChange));
+	sig1 = settings.connect('changed::display-icons', Lang.bind(this, iconChange));
+	sig2 = settings.connect('changed::enable-cpu', Lang.bind(this, cpuChange));
+	sig3 = settings.connect('changed::enable-ram', Lang.bind(this, ramChange));
+	sig4 = settings.connect('changed::enable-disk', Lang.bind(this, diskChange));
+	sig5 = settings.connect('changed::enable-hide', Lang.bind(this, hideChange));
+	sig6 = settings.connect('changed::enable-eth', Lang.bind(this, ethChange));
+	sig7 = settings.connect('changed::enable-wlan', Lang.bind(this, wlanChange));
+	sig8 = settings.connect('changed::label-cpu', Lang.bind(this, cpuLabelChange))
+	sig9 = settings.connect('changed::label-ram', Lang.bind(this, ramLabelChange))
+	sig10 = settings.connect('changed::label-disk', Lang.bind(this, diskLabelChange))
+	sig11 = settings.connect('changed::label-eth', Lang.bind(this, ethLabelChange))
+	sig12 = settings.connect('changed::label-wlan', Lang.bind(this, wlanLabelChange))
+	sig13 = settings.connect('changed::select-disk', Lang.bind(this, selectDiskChange))
+}
 
-	settings.connect('changed::timer', Lang.bind(this, timeChange));
-	settings.connect('changed::display-icons', Lang.bind(this, iconChange));
-	settings.connect('changed::enable-cpu', Lang.bind(this, cpuChange));
-	settings.connect('changed::enable-ram', Lang.bind(this, ramChange));
-	settings.connect('changed::enable-disk', Lang.bind(this, diskChange));
-	settings.connect('changed::enable-hide', Lang.bind(this, hideChange));
-	settings.connect('changed::enable-eth', Lang.bind(this, ethChange));
-	settings.connect('changed::enable-wlan', Lang.bind(this, wlanChange));
-	settings.connect('changed::label-cpu', Lang.bind(this, cpuLabelChange))
-	settings.connect('changed::label-ram', Lang.bind(this, ramLabelChange))
-	settings.connect('changed::label-disk', Lang.bind(this, diskLabelChange))
-	settings.connect('changed::label-eth', Lang.bind(this, ethLabelChange))
-	settings.connect('changed::label-wlan', Lang.bind(this, wlanLabelChange))
-	settings.connect('changed::select-disk', Lang.bind(this, selectDiskChange))
+function disconnectSettings() {
+	settings.disconnect(sig0);
+	settings.disconnect(sig1);
+	settings.disconnect(sig2);
+	settings.disconnect(sig3);
+	settings.disconnect(sig4);
+	settings.disconnect(sig5);
+	settings.disconnect(sig6);
+	settings.disconnect(sig7);
+	settings.disconnect(sig8);
+	settings.disconnect(sig9);
+	settings.disconnect(sig10);
+	settings.disconnect(sig11);
+	settings.disconnect(sig12);
+	settings.disconnect(sig13);
 }
 
 function refreshCpu() {
@@ -414,6 +433,7 @@ function timeChange() {
 
 	if (timer != null)
 		Mainloop.source_remove(timer);
+
 	timer = Mainloop.timeout_add_seconds(timeVal, Lang.bind(this, refresh));
 }
 
@@ -550,18 +570,28 @@ function setUp() {
 }
 
 function init() {
-	settings = getSchema();
-	client = NM.Client.new(null);
-
-	initializeUI();
-	connectWidget();
-	setUp();
+		settings = getSchema();
 }
 
 function enable() {
-    Main.panel._rightBox.insert_child_at_index(button, 0);
+		client = NM.Client.new(null);
+
+		connectSettings();
+
+		initializeUI();
+		setUp();
+
+		Main.panel._rightBox.insert_child_at_index(button, 0);
 }
 
 function disable() {
     Main.panel._rightBox.remove_child(button);
+
+		Mainloop.source_remove(timer);
+
+		disconnectSettings();
+
+		button.disconnect(sigButton);
+		button.destroy();
+		button = null;
 }
