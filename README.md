@@ -2,7 +2,7 @@
 Resource_Monitor is a Gnome Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in gnome shell top bar.
 
 # Screenshots
-![](https://github.com/Ory0n/test/blob/master/main.png)
+![](https://github.com/Ory0n/Resource_Monitor/blob/master/main.png)
 
 # How-To Install
 ## Download
@@ -50,7 +50,7 @@ gnome-shell-extension-tool -e Resource_Monitor@Ory0n
 Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 
 # General Settings
-![](https://github.com/Ory0n/test/blob/master/settings.png)
+![](https://github.com/Ory0n/Resource_Monitor/blob/master/settings.png)
 
 - **Update Interval:** Choose the refresh interval, from 1 to 30 seconds.
 - **Display Icons:** Display or hide the icons.
@@ -68,7 +68,7 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 - **Modify Width Wlan:** Resize the Wlan field.
 - **Gnome System Monitor:** Clicking on the extension will open Gnome System Monitor.
 
-![](https://github.com/Ory0n/test/blob/master/system-monitor.png)
+![](https://github.com/Ory0n/Resource_Monitor/blob/master/system-monitor.png)
 
 # Bug Reporting
 Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracker to report issues or ask for features.
