@@ -31,7 +31,6 @@ gnome-shell-extension-tool -e Resource_Monitor@Ory0n
 
 ### Cloning the repository
 1. Clone the Master repository.
-
 2. Move the `Resource_Monitor` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
 3. Copy and Paste the `com.github.Ory0n.Resource_Monitor.gschema.xml` schema to `/usr/share/glib-2.0/schemas`.
 4. Run `glib-compile-schemas /usr/share/glib-2.0/schemas`
