@@ -305,11 +305,11 @@ function refreshEth() {
 
 	for (let i = 0; i < line.length; i++)
 	{
-		if (line[i].match(/^\s*eth+[0-9]:/))
+		if (line[i].match(/^\s*(eth+[0-9]|en[a-z0-9]*):/))
 		{
-			let values = line[i].match(/^\s*eth+[0-9]:\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+)/);
-			dTot += parseInt(values[1]);
-			uTot += parseInt(values[2]);
+			let values = line[i].match(/^\s*(eth[0-9]+|en[a-z0-9]*):\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+)/);
+			dTot += parseInt(values[2]);
+			uTot += parseInt(values[3]);
 		}
 	}
 
@@ -337,7 +337,7 @@ function refreshEth() {
 	} else {
 		ethUnit.set_text('B');
 	}
-
+	
 	eth.set_text(down.toFixed(1) + '|' + up.toFixed(1));
 }
 
@@ -350,11 +350,11 @@ function refreshWlan() {
 
 	for (let i = 0; i < line.length; i++)
 	{
-		if (line[i].match(/^\s*wlan+[0-9]:/))
+		if (line[i].match(/^\s*(wlan[0-9]+|wl[a-z0-9]*):/))
 		{
-			let values = line[i].match(/^\s*wlan+[0-9]:\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+)/);
-			dTot += parseInt(values[1]);
-			uTot += parseInt(values[2]);
+			let values = line[i].match(/^\s*(wlan[0-9]+|wl[a-z0-9]*):\s+([0-9]+)\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+[0-9]+\s+([0-9]+)/);
+			dTot += parseInt(values[2]);
+			uTot += parseInt(values[3]);
 		}
 	}
 
