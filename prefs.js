@@ -21,9 +21,10 @@ const Gtk = imports.gi.Gtk;
 const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
 
 let settings;
-const schema = 'com.github.Ory0n.Resource_Monitor';
 
 function updateTimer(object, value) {
   settings.set_int('timer', value.get_value());
@@ -82,10 +83,18 @@ function selectDisk(object, value) {
 }
 
 function init() {
-  if (Gio.Settings.list_schemas().indexOf(schema) == -1)
-        throw ("Schema \"%s\" not found.").format(schema);
+	if (Gio.Settings.list_schemas().indexOf(Me.metadata["settings-schema"]) == -1) {
+		let schemaSource = Gio.SettingsSchemaSource.new_from_directory(Me.path + "/schemas", Gio.SettingsSchemaSource.get_default(), false);
 
-  settings = new Gio.Settings({ schema: schema });
+		let schemaObj = schemaSource.lookup(Me.metadata["settings-schema"], true);
+		if(!schemaObj) {
+			throw new Error("Schema " + Me.metadata["settings-schema"] + " could not be found for extension " + Me.uuid + ". Please check your installation.");
+		}
+
+		return new Gio.Settings({ settings_schema: schemaObj });
+	}
+
+	return new Gio.Settings({ schema: Me.metadata["settings-schema"] });
 }
 
 function PatternsPrefs() {

@@ -73,6 +73,9 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 5 (May 24, 2019)**
+- Schema Bug fixed.
+
 **version 4 (May 2, 2019)**
 - Network Bugs fixed.
 

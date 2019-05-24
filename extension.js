@@ -27,6 +27,8 @@ const Lang = imports.lang;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 const NM = imports.gi.NM;
+const ExtensionUtils = imports.misc.extensionUtils;
+const Me = ExtensionUtils.getCurrentExtension();
 
 let button;
 let box;
@@ -45,17 +47,24 @@ let timer;
 let timeVal;
 
 let settings;
-const schema = 'com.github.Ory0n.Resource_Monitor';
 
 let displayIcons, enCpu, enRam, enDisk, enHide, enEth, enWlan;
 
 let sig0, sig1, sig2, sig3, sig4, sig5, sig6, sig7, sig8, sig9, sig10, sig11, sig12, sig13, sigButton;
 
 function getSchema() {
-	if (Gio.Settings.list_schemas().indexOf(schema) == -1)
-        throw ("Schema \"%s\" not found.").format(schema);
+	if (Gio.Settings.list_schemas().indexOf(Me.metadata["settings-schema"]) == -1) {
+		let schemaSource = Gio.SettingsSchemaSource.new_from_directory(Me.path + "/schemas", Gio.SettingsSchemaSource.get_default(), false);
 
-	return new Gio.Settings({ schema: schema });
+		let schemaObj = schemaSource.lookup(Me.metadata["settings-schema"], true);
+		if(!schemaObj) {
+			throw new Error("Schema " + Me.metadata["settings-schema"] + " could not be found for extension " + Me.uuid + ". Please check your installation.");
+		}
+
+		return new Gio.Settings({ settings_schema: schemaObj });
+	}
+
+	return new Gio.Settings({ schema: Me.metadata["settings-schema"] });
 }
 
 function openSystemMonitor() {
