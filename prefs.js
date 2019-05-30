@@ -91,10 +91,9 @@ function init() {
 			throw new Error("Schema " + Me.metadata["settings-schema"] + " could not be found for extension " + Me.uuid + ". Please check your installation.");
 		}
 
-		return new Gio.Settings({ settings_schema: schemaObj });
-	}
-
-	return new Gio.Settings({ schema: Me.metadata["settings-schema"] });
+		settings = new Gio.Settings({ settings_schema: schemaObj });
+	} else
+		settings = new Gio.Settings({ schema: Me.metadata["settings-schema"] });
 }
 
 function PatternsPrefs() {
