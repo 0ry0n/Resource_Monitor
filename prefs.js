@@ -10,292 +10,445 @@
  *
  * Resource_Monitor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Resource_Monitor.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
 
-const Gtk = imports.gi.Gtk;
-const Lang = imports.lang;
-const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
+const { Gio, GObject, Gtk, GLib } = imports.gi;
+
+const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
+const _ = Gettex.gettext;
+
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-
-let settings;
-
-function updateTimer(object, value) {
-  settings.set_int('timer', value.get_value());
-}
-
-function displayIcons(object, value) {
-  settings.set_boolean('display-icons', object.active);
-}
-
-function enableCpu(object, value) {
-  settings.set_boolean('enable-cpu', object.active);
-}
-
-function enableRam(object, value) {
-  settings.set_boolean('enable-ram', object.active);
-}
-
-function enableDisk(object, value) {
-  settings.set_boolean('enable-disk', object.active);
-}
-
-function enableAutoHideNet(object, value) {
-  settings.set_boolean('enable-hide', object.active);
-}
-
-function enableEth(object, value) {
-  settings.set_boolean('enable-eth', object.active);
-}
-
-function enableWlan(object, value) {
-  settings.set_boolean('enable-wlan', object.active);
-}
-
-function labelCpu(object, value) {
-  settings.set_int('label-cpu', value.get_value());
-}
-
-function labelRam(object, value) {
-  settings.set_int('label-ram', value.get_value());
-}
-
-function labelDisk(object, value) {
-  settings.set_int('label-disk', value.get_value());
-}
-
-function labelEth(object, value) {
-  settings.set_int('label-eth', value.get_value());
-}
-
-function labelWlan(object, value) {
-  settings.set_int('label-wlan', value.get_value());
-}
-
-function selectDisk(object, value) {
-  settings.set_string('select-disk', value.get_active_text());
-}
+const Convenience = Me.imports.convenience;
 
 function init() {
-	if (Gio.Settings.list_schemas().indexOf(Me.metadata["settings-schema"]) == -1) {
-		let schemaSource = Gio.SettingsSchemaSource.new_from_directory(Me.path + "/schemas", Gio.SettingsSchemaSource.get_default(), false);
-
-		let schemaObj = schemaSource.lookup(Me.metadata["settings-schema"], true);
-		if(!schemaObj) {
-			throw new Error("Schema " + Me.metadata["settings-schema"] + " could not be found for extension " + Me.uuid + ". Please check your installation.");
-		}
-
-		settings = new Gio.Settings({ settings_schema: schemaObj });
-	} else
-		settings = new Gio.Settings({ schema: Me.metadata["settings-schema"] });
+  Convenience.initTranslations();
 }
 
-function PatternsPrefs() {
-  let box = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, margin: 10 });
-  let title = new Gtk.Label({ label: 'Settings' });
+const ResourceMonitorPrefsWidget = GObject.registerClass(
+  class ResourceMonitorPrefsWidget extends Gtk.Grid {
+    _init(params) {
+      super._init(params);
 
-  let vBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL });
+      // Settings
+      this._settings = Convenience.getSettings();
 
-  // Timer
-  let hBoxTimer = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleTimer = new Gtk.Label({ label: 'Update Interval (seconds)', xalign: 0 });
-  let valueTimer = new Gtk.Adjustment({ lower: 1, upper: 30, step_increment: 1 });
-  let scaleTimer = new Gtk.HScale({ digits: 0, adjustment: valueTimer, value_pos: Gtk.PositionType.RIGHT });
-  scaleTimer.set_value(settings.get_int('timer'));
-  let buttonTimer = new Gtk.Button({ label: 'Apply' });
-  buttonTimer.connect('clicked', Lang.bind(this, updateTimer, valueTimer));
+      // Parent
+      this.margin = 12;
+      this.row_spacing = 6;
+      this.orientation = Gtk.Orientation.VERTICAL;
 
-  hBoxTimer.pack_start(scaleTimer, true, true, 0);
-  hBoxTimer.add(buttonTimer);
+      // REFRESH
+      let alignmentRefresh = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
 
-  vBox.add(titleTimer);
-  vBox.add(hBoxTimer);
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Refresh')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentRefresh);
 
-  // Icons
-  let hBoxIcons = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleIcons = new Gtk.Label({ label: 'Display Icons', xalign: 0 });
-  let valueIcons = new Gtk.Switch({ active: settings.get_boolean('display-icons') });
-  valueIcons.connect('notify::active', Lang.bind(this, displayIcons));
+      let gridRefresh = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentRefresh.add(gridRefresh);
 
-  hBoxIcons.pack_start(titleIcons, true, true, 0);
-  hBoxIcons.add(valueIcons);
-  vBox.add(hBoxIcons);
+      gridRefresh.attach(new Gtk.Label({
+        label: '%s'.format(_('Seconds')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
 
-  // Cpu
-  let hBoxCpu = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleCpu = new Gtk.Label({ label: 'Display Cpu', xalign: 0 });
-  let valueCpu = new Gtk.Switch({ active: settings.get_boolean('enable-cpu') });
-  valueCpu.connect('notify::active', Lang.bind(this, enableCpu));
+      let adjustment = new Gtk.Adjustment({
+        lower: 1,
+        upper: 30,
+        step_increment: 1
+      });
+      this._settings.bind('interval', adjustment, 'value', Gio.SettingsBindFlags.DEFAULT);
 
-  hBoxCpu.pack_start(titleCpu, true, true, 0);
-  hBoxCpu.add(valueCpu);
-  vBox.add(hBoxCpu);
+      gridRefresh.attach(new Gtk.HScale({
+        adjustment: adjustment,
+        hexpand: true,
+        digits: 0
+      }), 1, 0, 1, 1);
 
-  // Width Cpu
-  let hBoxLabelCpu = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleLabelCpu = new Gtk.Label({ label: 'Modify Width Cpu', xalign: 0 });
-  let spinLabelCpu = Gtk.SpinButton.new_with_range(22, 40, 1);
-  spinLabelCpu.set_value(settings.get_int('label-cpu'));
-  let buttonLabelCpu = new Gtk.Button({ label: 'Apply' });
-  buttonLabelCpu.connect('clicked', Lang.bind(this, labelCpu, spinLabelCpu));
+      // ICONS
+      let alignmentIcons = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
 
-  hBoxLabelCpu.pack_start(titleLabelCpu, true, true, 0);
-  hBoxLabelCpu.add(spinLabelCpu);
-  hBoxLabelCpu.add(buttonLabelCpu);
-  vBox.add(hBoxLabelCpu);
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Icons')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentIcons);
 
-  // Ram
-  let hBoxRam = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleRam = new Gtk.Label({ label: 'Display Ram', xalign: 0 });
-  let valueRam = new Gtk.Switch({ active: settings.get_boolean('enable-ram') });
-  valueRam.connect('notify::active', Lang.bind(this, enableRam));
+      let gridIcons = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentIcons.add(gridIcons);
 
-  hBoxRam.pack_start(titleRam, true, true, 0);
-  hBoxRam.add(valueRam);
-  vBox.add(hBoxRam);
+      gridIcons.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
 
-  // Width Ram
-  let hBoxLabelRam = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleLabelRam = new Gtk.Label({ label: 'Modify Width Ram', xalign: 0 });
-  let spinLabelRam = Gtk.SpinButton.new_with_range(22, 40, 1);
-  spinLabelRam.set_value(settings.get_int('label-ram'));
-  let buttonLabelRam = new Gtk.Button({ label: 'Apply' });
-  buttonLabelRam.connect('clicked', Lang.bind(this, labelRam, spinLabelRam));
+      let valueIcons = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('icons', valueIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
+      gridIcons.attach(valueIcons, 1, 0, 1, 1);
 
-  hBoxLabelRam.pack_start(titleLabelRam, true, true, 0);
-  hBoxLabelRam.add(spinLabelRam);
-  hBoxLabelRam.add(buttonLabelRam);
-  vBox.add(hBoxLabelRam);
+      // CPU
+      let alignmentCpu = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
 
-  // Disk
-  let hBoxDisk = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleDisk = new Gtk.Label({ label: 'Display Disk', xalign: 0 });
-  let valueDisk = new Gtk.Switch({ active: settings.get_boolean('enable-disk') });
-  valueDisk.connect('notify::active', Lang.bind(this, enableDisk));
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Cpu')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentCpu);
 
-  hBoxDisk.pack_start(titleDisk, true, true, 0);
-  hBoxDisk.add(valueDisk);
-  vBox.add(hBoxDisk);
+      let gridCpu = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentCpu.add(gridCpu);
 
-  // ComboBox Hdd
-  let hBoxSelectDisk = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleSelectDisk = new Gtk.Label({ label: 'Chose Disk', xalign: 0 });
-  let comboSelectDisk = new Gtk.ComboBoxText({});
+      gridCpu.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
 
-	let file = GLib.file_get_contents('/proc/diskstats');
-	let line = ('' + file[1]).split('\n');
-  let tmp = settings.get_string('select-disk');
-  let x = 1;
+      let valueCpu = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('cpu', valueCpu, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueCpu.connect('state-set', button => {
+        widthCpu.sensitive = button.active;
+      });
+      gridCpu.attach(valueCpu, 1, 0, 1, 1);
 
-  comboSelectDisk.insert_text(0, 'All');
-  if(tmp == 'All')
-    comboSelectDisk.set_active(0);
+      gridCpu.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
 
-	for (let i = 0; i < line.length; i++)
-	{
-		if (line[i].match(/^\s*\d+\s*\d+\ssd[a-z]\d*\s/))
-		{
-			let values = line[i].match(/sd[a-z]\d*/);
-      comboSelectDisk.insert_text(x, values + '');
-      if(tmp == values + '')
-        comboSelectDisk.set_active(x);
+      let widthCpu = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 22,
+          upper: 40,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthcpu', widthCpu, 'value', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      widthCpu.sensitive = valueCpu.active;
+      gridCpu.attach(widthCpu, 1, 1, 1, 1);
 
-      x++;
-		}
-	}
+      // RAM
+      let alignmentRam = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
 
-  let buttonSelectDisk = new Gtk.Button({ label: 'Apply' });
-  buttonSelectDisk.connect('clicked', Lang.bind(this, selectDisk, comboSelectDisk));
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Ram')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentRam);
 
-  hBoxSelectDisk.pack_start(titleSelectDisk, true, true, 0);
-  hBoxSelectDisk.add(comboSelectDisk);
-  hBoxSelectDisk.add(buttonSelectDisk);
-  vBox.add(hBoxSelectDisk);
+      let gridRam = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentRam.add(gridRam);
 
-  // Width Disk
-  let hBoxLabelDisk = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleLabelDisk = new Gtk.Label({ label: 'Modify Width Disk', xalign: 0 });
-  let spinLabelDisk = Gtk.SpinButton.new_with_range(22, 85, 1);
-  spinLabelDisk.set_value(settings.get_int('label-disk'));
-  let buttonLabelDisk = new Gtk.Button({ label: 'Apply' });
-  buttonLabelDisk.connect('clicked', Lang.bind(this, labelDisk, spinLabelDisk));
+      gridRam.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
 
-  hBoxLabelDisk.pack_start(titleLabelDisk, true, true, 0);
-  hBoxLabelDisk.add(spinLabelDisk);
-  hBoxLabelDisk.add(buttonLabelDisk);
-  vBox.add(hBoxLabelDisk);
+      let valueRam = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('ram', valueRam, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueRam.connect('state-set', button => {
+        widthRam.sensitive = button.active;
+      });
+      gridRam.attach(valueRam, 1, 0, 1, 1);
 
-  // Auto Hide Net
-  let hBoxHide = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleHide = new Gtk.Label({ label: 'Auto Hide Net', xalign: 0 });
-  let valueHide = new Gtk.Switch({ active: settings.get_boolean('enable-hide') });
-  valueHide.connect('notify::active', Lang.bind(this, enableAutoHideNet));
+      gridRam.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
 
-  hBoxHide.pack_start(titleHide, true, true, 0);
-  hBoxHide.add(valueHide);
-  vBox.add(hBoxHide);
+      let widthRam = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 22,
+          upper: 40,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthram', widthRam, 'value', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      widthRam.sensitive = valueRam.active;
+      gridRam.attach(widthRam, 1, 1, 1, 1);
 
-  // Eth
-  let hBoxEth = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleEth = new Gtk.Label({ label: 'Display Eth', xalign: 0 });
-  let valueEth = new Gtk.Switch({active: settings.get_boolean('enable-eth') });
-  valueEth.connect('notify::active', Lang.bind(this, enableEth));
+      // DISK
+      let alignmentDisk = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
 
-  hBoxEth.pack_start(titleEth, true, true, 0);
-  hBoxEth.add(valueEth);
-  vBox.add(hBoxEth);
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Disk')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentDisk);
 
-  // Width Eth
-  let hBoxLabelEth = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleLabelEth = new Gtk.Label({ label: 'Modify Width Eth', xalign: 0 });
-  let spinLabelEth = Gtk.SpinButton.new_with_range(22, 85, 1);
-  spinLabelEth.set_value(settings.get_int('label-eth'));
-  let buttonLabelEth = new Gtk.Button({ label: 'Apply' });
-  buttonLabelEth.connect('clicked', Lang.bind(this, labelEth, spinLabelEth));
+      let gridDisk = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentDisk.add(gridDisk);
 
-  hBoxLabelEth.pack_start(titleLabelEth, true, true, 0);
-  hBoxLabelEth.add(spinLabelEth);
-  hBoxLabelEth.add(buttonLabelEth);
-  vBox.add(hBoxLabelEth);
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
 
-  // Wlan
-  let hBoxWlan = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleWlan = new Gtk.Label({ label: 'Display Wlan', xalign: 0 });
-  let valueWlan = new Gtk.Switch({ active: settings.get_boolean('enable-wlan') });
-  valueWlan.connect('notify::active', Lang.bind(this, enableWlan));
+      let valueDisk = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('disk', valueDisk, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueDisk.connect('state-set', button => {
+        widthDisk.sensitive = button.active;
+        combobox.sensitive = button.active;
+      });
+      gridDisk.attach(valueDisk, 1, 0, 1, 1);
 
-  hBoxWlan.pack_start(titleWlan, true, true, 0);
-  hBoxWlan.add(valueWlan);
-  vBox.add(hBoxWlan);
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
 
-  // Width Wlan
-  let hBoxLabelWlan = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
-  let titleLabelWlan = new Gtk.Label({ label: 'Modify Width Wlan', xalign: 0 });
-  let spinLabelWlan = Gtk.SpinButton.new_with_range(22, 85, 1);
-  spinLabelWlan.set_value(settings.get_int('label-wlan'));
-  let buttonLabelWlan = new Gtk.Button({ label: 'Apply' });
-  buttonLabelWlan.connect('clicked', Lang.bind(this, labelWlan, spinLabelWlan));
+      let widthDisk = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 22,
+          upper: 40,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthdisk', widthDisk, 'value', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      widthDisk.sensitive = valueDisk.active;
+      gridDisk.attach(widthDisk, 1, 1, 1, 1);
 
-  hBoxLabelWlan.pack_start(titleLabelWlan, true, true, 0);
-  hBoxLabelWlan.add(spinLabelWlan);
-  hBoxLabelWlan.add(buttonLabelWlan);
-  vBox.add(hBoxLabelWlan);
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Choose')),
+        halign: Gtk.Align.START
+      }), 0, 2, 1, 1);
 
-  box.add(title);
-  box.add(vBox);
+      let combobox = new Gtk.ComboBoxText({
+        halign: Gtk.Align.END
+      });
+      combobox.connect('changed', widget => {
+        this._settings.set_string('chosendisk', disks[combobox.active]);
+      });
+      // Init
+      combobox.sensitive = valueDisk.active;
+      gridDisk.attach(combobox, 1, 2, 1, 1);
 
-  return box;
-}
+      /**********/
+      let file = GLib.file_get_contents('/proc/diskstats');
+      let line = ('' + file[1]).split('\n');
+      let current = this._settings.get_string('chosendisk');
 
-function buildPrefsWidget() {
-  let widget = new PatternsPrefs();
-  widget.show_all();
+      let x = 1;
+      let disks = [ 'All' ];
 
-  return widget;
+      combobox.insert_text(0, 'All');
+      for (let i = 0; i < line.length; i++)
+      {
+        if ((/^\s*\d+\s*\d+\ssd[a-z]\d*\s/).test(line[i]))
+        {
+          let values = line[i].match(/sd[a-z]\d*/) + '';
+          disks[x] = values;
+          combobox.insert_text(x++, values);
+        }
+      }
+
+      for (let i = 0; i < disks.length; i++) {
+        if(current === disks[i]) {
+          combobox.set_active(i);
+          break;
+        }
+      }
+      /**********/
+
+      // AUTO HIDE
+      let alignmentAutoHide = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
+
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Auto Hide')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentAutoHide);
+
+      let gridAutoHide = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentAutoHide.add(gridAutoHide);
+
+      gridAutoHide.attach(new Gtk.Label({
+        label: '%s'.format(_('Enable')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueAutoHide = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('autohide', valueAutoHide, 'active', Gio.SettingsBindFlags.DEFAULT);
+      gridAutoHide.attach(valueAutoHide, 1, 0, 1, 1);
+
+      // ETH
+      let alignmentEth = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
+
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Eth')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentEth);
+
+      let gridEth= new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentEth.add(gridEth);
+
+      gridEth.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueEth = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('eth', valueEth, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueEth.connect('state-set', button => {
+        widthEth.sensitive = button.active;
+      });
+      gridEth.attach(valueEth, 1, 0, 1, 1);
+
+      gridEth.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
+
+      let widthEth = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 22,
+          upper: 40,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widtheth', widthEth, 'value', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      widthEth.sensitive = valueEth.active;
+      gridEth.attach(widthEth, 1, 1, 1, 1);
+
+      // WLAN
+      let alignmentWlan = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
+
+      this.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Wlan')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      this.add(alignmentWlan);
+
+      let gridWlan = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentWlan.add(gridWlan);
+
+      gridWlan.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueWlan = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('wlan', valueWlan, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueWlan.connect('state-set', button => {
+        widthWlan.sensitive = button.active;
+      });
+      gridWlan.attach(valueWlan, 1, 0, 1, 1);
+
+      gridWlan.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
+
+      let widthWlan = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 22,
+          upper: 40,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthwlan', widthWlan, 'value', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      widthWlan.sensitive = valueWlan.active;
+      gridWlan.attach(widthWlan, 1, 1, 1, 1);
+     }
+   }
+ );
+
+ function buildPrefsWidget() {
+   let widget = new ResourceMonitorPrefsWidget();
+   widget.show_all();
+
+   return widget;
 }
