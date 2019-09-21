@@ -18,7 +18,6 @@
  */
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
-
 const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
 const _ = Gettex.gettext;
 
@@ -256,7 +255,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let widthDisk = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 22,
-          upper: 40,
+          upper: 80,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -283,26 +282,34 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       gridDisk.attach(combobox, 1, 2, 1, 1);
 
       /**********/
+      //let lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
       let file = GLib.file_get_contents('/proc/diskstats');
-      let line = ('' + file[1]).split('\n');
+      let lines = ('' + file[1]).split('\n');
+
       let current = this._settings.get_string('chosendisk');
 
       let x = 1;
       let disks = [ 'All' ];
 
       combobox.insert_text(0, 'All');
-      for (let i = 0; i < line.length; i++)
-      {
-        if ((/^\s*\d+\s*\d+\ssd[a-z]\d*\s/).test(line[i]))
-        {
-          let values = line[i].match(/sd[a-z]\d*/) + '';
-          disks[x] = values;
-          combobox.insert_text(x++, values);
-        }
+
+      for (let i = 0; i < lines.length; i++) {
+        let line = lines[i];
+        let entry = line.trim().split(/[\s]+/);
+        if (typeof (entry[1]) === 'undefined')
+          break;
+
+        let name = entry[2];
+
+        if (name.match(/loop\d*/))
+          continue;
+
+        disks[x] = name;
+        combobox.insert_text(x++, name);
       }
 
       for (let i = 0; i < disks.length; i++) {
-        if(current === disks[i]) {
+        if (current === disks[i]) {
           combobox.set_active(i);
           break;
         }
@@ -380,7 +387,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let widthEth = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 22,
-          upper: 40,
+          upper: 80,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -432,7 +439,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let widthWlan = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 22,
-          upper: 40,
+          upper: 80,
           step_increment: 1
         }),
         halign: Gtk.Align.END,

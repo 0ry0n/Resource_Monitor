@@ -10,20 +10,19 @@
  *
  * Resource_Monitor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Resource_Monitor.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
 
-.unit {
-  padding-top: .6em;
-  font-size: 10px;
-}
+ .unit {
+   padding: 8px 0px 0px 1px;
+   font-size: 10px;
+ }
 
-.label {
-  min-width: 65px;
-  text-align: right;
-  font-size: 11pt;
-}
+ .label {
+   padding-top: 3px;
+   text-align: right;
+ }
