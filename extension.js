@@ -21,6 +21,7 @@ const { St, GObject, NM, GLib, Shell } = imports.gi;
 
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
+
 const Util = imports.misc.util;
 const Mainloop = imports.mainloop;
 
@@ -31,8 +32,8 @@ const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 const Convenience = Me.imports.convenience;
 
-let ResourceMonitorIndicator;
-let IndicatorName = Me.metadata['name'];
+var ResourceMonitorIndicator;
+var IndicatorName = Me.metadata['name'];
 
 const INTERVAL = 'interval';
 const ICONS = 'icons';
@@ -79,10 +80,12 @@ var ResourceMonitor = GObject.registerClass(
       this.initUI();
 
       /** ### Signals ### **/
+      this.numSigId = 0;
+      this.sigId = [];
 
       // Interval
       this.interval = this._settings.get_int(INTERVAL);
-      this._settings.connect(`changed::${INTERVAL}`, () => {
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${INTERVAL}`, () => {
         this.interval = this._settings.get_int(INTERVAL);
 
         if (this.timer) {
@@ -95,22 +98,22 @@ var ResourceMonitor = GObject.registerClass(
 
       // Icons
       this.displayIcons;
-      this._settings.connect(`changed::${ICONS}`, this.iconsChange.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${ICONS}`, this.iconsChange.bind(this));
       this.iconsChange();
 
       // Cpu
       this.enCpu;
-      this._settings.connect(`changed::${CPU}`, this.cpuChange.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPU}`, this.cpuChange.bind(this));
       this.cpuChange();
 
       // Ram
       this.enRam;
-      this._settings.connect(`changed::${RAM}`, this.ramChange.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${RAM}`, this.ramChange.bind(this));
       this.ramChange();
 
       // Disk
       this.enDisk;
-      this._settings.connect(`changed::${DISK}`, this.diskChange.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK}`, this.diskChange.bind(this));
       this.diskChange();
 
       this.onWlan = true;
@@ -118,52 +121,52 @@ var ResourceMonitor = GObject.registerClass(
 
       // Eth
       this.enEth;
-      this._settings.connect(`changed::${ETH}`, this.getSettingsEth.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${ETH}`, this.getSettingsEth.bind(this));
       this.getSettingsEth();
 
       // Wlan
       this.enWlan;
-      this._settings.connect(`changed::${WLAN}`, this.getSettingsWlan.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WLAN}`, this.getSettingsWlan.bind(this));
       this.getSettingsWlan();
 
       // Auto Hide
       this.enHide;
-      this._settings.connect(`changed::${AUTO_HIDE}`, this.hideChange.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${AUTO_HIDE}`, this.hideChange.bind(this));
       this.hideChange();
 
       // Chosen Disk
       this.chosenDisk;
-      this._settings.connect(`changed::${CHOSEN_DISK}`, this.chosenDiskChange.bind(this));
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${CHOSEN_DISK}`, this.chosenDiskChange.bind(this));
       this.chosenDiskChange();
 
       /** ## WIDTH ## **/
 
       // Cpu
-      this._settings.connect(`changed::${WIDTH_CPU}`, () => {
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPU}`, () => {
         this.cpu.set_width(this._settings.get_int(WIDTH_CPU));
       });
       this.cpu.set_width(this._settings.get_int(WIDTH_CPU));
 
       // Ram
-      this._settings.connect(`changed::${WIDTH_RAM}`, () => {
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_RAM}`, () => {
         this.ram.set_width(this._settings.get_int(WIDTH_RAM));
       });
       this.ram.set_width(this._settings.get_int(WIDTH_RAM));
 
       // Disk
-      this._settings.connect(`changed::${WIDTH_DISK}`, () => {
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK}`, () => {
         this.disk.set_width(this._settings.get_int(WIDTH_DISK));
       });
       this.disk.set_width(this._settings.get_int(WIDTH_DISK));
 
       // Eth
-      this._settings.connect(`changed::${WIDTH_ETH}`, () => {
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_ETH}`, () => {
         this.eth.set_width(this._settings.get_int(WIDTH_ETH));
       });
       this.eth.set_width(this._settings.get_int(WIDTH_ETH));
 
       // Wlan
-      this._settings.connect(`changed::${WIDTH_WLAN}`, () => {
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_WLAN}`, () => {
         this.wlan.set_width(this._settings.get_int(WIDTH_WLAN));
       });
       this.wlan.set_width(this._settings.get_int(WIDTH_WLAN));
@@ -234,27 +237,27 @@ var ResourceMonitor = GObject.registerClass(
 
       // Label
       this.cpu = new St.Label({
-        text: 'cpu',
+        text: CPU,
         style_class: 'label'
       });
 
       this.ram = new St.Label({
-        text: 'ram',
+        text: RAM,
         style_class: 'label'
       });
 
       this.disk = new St.Label({
-        text: 'disk',
+        text: DISK,
         style_class: 'label'
       });
 
       this.eth = new St.Label({
-        text: 'eth',
+        text: ETH,
         style_class: 'label'
       });
 
       this.wlan = new St.Label({
-        text: 'wlan',
+        text: WLAN,
         style_class: 'label'
       });
 
@@ -282,21 +285,27 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     destroy() {
-      if(this.timerHide) {
+      if (this.timerHide) {
         Mainloop.source_remove(this.timerHide);
         this.timerHide = null;
       }
 
-      if(this.timer) {
+      if (this.timer) {
         Mainloop.source_remove(this.timer);
         this.timer = null;
+      }
+
+      /** ## Signals Disconnection ## **/
+      for (var i = 0; i < this.numSigId; i++) {
+        this._settings.disconnect(this.sigId[i]);
+        this.sigId[i] = 0;
       }
 
       super.destroy();
     }
 
     _openSystemMonitor() {
-      let app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
+      var app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
 
       if (app != null)
         app.activate();
@@ -308,16 +317,16 @@ var ResourceMonitor = GObject.registerClass(
 
     iconsChange() {
       this.displayIcons = this._settings.get_boolean(ICONS);
-    	if(this.displayIcons) {
-    		if(this.enCpu)
+    	if (this.displayIcons) {
+    		if (this.enCpu)
     			this.cpuIco.show();
-    		if(this.enRam)
+    		if (this.enRam)
     			this.ramIco.show();
-    		if(this.enDisk)
+    		if (this.enDisk)
     			this.diskIco.show();
-    		if(this.enEth)
+    		if (this.enEth)
     			this.ethIco.show();
-    		if(this.enWlan)
+    		if (this.enWlan)
     			this.wlanIco.show();
     	} else {
     		this.cpuIco.hide();
@@ -330,8 +339,8 @@ var ResourceMonitor = GObject.registerClass(
 
     cpuChange() {
     	this.enCpu = this._settings.get_boolean(CPU);
-    	if(this.enCpu) {
-    		if(this.displayIcons)
+    	if (this.enCpu) {
+    		if (this.displayIcons)
     			this.cpuIco.show();
     		this.cpu.show();
     		this.cpuUnit.show();
@@ -344,8 +353,8 @@ var ResourceMonitor = GObject.registerClass(
 
     ramChange() {
     	this.enRam = this._settings.get_boolean(RAM);
-    	if(this.enRam) {
-    		if(this.displayIcons)
+    	if (this.enRam) {
+    		if (this.displayIcons)
     			this.ramIco.show();
     		this.ram.show();
     		this.ramUnit.show();
@@ -358,8 +367,8 @@ var ResourceMonitor = GObject.registerClass(
 
     diskChange() {
     	this.enDisk = this._settings.get_boolean(DISK);
-    	if(this.enDisk) {
-    		if(this.displayIcons)
+    	if (this.enDisk) {
+    		if (this.displayIcons)
     			this.diskIco.show();
     		this.disk.show();
     		this.diskUnit.show();
@@ -377,8 +386,8 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     ethChange() {
-    	if((this.enEth && this.onEth) || (this.enEth && !this.enHide)) {
-    		if(this.displayIcons)
+    	if ((this.enEth && this.onEth) || (this.enEth && !this.enHide)) {
+    		if (this.displayIcons)
     			this.ethIco.show();
     		this.eth.show();
     		this.ethUnit.show();
@@ -396,8 +405,8 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     wlanChange() {
-    	if((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide)) {
-    		if(this.displayIcons)
+    	if ((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide)) {
+    		if (this.displayIcons)
     			this.wlanIco.show();
     		this.wlan.show();
     		this.wlanUnit.show();
@@ -410,10 +419,10 @@ var ResourceMonitor = GObject.registerClass(
 
     hideChange() {
     	this.enHide = this._settings.get_boolean(AUTO_HIDE);
-    	if(this.enHide) {
+    	if (this.enHide) {
     		this.refreshHide();
     	} else {
-        if(this.timerHide) {
+        if (this.timerHide) {
           Mainloop.source_remove(this.timerHide);
           this.timerHide = null;
         }
@@ -434,18 +443,18 @@ var ResourceMonitor = GObject.registerClass(
     /*********************/
 
     refresh() {
-      if(this.enCpu)
+      if (this.enCpu)
         this.refreshCpu();
-      if(this.enRam)
+      if (this.enRam)
         this.refreshRam();
-      if(this.enDisk)
+      if (this.enDisk)
         this.refreshDisk();
-      if(this.enEth)
+      if (this.enEth)
         this.refreshEth();
-      if(this.enWlan)
+      if (this.enWlan)
         this.refreshWlan();
 
-      if(this.timer) {
+      if (this.timer) {
         Mainloop.source_remove(this.timer);
         this.timer = null;
       }
@@ -455,31 +464,40 @@ var ResourceMonitor = GObject.registerClass(
 
     refreshHide() {
       if (this.enEth || this.enWlan) {
-        let devices = this.client.get_devices();
+        var devices = this.client.get_devices();
 
-        for(let i = 0; i < devices.length; i++) {
-          let device = devices[i];
+        for (var i = 0; i < devices.length; i++) {
+          var device = devices[i];
 
-          if(device.get_device_type() === NM.DeviceType.ETHERNET) {
-            if(device.active_connection) {
-              if(device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
-                this.onEth = true;
-            } else
-              this.onEth = false;
-          } else if(device.get_device_type() === NM.DeviceType.WIFI) {
-            if(device.active_connection) {
-              if(device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
-                this.onWlan = true;
-            } else
-              this.onWlan = false;
+          switch (device.get_device_type()) {
+            
+            case NM.DeviceType.ETHERNET: {
+              if (device.active_connection) {
+                if (device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
+                  this.onEth = true;
+              } else
+                this.onEth = false;
+
+              this.ethChange();
+            } break;
+
+            case NM.DeviceType.WIFI: {
+              if (device.active_connection) {
+                if (device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
+                  this.onWlan = true;
+              } else
+                this.onWlan = false;
+
+              this.wlanChange();
+            } break;
+
+            default:
+
           }
         }
-
-        this.ethChange();
-        this.wlanChange();
       }
 
-      if(this.timerHide) {
+      if (this.timerHide) {
         Mainloop.source_remove(this.timerHide);
         this.timerHide = null;
       }
@@ -488,19 +506,19 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshCpu() {
-      let lines = Shell.get_file_contents_utf8_sync('/proc/stat').split('\n');
-      let entry = lines[0].trim().split(/[\s]+/);
-      let cpuTot = 0;
-      let idle = parseInt(entry[4]);
+      var lines = Shell.get_file_contents_utf8_sync('/proc/stat').split('\n');
+      var entry = lines[0].trim().split(/[\s]+/);
+      var cpuTot = 0;
+      var idle = parseInt(entry[4]);
 
       // user sys nice idle iowait
-      for (let i = 1; i < 5; i++)
+      for (var i = 1; i < 5; i++)
         cpuTot += parseInt(entry[i]);
 
-      let delta = cpuTot - this.cpuTotOld;
-      let deltaIdle = idle - this.idleOld;
+      var delta = cpuTot - this.cpuTotOld;
+      var deltaIdle = idle - this.idleOld;
 
-      let cpuCurr = 100 * (delta - deltaIdle) / delta;
+      var cpuCurr = 100 * (delta - deltaIdle) / delta;
 
       this.cpuTotOld = cpuTot;
       this.idleOld = idle;
@@ -509,12 +527,12 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshRam() {
-      let total, free, buffer, cached, used;
-      let lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
+      var total, free, buffer, cached, used;
+      var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
 
-      for (let i = 0; i < 5; i++) {
-        let values;
-        let line = lines[i];
+      for (var i = 0; i < 5; i++) {
+        var values;
+        var line = lines[i];
 
         if (line.match(/^MemTotal/)) {
           values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
@@ -537,14 +555,14 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshDisk() {
-      let rwTot = [0, 0];
-      let rw = [0, 0];
-      let lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
+      var rwTot = [0, 0];
+      var rw = [0, 0];
+      var lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
 
-      if(this.chosenDisk === 'All') {
-        for (let i = 0; i < lines.length; i++) {
-          let line = lines[i];
-          let entry = line.trim().split(/[\s]+/);
+      if (this.chosenDisk === 'All') {
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          var entry = line.trim().split(/[\s]+/);
           if (typeof (entry[1]) === 'undefined')
             break;
 
@@ -555,13 +573,13 @@ var ResourceMonitor = GObject.registerClass(
           rwTot[1] += parseInt(entry[9]);
         }
       } else {
-        for (let i = 0; i < lines.length; i++) {
-          let line = lines[i];
-          let entry = line.trim().split(/[\s]+/);
+        for (var i = 0; i < lines.length; i++) {
+          var line = lines[i];
+          var entry = line.trim().split(/[\s]+/);
           if (typeof (entry[1]) === 'undefined')
             break;
 
-          if(entry[2] === this.chosenDisk) {
+          if (entry[2] === this.chosenDisk) {
             rwTot[0] += parseInt(entry[5]);
             rwTot[1] += parseInt(entry[9]);
             break;
@@ -569,20 +587,20 @@ var ResourceMonitor = GObject.registerClass(
         }
       }
 
-      let idle = GLib.get_monotonic_time() / 1000;
-      let delta = (idle - this.idleDiskOld) / 1000;
+      var idle = GLib.get_monotonic_time() / 1000;
+      var delta = (idle - this.idleDiskOld) / 1000;
 
-      if(delta > 0) {
-        for( let i = 0; i < 2; i++) {
+      if (delta > 0) {
+        for ( var i = 0; i < 2; i++) {
           rw[i] =  (rwTot[i] - this.rwTotOld[i]) / delta;
           this.rwTotOld[i] = rwTot[i];
         }
 
-        if(rw[0] > 1024 || rw[1] > 1024) {
+        if (rw[0] > 1024 || rw[1] > 1024) {
           this.diskUnit.set_text('M');
           rw[0] /= 1024;
           rw[1] /= 1024;
-          if(rw[0] > 1024 || rw[1] > 1024) {
+          if (rw[0] > 1024 || rw[1] > 1024) {
             this.diskUnit.set_text('G');
             rw[0] /= 1024;
             rw[1] /= 1024;
@@ -598,39 +616,39 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshEth() {
-      let duTot = [0, 0];
-      let du = [0, 0];
-      let lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
+      var duTot = [0, 0];
+      var du = [0, 0];
+      var lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
-      for (let i = 2; i < lines.length - 1; i++) {
-        let line = lines[i];
-        let entry = line.trim().split(':');
+      for (var i = 2; i < lines.length - 1; i++) {
+        var line = lines[i];
+        var entry = line.trim().split(':');
         if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
-          let values = entry[1].trim().split(/[\s]+/);
+          var values = entry[1].trim().split(/[\s]+/);
 
           duTot[0] += parseInt(values[0]);
           duTot[1] += parseInt(values[8]);
         }
       }
 
-      let idle = GLib.get_monotonic_time() / 1000; // forse con * 0.001024
-      let delta = (idle - this.idleEthOld) / 1000; // forse no /1000
+      var idle = GLib.get_monotonic_time() / 1000; // forse con * 0.001024
+      var delta = (idle - this.idleEthOld) / 1000; // forse no /1000
 
-      if(delta > 0) {
-        for( let i = 0; i < 2; i++) {
+      if (delta > 0) {
+        for ( var i = 0; i < 2; i++) {
           du[i] =  (duTot[i] - this.duTotEthOld[i]) / delta;
           this.duTotEthOld[i] = duTot[i];
         }
 
-        if(du[0] > 1024 || du[1] > 1024) {
+        if (du[0] > 1024 || du[1] > 1024) {
       		this.ethUnit.set_text('K');
       		du[0] /= 1024;
       		du[1] /= 1024;
-      		if(du[0] > 1024 || du[1] > 1024) {
+      		if (du[0] > 1024 || du[1] > 1024) {
       			this.ethUnit.set_text('M');
       			du[0] /= 1024;
       			du[1] /= 1024;
-      			if(du[0] > 1024 || du[1] > 1024) {
+      			if (du[0] > 1024 || du[1] > 1024) {
       				this.ethUnit.set_text('G');
       				du[0] /= 1024;
       				du[1] /= 1024;
@@ -647,39 +665,39 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshWlan() {
-      let duTot = [0, 0];
-      let du = [0, 0];
-      let lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
+      var duTot = [0, 0];
+      var du = [0, 0];
+      var lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
-      for (let i = 2; i < lines.length - 1; i++) {
-        let line = lines[i];
-        let entry = line.trim().split(':');
+      for (var i = 2; i < lines.length - 1; i++) {
+        var line = lines[i];
+        var entry = line.trim().split(':');
         if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
-          let values = entry[1].trim().split(/[\s]+/);
+          var values = entry[1].trim().split(/[\s]+/);
 
           duTot[0] += parseInt(values[0]);
           duTot[1] += parseInt(values[8]);
         }
       }
 
-      let idle = GLib.get_monotonic_time() / 1000; // forse con * 0.001024
-      let delta = (idle - this.idleWlanOld) / 1000; // forse no /1000
+      var idle = GLib.get_monotonic_time() / 1000; // forse con * 0.001024
+      var delta = (idle - this.idleWlanOld) / 1000; // forse no /1000
 
-      if(delta > 0) {
-        for( let i = 0; i < 2; i++) {
+      if (delta > 0) {
+        for ( var i = 0; i < 2; i++) {
           du[i] =  (duTot[i] - this.duTotWlanOld[i]) / delta;
           this.duTotWlanOld[i] = duTot[i];
         }
 
-        if(du[0] > 1024 || du[1] > 1024) {
+        if (du[0] > 1024 || du[1] > 1024) {
       		this.wlanUnit.set_text('K');
       		du[0] /= 1024;
       		du[1] /= 1024;
-      		if(du[0] > 1024 || du[1] > 1024) {
+      		if (du[0] > 1024 || du[1] > 1024) {
       			this.wlanUnit.set_text('M');
       			du[0] /= 1024;
       			du[1] /= 1024;
-      			if(du[0] > 1024 || du[1] > 1024) {
+      			if (du[0] > 1024 || du[1] > 1024) {
       				this.wlanUnit.set_text('G');
       				du[0] /= 1024;
       				du[1] /= 1024;
