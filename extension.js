@@ -465,36 +465,46 @@ var ResourceMonitor = GObject.registerClass(
     refreshHide() {
       if (this.enEth || this.enWlan) {
         var devices = this.client.get_devices();
+        var e = true, w = true;
 
         for (var i = 0; i < devices.length; i++) {
           var device = devices[i];
 
           switch (device.get_device_type()) {
-            
+
             case NM.DeviceType.ETHERNET: {
+              e = false;
               if (device.active_connection) {
                 if (device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
                   this.onEth = true;
               } else
                 this.onEth = false;
-
-              this.ethChange();
             } break;
 
             case NM.DeviceType.WIFI: {
+              w = false;
               if (device.active_connection) {
                 if (device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
                   this.onWlan = true;
               } else
                 this.onWlan = false;
-
-              this.wlanChange();
             } break;
 
             default:
 
           }
         }
+
+        if (e) {
+          this.onEth = false;
+        }
+
+        if (w) {
+          this.onWlan = false;
+        }
+
+        this.ethChange();
+        this.wlanChange();
       }
 
       if (this.timerHide) {
