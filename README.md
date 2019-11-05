@@ -15,35 +15,26 @@ You can get this extension:
 ### Using the latest release
 1. Unzip the file `Resource_Monitor-x.zip`.
 2. Move the `Resource_Monitor-x` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Copy and Paste the `com.github.Ory0n.Resource_Monitor.gschema.xml` schema to `/usr/share/glib-2.0/schemas`.
-4. Run `glib-compile-schemas /usr/share/glib-2.0/schemas`
-5. Activate the extensions with Gnome Tweak Tool.
+3. Activate the extensions with Gnome Tweak Tool.
 
 For example...
 ```
 unzip Resource_Monitor-x.zip
 mv Resource_Monitor-x ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
-cp ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/schemas/com.github.Ory0n.Resource_Monitor.gschema.xml /usr/share/glib-2.0/schemas
 
-glib-compile-schemas /usr/share/glib-2.0/schemas
 gnome-shell-extension-tool -e Resource_Monitor@Ory0n
 ```
 
 ### Cloning the repository
 1. Clone the Master repository.
 2. Move the `Resource_Monitor` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Copy and Paste the `com.github.Ory0n.Resource_Monitor.gschema.xml` schema to `/usr/share/glib-2.0/schemas`.
-4. Run `glib-compile-schemas /usr/share/glib-2.0/schemas`
-5. Activate the extensions with Gnome Tweak Tool.
+3. Activate the extensions with Gnome Tweak Tool.
 
 For example...
 ```
 git clone https://github.com/Ory0n/Resource_Monitor
-
 mv Resource_Monitor ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
-cp ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/schemas/com.github.Ory0n.Resource_Monitor.gschema.xml /usr/share/glib-2.0/schemas
 
-glib-compile-schemas /usr/share/glib-2.0/schemas
 gnome-shell-extension-tool -e Resource_Monitor@Ory0n
 ```
 Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
@@ -73,6 +64,11 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 7 (Nov 5, 2019)**
+- Added support for gnome 3.34.
+- Total restyling of the application.
+- Improved graphics.
+
 **version 6 (Jun 5, 2019)**
 - Settings Bug fixed.
 
@@ -98,4 +94,3 @@ Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracke
 
 # License
 This project is licensed under the GNU GPL-3.0 License - see the [LICENSE.md](https://github.com/Ory0n/Resource_Monitor/blob/master/LICENSE) file for details.
-
