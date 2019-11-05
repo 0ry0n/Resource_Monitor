@@ -10,91 +10,100 @@
  *
  * Resource_Monitor is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with Resource_Monitor.  If not, see <http://www.gnu.org/licenses/>.
+ * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
 -->
 
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="gsettings-desktop-schemas">
-    <schema id="com.github.Ory0n.Resource_Monitor" path="/com/github/Ory0n/Resource_Monitor/">
-    <key type="i" name="timer">
-      <range min="1" max="30"/>
+<schemalist gettext-domain="com-github-Ory0n-Resource_Monitor">
+  <schema id="com.github.Ory0n.Resource_Monitor"
+          path="/com/github/Ory0n/Resource_Monitor/">
+    <key name="interval" type="i">
       <default>2</default>
       <summary>Update Interval</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="b" name="display-icons">
+    <key name="icons" type="b">
       <default>true</default>
       <summary>Display Icons</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="b" name="enable-cpu">
+    <key name="cpu" type="b">
       <default>true</default>
-      <summary>Display CPU</summary>
-      <description/>
+      <summary>Display Cpu</summary>
+      <description>
+      </description>
     </key>
-    <key type="b" name="enable-ram">
+    <key name="ram" type="b">
       <default>true</default>
       <summary>Display Ram</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="b" name="enable-disk">
+    <key name="disk" type="b">
       <default>true</default>
       <summary>Display Disk</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="b" name="enable-hide">
-      <default>false</default>
-      <summary>Auto Hide Net</summary>
-      <description/>
-    </key>
-    <key type="b" name="enable-eth">
+    <key name="eth" type="b">
       <default>true</default>
       <summary>Display Eth</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="b" name="enable-wlan">
+    <key name="wlan" type="b">
       <default>true</default>
       <summary>Display Wlan</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="i" name="label-cpu">
-      <range min="22" max="40"/>
+    <key name="widthcpu" type="i">
       <default>35</default>
       <summary>Width Cpu</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="i" name="label-ram">
-      <range min="22" max="40"/>
+    <key name="widthram" type="i">
       <default>35</default>
       <summary>Width Ram</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="i" name="label-disk">
-      <range min="22" max="85"/>
+    <key name="widthdisk" type="i">
       <default>65</default>
       <summary>Width Disk</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="i" name="label-eth">
-      <range min="22" max="85"/>
+    <key name="widtheth" type="i">
       <default>65</default>
       <summary>Width Eth</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="i" name="label-wlan">
-      <range min="22" max="85"/>
+    <key name="widthwlan" type="i">
       <default>65</default>
       <summary>Width Wlan</summary>
-      <description/>
+      <description>
+      </description>
     </key>
-    <key type="s" name="select-disk">
+    <key name="chosendisk" type="s">
       <default>'All'</default>
       <summary>Selected Disk</summary>
-      <description/>
+      <description>
+      </description>
+    </key>
+    <key name="autohide" type="b">
+      <default>false</default>
+      <summary>Auto Hide Net</summary>
+      <description>
+      </description>
     </key>
   </schema>
 </schemalist>
