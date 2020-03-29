@@ -16,8 +16,9 @@
  * You should have received a copy of the GNU General Public License
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
+'use strict';
 
-const { St, GObject, NM, GLib, Shell } = imports.gi;
+const { St, GObject, NM, GLib, Shell, Gio, Clutter } = imports.gi;
 
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
@@ -30,7 +31,6 @@ const _ = Gettext.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
 
 var ResourceMonitorIndicator;
 var IndicatorName = Me.metadata['name'];
@@ -42,6 +42,7 @@ const RAM = 'ram';
 const DISK = 'disk';
 const ETH = 'eth';
 const WLAN = 'wlan';
+const CPUTEMPERATURE = 'cputemperature';
 const CHOSEN_DISK = 'chosendisk';
 const AUTO_HIDE = 'autohide';
 const WIDTH_CPU = 'widthcpu';
@@ -49,6 +50,9 @@ const WIDTH_RAM = 'widthram';
 const WIDTH_DISK = 'widthdisk';
 const WIDTH_ETH = 'widtheth';
 const WIDTH_WLAN = 'widthwlan';
+const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
+
+const CPUTEMPERATUREUNIT = 'cputemperatureunit';
 
 const INTERVAL_HIDE = 2;
 
@@ -58,7 +62,7 @@ var ResourceMonitor = GObject.registerClass(
       super._init(params, IndicatorName);
       this.actor.connect('button-press-event', this._openSystemMonitor.bind(this));
 
-      this._settings = Convenience.getSettings();
+      this._settings = ExtensionUtils.getSettings();
 
       this.client = NM.Client.new(null);
 
@@ -139,37 +143,58 @@ var ResourceMonitor = GObject.registerClass(
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${CHOSEN_DISK}`, this.chosenDiskChange.bind(this));
       this.chosenDiskChange();
 
+      // Cpu Temperature
+      this.cpuTemperature;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATURE}`, this.cpuTemperatureChange.bind(this));
+      this.cpuTemperatureChange();
+
+      // Cpu Temperature Unit
+      this.cpuTemperatureFahrenheit;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATUREUNIT}`, () => {
+        this.cpuTemperatureFahrenheit = this._settings.get_boolean(CPUTEMPERATUREUNIT);
+
+        this.cpuTemperatureUnit.text = this.cpuTemperatureFahrenheit ? '°F' : '°C';
+      });
+      this.cpuTemperatureFahrenheit = this._settings.get_boolean(CPUTEMPERATUREUNIT);
+      this.cpuTemperatureUnit.text = this.cpuTemperatureFahrenheit ? '°F' : '°C'
+
       /** ## WIDTH ## **/
 
       // Cpu
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPU}`, () => {
-        this.cpu.set_width(this._settings.get_int(WIDTH_CPU));
+        this.cpu.width = this._settings.get_int(WIDTH_CPU);
       });
-      this.cpu.set_width(this._settings.get_int(WIDTH_CPU));
+      this.cpu.width = this._settings.get_int(WIDTH_CPU);
 
       // Ram
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_RAM}`, () => {
-        this.ram.set_width(this._settings.get_int(WIDTH_RAM));
+        this.ram.width = this._settings.get_int(WIDTH_RAM);
       });
-      this.ram.set_width(this._settings.get_int(WIDTH_RAM));
+      this.ram.width = this._settings.get_int(WIDTH_RAM);
 
       // Disk
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK}`, () => {
-        this.disk.set_width(this._settings.get_int(WIDTH_DISK));
+        this.disk.width = this._settings.get_int(WIDTH_DISK);
       });
-      this.disk.set_width(this._settings.get_int(WIDTH_DISK));
+      this.disk.width = this._settings.get_int(WIDTH_DISK);
 
       // Eth
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_ETH}`, () => {
-        this.eth.set_width(this._settings.get_int(WIDTH_ETH));
+        this.eth.width = this._settings.get_int(WIDTH_ETH);
       });
-      this.eth.set_width(this._settings.get_int(WIDTH_ETH));
+      this.eth.width = this._settings.get_int(WIDTH_ETH);
 
       // Wlan
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_WLAN}`, () => {
-        this.wlan.set_width(this._settings.get_int(WIDTH_WLAN));
+        this.wlan.width = this._settings.get_int(WIDTH_WLAN);
       });
-      this.wlan.set_width(this._settings.get_int(WIDTH_WLAN));
+      this.wlan.width = this._settings.get_int(WIDTH_WLAN);
+
+      // Cpu Temperature
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPUTEMPERATURE}`, () => {
+        this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
+      });
+      this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
 
       /** ### ### ### ### **/
 
@@ -185,84 +210,116 @@ var ResourceMonitor = GObject.registerClass(
 
       // Icon
       this.cpuIco = new St.Icon({
-        icon_name: 'computer-symbolic',
+        gicon: new Gio.ThemedIcon({name: 'computer-symbolic'}),
         style_class: 'system-status-icon'
       });
 
       this.ramIco = new St.Icon({
-        icon_name: 'emblem-system-symbolic',
+        gicon: new Gio.ThemedIcon({name: 'emblem-system-symbolic'}),
         style_class: 'system-status-icon'
       });
 
       this.diskIco = new St.Icon({
-        icon_name: 'drive-harddisk-symbolic',
+        gicon: new Gio.ThemedIcon({name: 'drive-harddisk-symbolic'}),
         style_class: 'system-status-icon'
       });
 
       this.ethIco  = new St.Icon({
-        icon_name: 'network-wired-symbolic',
+        gicon: new Gio.ThemedIcon({name: 'network-wired-symbolic'}),
         style_class: 'system-status-icon'
       });
 
       this.wlanIco = new St.Icon({
-        icon_name: 'network-wireless-symbolic',
+        gicon: new Gio.ThemedIcon({name: 'network-wireless-symbolic'}),
         style_class: 'system-status-icon'
       });
 
       // Unit
       this.cpuUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: '%',
         style_class: 'unit'
       });
 
       this.ramUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: '%',
         style_class: 'unit'
       });
 
       this.diskUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: 'K',
         style_class: 'unit'
       });
 
       this.ethUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: 'K',
         style_class: 'unit'
       });
 
       this.wlanUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: 'K',
+        style_class: 'unit'
+      });
+
+      this.cpuTemperatureUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: '°C',
         style_class: 'unit'
       });
 
       // Label
       this.cpu = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: CPU,
         style_class: 'label'
       });
 
       this.ram = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: RAM,
         style_class: 'label'
       });
 
       this.disk = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: DISK,
         style_class: 'label'
       });
 
       this.eth = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: ETH,
         style_class: 'label'
       });
 
       this.wlan = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
         text: WLAN,
+        style_class: 'label'
+      });
+
+      this.cpuTemperature = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: CPUTEMPERATURE,
+        style_class: 'label'
+      });
+
+      this.temperatureBrackets = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: ']',
         style_class: 'label'
       });
 
       this.box.add(this.cpu);
       this.box.add(this.cpuUnit);
+
+      this.box.add(this.cpuTemperature);
+      this.box.add(this.cpuTemperatureUnit);
+      this.box.add(this.temperatureBrackets);
       this.box.add(this.cpuIco);
 
       this.box.add(this.ram);
@@ -345,7 +402,8 @@ var ResourceMonitor = GObject.registerClass(
     		this.cpu.show();
     		this.cpuUnit.show();
     	} else {
-    		this.cpuIco.hide();
+        if (!this.enCpuTemperature)
+    		  this.cpuIco.hide();
     		this.cpu.hide();
     		this.cpuUnit.hide();
     	}
@@ -440,6 +498,23 @@ var ResourceMonitor = GObject.registerClass(
       this.rwTotOld = [0, 0];
     }
 
+    cpuTemperatureChange() {
+      this.enCpuTemperature = this._settings.get_boolean(CPUTEMPERATURE);
+      if (this.enCpuTemperature) {
+        if (this.displayIcons)
+          this.cpuIco.show();
+        this.temperatureBrackets.show()
+        this.cpuTemperature.show();
+        this.cpuTemperatureUnit.show();
+      } else {
+        if (!this.enCpu)
+          this.cpuIco.hide();
+        this.temperatureBrackets.hide();
+        this.cpuTemperature.hide();
+        this.cpuTemperatureUnit.hide();
+      }
+    }
+
     /*********************/
 
     refresh() {
@@ -453,6 +528,8 @@ var ResourceMonitor = GObject.registerClass(
         this.refreshEth();
       if (this.enWlan)
         this.refreshWlan();
+      if (this.enCpuTemperature)
+        this.refreshCpuTemperature();
 
       if (this.timer) {
         Mainloop.source_remove(this.timer);
@@ -533,7 +610,7 @@ var ResourceMonitor = GObject.registerClass(
       this.cpuTotOld = cpuTot;
       this.idleOld = idle;
 
-      this.cpu.set_text(`${cpuCurr.toFixed(1)}`);
+      this.cpu.text = `${cpuCurr.toFixed(1)}`;
     }
 
     refreshRam() {
@@ -546,22 +623,22 @@ var ResourceMonitor = GObject.registerClass(
 
         if (line.match(/^MemTotal/)) {
           values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
-          total = values[1];
+          total = parseInt(values[1]);
         } else if (line.match(/^MemFree/)) {
           values = line.match(/^MemFree:\s*([^ ]*)\s*([^ ]*)$/);
-          free = values[1];
+          free = parseInt(values[1]);
         }	else if (line.match(/^Buffers/)) {
           values = line.match(/^Buffers:\s*([^ ]*)\s*([^ ]*)$/);
-          buffer = values[1];
+          buffer = parseInt(values[1]);
         }	else if (line.match(/^Cached/)) {
           values = line.match(/^Cached:\s*([^ ]*)\s*([^ ]*)$/);
-          cached = values[1];
+          cached = parseInt(values[1]);
         }
       }
 
       used = total - free - buffer - cached;
 
-      this.ram.set_text(`${(100*used/total).toFixed(1)}`);
+      this.ram.text = `${(100*used/total).toFixed(1)}`;
     }
 
     refreshDisk() {
@@ -607,22 +684,22 @@ var ResourceMonitor = GObject.registerClass(
         }
 
         if (rw[0] > 1024 || rw[1] > 1024) {
-          this.diskUnit.set_text('M');
+          this.diskUnit.text = 'M';
           rw[0] /= 1024;
           rw[1] /= 1024;
           if (rw[0] > 1024 || rw[1] > 1024) {
-            this.diskUnit.set_text('G');
+            this.diskUnit.text = 'G';
             rw[0] /= 1024;
             rw[1] /= 1024;
           }
         } else {
-          this.diskUnit.set_text('K');
+          this.diskUnit.text = 'K';
         }
       }
 
       this.idleDiskOld = idle;
 
-      this.disk.set_text(`${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`);
+      this.disk.text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
     }
 
     refreshEth() {
@@ -641,8 +718,8 @@ var ResourceMonitor = GObject.registerClass(
         }
       }
 
-      var idle = GLib.get_monotonic_time() / 1000; // forse con * 0.001024
-      var delta = (idle - this.idleEthOld) / 1000; // forse no /1000
+      var idle = GLib.get_monotonic_time() / 1000;
+      var delta = (idle - this.idleEthOld) / 1000;
 
       if (delta > 0) {
         for ( var i = 0; i < 2; i++) {
@@ -651,27 +728,27 @@ var ResourceMonitor = GObject.registerClass(
         }
 
         if (du[0] > 1024 || du[1] > 1024) {
-      		this.ethUnit.set_text('K');
+      		this.ethUnit.text = 'K';
       		du[0] /= 1024;
       		du[1] /= 1024;
       		if (du[0] > 1024 || du[1] > 1024) {
-      			this.ethUnit.set_text('M');
+      			this.ethUnit.text = 'M';
       			du[0] /= 1024;
       			du[1] /= 1024;
       			if (du[0] > 1024 || du[1] > 1024) {
-      				this.ethUnit.set_text('G');
+      				this.ethUnit.text = 'G';
       				du[0] /= 1024;
       				du[1] /= 1024;
       			}
       		}
       	} else {
-      		this.ethUnit.set_text('B');
+      		this.ethUnit.text = 'B';
       	}
       }
 
       this.idleEthOld = idle;
 
-      this.eth.set_text(`${du[0].toFixed(1)}|${du[1].toFixed(1)}`);
+      this.eth.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
     }
 
     refreshWlan() {
@@ -690,8 +767,8 @@ var ResourceMonitor = GObject.registerClass(
         }
       }
 
-      var idle = GLib.get_monotonic_time() / 1000; // forse con * 0.001024
-      var delta = (idle - this.idleWlanOld) / 1000; // forse no /1000
+      var idle = GLib.get_monotonic_time() / 1000;
+      var delta = (idle - this.idleWlanOld) / 1000;
 
       if (delta > 0) {
         for ( var i = 0; i < 2; i++) {
@@ -700,32 +777,51 @@ var ResourceMonitor = GObject.registerClass(
         }
 
         if (du[0] > 1024 || du[1] > 1024) {
-      		this.wlanUnit.set_text('K');
+      		this.wlanUnit.text = 'K';
       		du[0] /= 1024;
       		du[1] /= 1024;
       		if (du[0] > 1024 || du[1] > 1024) {
-      			this.wlanUnit.set_text('M');
+      			this.wlanUnit.text = 'M';
       			du[0] /= 1024;
       			du[1] /= 1024;
       			if (du[0] > 1024 || du[1] > 1024) {
-      				this.wlanUnit.set_text('G');
+      				this.wlanUnit.text = 'G';
       				du[0] /= 1024;
       				du[1] /= 1024;
       			}
       		}
       	} else {
-      		this.wlanUnit.set_text('B');
+      		this.wlanUnit.text = 'B';
       	}
       }
 
       this.idleWlanOld = idle;
 
-      this.wlan.set_text(`${du[0].toFixed(1)}|${du[1].toFixed(1)}`);
+      this.wlan.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+    }
+
+    refreshCpuTemperature() {
+      var cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone0/temp';
+      if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
+        var file = Gio.file_new_for_path(cpuTemperatureFile);
+        file.load_contents_async(null, (source, result) => {
+          var contents = source.load_contents_finish(result);
+          var temperature = parseInt(contents[1]) / 1000;
+
+          if (this.cpuTemperatureFahrenheit) {
+            temperature = (temperature * 1,8) + 32;
+          }
+
+          this.cpuTemperature.text = `[${temperature.toFixed(1)}`;
+        });
+      } else {
+        this.cpuTemperature.text = '[Error';
+      }
     }
 });
 
 function init() {
-  Convenience.initTranslations();
+  ExtensionUtils.initTranslations();
 }
 
 function enable() {

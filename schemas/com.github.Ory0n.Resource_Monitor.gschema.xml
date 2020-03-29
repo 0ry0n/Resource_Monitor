@@ -63,6 +63,12 @@
       <description>
       </description>
     </key>
+    <key name="cputemperature" type="b">
+      <default>false</default>
+      <summary>Display Cpu Temperature</summary>
+      <description>
+      </description>
+    </key>
     <key name="widthcpu" type="i">
       <default>35</default>
       <summary>Width Cpu</summary>
@@ -93,6 +99,12 @@
       <description>
       </description>
     </key>
+    <key name="widthcputemperature" type="i">
+      <default>35</default>
+      <summary>Width Cpu Temperature</summary>
+      <description>
+      </description>
+    </key>
     <key name="chosendisk" type="s">
       <default>'All'</default>
       <summary>Selected Disk</summary>
@@ -102,6 +114,12 @@
     <key name="autohide" type="b">
       <default>false</default>
       <summary>Auto Hide Net</summary>
+      <description>
+      </description>
+    </key>
+    <key name="cputemperatureunit" type="b">
+      <default>false</default>
+      <summary>Cpu Temperature Unit Fahrenheit</summary>
       <description>
       </description>
     </key>

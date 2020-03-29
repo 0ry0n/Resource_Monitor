@@ -4,7 +4,8 @@
   "uuid": "Resource_Monitor@Ory0n",
   "shell-version": [
     "3.32",
-    "3.34"
+    "3.34",
+    "3.36"
   ],
   "gettext-domain": "com-github-Ory0n-Resource_Monitor",
   "settings-schema": "com.github.Ory0n.Resource_Monitor",

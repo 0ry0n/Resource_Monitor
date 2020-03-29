@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
+ 'use strict';
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
 const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
@@ -23,24 +24,28 @@ const _ = Gettex.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
-const Convenience = Me.imports.convenience;
 
 function init() {
-  Convenience.initTranslations();
+  ExtensionUtils.initTranslations();
 }
 
 const ResourceMonitorPrefsWidget = GObject.registerClass(
-  class ResourceMonitorPrefsWidget extends Gtk.Grid {
+  class ResourceMonitorPrefsWidget extends Gtk.Notebook {
     _init(params) {
       super._init(params);
 
       // Settings
-      this._settings = Convenience.getSettings();
+      this._settings = ExtensionUtils.getSettings();
 
       // Parent
       this.margin = 12;
-      this.row_spacing = 6;
-      this.orientation = Gtk.Orientation.VERTICAL;
+
+      // GLOBAL
+      let globalFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
 
       // REFRESH
       let alignmentRefresh = new Gtk.Alignment({
@@ -48,12 +53,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         right_padding: 12
       });
 
-      this.add(new Gtk.Label({
-        label: '<b>%s</b>'.format(_('Refresh')),
+      globalFrame.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Refresh Time')),
         use_markup: true,
         halign: Gtk.Align.START
       }));
-      this.add(alignmentRefresh);
+      globalFrame.add(alignmentRefresh);
 
       let gridRefresh = new Gtk.Grid({
         row_spacing: 6
@@ -85,12 +90,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         right_padding: 12
       });
 
-      this.add(new Gtk.Label({
+      globalFrame.add(new Gtk.Label({
         label: '<b>%s</b>'.format(_('Icons')),
         use_markup: true,
         halign: Gtk.Align.START
       }));
-      this.add(alignmentIcons);
+      globalFrame.add(alignmentIcons);
 
       let gridIcons = new Gtk.Grid({
         row_spacing: 6
@@ -109,23 +114,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings.bind('icons', valueIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
       gridIcons.attach(valueIcons, 1, 0, 1, 1);
 
-      // CPU
-      let alignmentCpu = new Gtk.Alignment({
-        left_padding: 12,
-        right_padding: 12
-      });
-
-      this.add(new Gtk.Label({
-        label: '<b>%s</b>'.format(_('Cpu')),
+      this.append_page(globalFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Global')),
         use_markup: true,
-        halign: Gtk.Align.START
+        halign: Gtk.Align.CENTER
       }));
-      this.add(alignmentCpu);
+
+      // CPU
+      let cpuFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
 
       let gridCpu = new Gtk.Grid({
         row_spacing: 6
       });
-      alignmentCpu.add(gridCpu);
+      cpuFrame.add(gridCpu);
 
       gridCpu.attach(new Gtk.Label({
         label: '%s'.format(_('Display')),
@@ -161,23 +166,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       widthCpu.sensitive = valueCpu.active;
       gridCpu.attach(widthCpu, 1, 1, 1, 1);
 
-      // RAM
-      let alignmentRam = new Gtk.Alignment({
-        left_padding: 12,
-        right_padding: 12
-      });
-
-      this.add(new Gtk.Label({
-        label: '<b>%s</b>'.format(_('Ram')),
+      this.append_page(cpuFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Cpu')),
         use_markup: true,
-        halign: Gtk.Align.START
+        halign: Gtk.Align.CENTER
       }));
-      this.add(alignmentRam);
+
+      // RAM
+      let ramFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
 
       let gridRam = new Gtk.Grid({
         row_spacing: 6
       });
-      alignmentRam.add(gridRam);
+      ramFrame.add(gridRam);
 
       gridRam.attach(new Gtk.Label({
         label: '%s'.format(_('Display')),
@@ -213,23 +218,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       widthRam.sensitive = valueRam.active;
       gridRam.attach(widthRam, 1, 1, 1, 1);
 
-      // DISK
-      let alignmentDisk = new Gtk.Alignment({
-        left_padding: 12,
-        right_padding: 12
-      });
-
-      this.add(new Gtk.Label({
-        label: '<b>%s</b>'.format(_('Disk')),
+      this.append_page(ramFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Ram')),
         use_markup: true,
-        halign: Gtk.Align.START
+        halign: Gtk.Align.CENTER
       }));
-      this.add(alignmentDisk);
+
+      // DISK
+      let diskFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
 
       let gridDisk = new Gtk.Grid({
         row_spacing: 6
       });
-      alignmentDisk.add(gridDisk);
+      diskFrame.add(gridDisk);
 
       gridDisk.attach(new Gtk.Label({
         label: '%s'.format(_('Display')),
@@ -281,8 +286,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       combobox.sensitive = valueDisk.active;
       gridDisk.attach(combobox, 1, 2, 1, 1);
 
+      this.append_page(diskFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Disk')),
+        use_markup: true,
+        halign: Gtk.Align.CENTER
+      }));
+
       /**********/
-      //let lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
       let file = GLib.file_get_contents('/proc/diskstats');
       let lines = ('' + file[1]).split('\n');
 
@@ -315,6 +325,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         }
       }
       /**********/
+      let netFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
 
       // AUTO HIDE
       let alignmentAutoHide = new Gtk.Alignment({
@@ -322,12 +337,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         right_padding: 12
       });
 
-      this.add(new Gtk.Label({
+      netFrame.add(new Gtk.Label({
         label: '<b>%s</b>'.format(_('Auto Hide')),
         use_markup: true,
         halign: Gtk.Align.START
       }));
-      this.add(alignmentAutoHide);
+      netFrame.add(alignmentAutoHide);
 
       let gridAutoHide = new Gtk.Grid({
         row_spacing: 6
@@ -352,12 +367,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         right_padding: 12
       });
 
-      this.add(new Gtk.Label({
+      netFrame.add(new Gtk.Label({
         label: '<b>%s</b>'.format(_('Eth')),
         use_markup: true,
         halign: Gtk.Align.START
       }));
-      this.add(alignmentEth);
+      netFrame.add(alignmentEth);
 
       let gridEth= new Gtk.Grid({
         row_spacing: 6
@@ -404,12 +419,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         right_padding: 12
       });
 
-      this.add(new Gtk.Label({
+      netFrame.add(new Gtk.Label({
         label: '<b>%s</b>'.format(_('Wlan')),
         use_markup: true,
         halign: Gtk.Align.START
       }));
-      this.add(alignmentWlan);
+      netFrame.add(alignmentWlan);
 
       let gridWlan = new Gtk.Grid({
         row_spacing: 6
@@ -449,6 +464,95 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       // Init
       widthWlan.sensitive = valueWlan.active;
       gridWlan.attach(widthWlan, 1, 1, 1, 1);
+
+      this.append_page(netFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Net')),
+        use_markup: true,
+        halign: Gtk.Align.CENTER
+      }));
+
+      // TEMPERATURE
+      let temperatureFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
+
+      let alignmentTemperature = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
+
+      temperatureFrame.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Cpu Temperature')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      temperatureFrame.add(alignmentTemperature);
+
+      let gridTemperature = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentTemperature.add(gridTemperature);
+
+      gridTemperature.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueTemperature = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('cputemperature', valueTemperature, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueTemperature.connect('state-set', button => {
+        widthTemperature.sensitive = button.active;
+        valueCpuTemperatureUnit.sensitive = button.active;
+      });
+      gridTemperature.attach(valueTemperature, 1, 0, 1, 1);
+
+      gridTemperature.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
+
+      let widthTemperature = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 22,
+          upper: 44,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthcputemperature', widthTemperature, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+      gridTemperature.attach(new Gtk.Label({
+        label: '%s'.format(_('Fahrenait Unit')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 3, 1, 1);
+
+      let valueCpuTemperatureUnit = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+
+      this._settings.bind('cputemperatureunit', valueCpuTemperatureUnit, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueCpuTemperatureUnit.connect('state-set', button => {
+        valueCpuTemperatureUnit.value = button.active;
+      });
+      gridTemperature.attach(valueCpuTemperatureUnit, 1, 3, 1, 1);
+
+      // Init
+      widthTemperature.sensitive = valueTemperature.active;
+      valueCpuTemperatureUnit.sensitive = valueTemperature.active;
+      gridTemperature.attach(widthTemperature, 1, 1, 1, 1);
+
+      this.append_page(temperatureFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Thermal')),
+        use_markup: true,
+        halign: Gtk.Align.CENTER
+      }));
      }
    }
  );
