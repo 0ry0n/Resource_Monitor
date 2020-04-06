@@ -42,7 +42,7 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 # General Settings
 ![](https://github.com/Ory0n/Resource_Monitor/blob/master/settings.png)
 
-- **Update Interval:** Choose the refresh interval, from 1 to 30 seconds.
+- **Refresh Time:** Choose the refresh interval, from 1 to 30 seconds.
 - **Display Icons:** Display or hide the icons.
 - **Display Cpu:** Display or hide the Cpu field.
 - **Modify Width Cpu:** Resize the Cpu field.
@@ -64,6 +64,12 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 8 (Apr 6, 2020)**
+- Added support for gnome 3.36.
+- Added CPU temperature monitoring.
+- New graphics for extension preferences.
+- Text Bug fixed.
+
 **version 7 (Nov 5, 2019)**
 - Added support for gnome 3.34.
 - Total restyling of the application.
