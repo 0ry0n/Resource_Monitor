@@ -154,8 +154,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthCpu = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 40,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -206,8 +206,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthRam = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 40,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -259,8 +259,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthDisk = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 80,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -401,8 +401,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthEth = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 80,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -454,7 +454,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let widthWlan = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 22,
-          upper: 80,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -518,8 +518,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthTemperature = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 44,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,

@@ -809,7 +809,7 @@ var ResourceMonitor = GObject.registerClass(
           var temperature = parseInt(contents[1]) / 1000;
 
           if (this.cpuTemperatureFahrenheit) {
-            temperature = (temperature * 1,8) + 32;
+            temperature = (temperature * 1.8) + 32;
           }
 
           this.cpuTemperature.text = `[${temperature.toFixed(1)}`;
