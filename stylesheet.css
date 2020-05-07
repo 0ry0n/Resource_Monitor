@@ -18,12 +18,14 @@
  */
 
  .unit {
-   font-size: 8pt;
+   font-size: 0.625em;
    font-weight: normal;
-   padding-top: 5px;
+   padding-top: 0.4em;
  }
 
 .label {
   text-align: right;
-  padding-right: 1px;
+  padding-right: 0.125em;
+  font-size: 1em;
+  font-weight: normal;
 }
