@@ -528,7 +528,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings.bind('widthcputemperature', widthTemperature, 'value', Gio.SettingsBindFlags.DEFAULT);
 
       gridTemperature.attach(new Gtk.Label({
-        label: '%s'.format(_('Fahrenait Unit')),
+        label: '%s'.format(_('Fahrenheit Unit')),
         halign: Gtk.Align.START,
         hexpand: true
       }), 0, 3, 1, 1);
