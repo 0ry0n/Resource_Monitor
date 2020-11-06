@@ -114,6 +114,36 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings.bind('icons', valueIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
       gridIcons.attach(valueIcons, 1, 0, 1, 1);
 
+      // DECIMALS
+      let alignmentDecimals = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
+
+      globalFrame.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Decimals')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      globalFrame.add(alignmentDecimals);
+
+      let gridDecimals = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentDecimals.add(gridDecimals);
+
+      gridDecimals.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueDecimals = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('decimals', valueDecimals, 'active', Gio.SettingsBindFlags.DEFAULT);
+      gridDecimals.attach(valueDecimals, 1, 0, 1, 1);
+
       this.append_page(globalFrame, new Gtk.Label({
         label: '<b>%s</b>'.format(_('Global')),
         use_markup: true,
@@ -154,8 +184,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthCpu = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 40,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -206,8 +236,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthRam = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 40,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -259,8 +289,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthDisk = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 80,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -401,8 +431,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthEth = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 80,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -454,7 +484,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let widthWlan = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 22,
-          upper: 80,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -518,8 +548,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthTemperature = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
-          upper: 44,
+          lower: 1,
+          upper: 500,
           step_increment: 1
         }),
         halign: Gtk.Align.END,
@@ -528,7 +558,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings.bind('widthcputemperature', widthTemperature, 'value', Gio.SettingsBindFlags.DEFAULT);
 
       gridTemperature.attach(new Gtk.Label({
-        label: '%s'.format(_('Fahrenait Unit')),
+        label: '%s'.format(_('Fahrenheit Unit')),
         halign: Gtk.Align.START,
         hexpand: true
       }), 0, 3, 1, 1);

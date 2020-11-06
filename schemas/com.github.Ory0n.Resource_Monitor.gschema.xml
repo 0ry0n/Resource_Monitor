@@ -123,5 +123,11 @@
       <description>
       </description>
     </key>
+    <key name="decimals" type="b">
+      <default>true</default>
+      <summary>Show Decimals</summary>
+      <description>
+      </description>
+    </key>
   </schema>
 </schemalist>
