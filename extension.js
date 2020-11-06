@@ -37,6 +37,7 @@ var IndicatorName = Me.metadata['name'];
 
 const INTERVAL = 'interval';
 const ICONS = 'icons';
+const DECIMALS = 'decimals';
 const CPU = 'cpu';
 const RAM = 'ram';
 const DISK = 'disk';
@@ -104,6 +105,11 @@ var ResourceMonitor = GObject.registerClass(
       this.displayIcons;
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${ICONS}`, this.iconsChange.bind(this));
       this.iconsChange();
+
+      // Decimals
+      this.displayDecimals;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DECIMALS}`, this.decimalsChange.bind(this));
+      this.decimalsChange();
 
       // Cpu
       this.enCpu;
@@ -394,6 +400,10 @@ var ResourceMonitor = GObject.registerClass(
     	}
     }
 
+    decimalsChange() {
+      this.displayDecimals = this._settings.get_boolean(DECIMALS);
+    }
+
     cpuChange() {
     	this.enCpu = this._settings.get_boolean(CPU);
     	if (this.enCpu) {
@@ -610,7 +620,11 @@ var ResourceMonitor = GObject.registerClass(
       this.cpuTotOld = cpuTot;
       this.idleOld = idle;
 
-      this.cpu.text = `${cpuCurr.toFixed(1)}`;
+      if (this.displayDecimals) {
+        this.cpu.text = `${cpuCurr.toFixed(1)}`;
+      } else {
+        this.cpu.text = `${cpuCurr.toFixed(0)}`;
+      }
     }
 
     refreshRam() {
@@ -638,7 +652,11 @@ var ResourceMonitor = GObject.registerClass(
 
       used = total - free - buffer - cached;
 
-      this.ram.text = `${(100*used/total).toFixed(1)}`;
+      if (this.displayDecimals) {
+        this.ram.text = `${(100*used/total).toFixed(1)}`;
+      } else {
+        this.ram.text = `${(100*used/total).toFixed(0)}`;
+      }
     }
 
     refreshDisk() {
@@ -699,7 +717,11 @@ var ResourceMonitor = GObject.registerClass(
 
       this.idleDiskOld = idle;
 
-      this.disk.text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+      if (this.displayDecimals) {
+        this.disk.text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+      } else {
+        this.disk.text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
+      }
     }
 
     refreshEth() {
@@ -748,7 +770,11 @@ var ResourceMonitor = GObject.registerClass(
 
       this.idleEthOld = idle;
 
-      this.eth.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+      if (this.displayDecimals) {
+        this.eth.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+      } else {
+        this.eth.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
+      }
     }
 
     refreshWlan() {
@@ -797,7 +823,11 @@ var ResourceMonitor = GObject.registerClass(
 
       this.idleWlanOld = idle;
 
-      this.wlan.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+      if (this.displayDecimals) {
+        this.wlan.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+      } else {
+        this.wlan.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
+      }
     }
 
     refreshCpuTemperature() {
@@ -812,7 +842,11 @@ var ResourceMonitor = GObject.registerClass(
             temperature = (temperature * 1.8) + 32;
           }
 
-          this.cpuTemperature.text = `[${temperature.toFixed(1)}`;
+          if (this.displayDecimals) {
+            this.cpuTemperature.text = `[${temperature.toFixed(1)}`;
+          } else {
+            this.cpuTemperature.text = `[${temperature.toFixed(0)}`;
+          }
         });
       } else {
         this.cpuTemperature.text = '[Error';
