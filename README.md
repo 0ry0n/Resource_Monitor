@@ -15,27 +15,27 @@ You can get this extension:
 ### Using the latest release
 1. Unzip the file `Resource_Monitor-x.zip`.
 2. Move the `Resource_Monitor-x` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Activate the extensions with Gnome Tweak Tool.
+3. Activate the extensions with Gnome Extensions.
 
 For example...
 ```
 unzip Resource_Monitor-x.zip
 mv Resource_Monitor-x ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
 
-gnome-shell-extension-tool -e Resource_Monitor@Ory0n
+gnome-extensions enable Resource_Monitor@Ory0n
 ```
 
 ### Cloning the repository
 1. Clone the Master repository.
 2. Move the `Resource_Monitor` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Activate the extensions with Gnome Tweak Tool.
+3. Activate the extensions with Gnome Extensions.
 
 For example...
 ```
 git clone https://github.com/Ory0n/Resource_Monitor
 mv Resource_Monitor ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
 
-gnome-shell-extension-tool -e Resource_Monitor@Ory0n
+gnome-extensions enable Resource_Monitor@Ory0n
 ```
 Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 
@@ -44,6 +44,7 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 
 - **Refresh Time:** Choose the refresh interval, from 1 to 30 seconds.
 - **Display Icons:** Display or hide the icons.
+- **Display Decimals:** Display or hide decimal numbers.
 - **Display Cpu:** Display or hide the Cpu field.
 - **Modify Width Cpu:** Resize the Cpu field.
 - **Display Ram:** Display or hide the Ram field.
@@ -64,6 +65,11 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 9 (Nov 6, 2020)**
+- Added support for gnome 3.38.
+- Added Display Decimals function.
+- Text Bug fixed.
+
 **version 8 (Apr 6, 2020)**
 - Added support for gnome 3.36.
 - Added CPU temperature monitoring.
