@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
- 'use strict';
+'use strict';
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
 const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
@@ -143,6 +143,36 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
       this._settings.bind('decimals', valueDecimals, 'active', Gio.SettingsBindFlags.DEFAULT);
       gridDecimals.attach(valueDecimals, 1, 0, 1, 1);
+
+      // ENABLE SHOW SYSTEM MONITOR
+      let alignmentShowSM = new Gtk.Alignment({
+        left_padding: 12,
+        right_padding: 12
+      });
+
+      globalFrame.add(new Gtk.Label({
+        label: '<b>%s</b>'.format(_('System Monitor')),
+        use_markup: true,
+        halign: Gtk.Align.START
+      }));
+      globalFrame.add(alignmentShowSM);
+
+      let gridShowSM = new Gtk.Grid({
+        row_spacing: 6
+      });
+      alignmentShowSM.add(gridShowSM);
+
+      gridShowSM.attach(new Gtk.Label({
+        label: '%s'.format(_('Show System Monitor when clicking on extension')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueShowSM = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('showsystemmonitor', valueShowSM, 'active', Gio.SettingsBindFlags.DEFAULT);
+      gridShowSM.attach(valueShowSM, 1, 0, 1, 1);
 
       this.append_page(globalFrame, new Gtk.Label({
         label: '<b>%s</b>'.format(_('Global')),
@@ -329,7 +359,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let current = this._settings.get_string('chosendisk');
 
       let x = 1;
-      let disks = [ 'All' ];
+      let disks = ['All'];
 
       combobox.insert_text(0, 'All');
 
@@ -404,7 +434,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       }));
       netFrame.add(alignmentEth);
 
-      let gridEth= new Gtk.Grid({
+      let gridEth = new Gtk.Grid({
         row_spacing: 6
       });
       alignmentEth.add(gridEth);
@@ -483,7 +513,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       let widthWlan = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
-          lower: 22,
+          lower: 1,
           upper: 500,
           step_increment: 1
         }),
@@ -583,13 +613,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         use_markup: true,
         halign: Gtk.Align.CENTER
       }));
-     }
-   }
- );
+    }
+  }
+);
 
- function buildPrefsWidget() {
-   let widget = new ResourceMonitorPrefsWidget();
-   widget.show_all();
+function buildPrefsWidget() {
+  let widget = new ResourceMonitorPrefsWidget();
+  widget.show_all();
 
-   return widget;
+  return widget;
 }

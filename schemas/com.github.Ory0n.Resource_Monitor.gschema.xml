@@ -129,5 +129,11 @@
       <description>
       </description>
     </key>
+    <key name="showsystemmonitor" type="b">
+      <default>true</default>
+      <summary>Show System Monitor</summary>
+      <description>
+      </description>
+    </key>
   </schema>
 </schemalist>

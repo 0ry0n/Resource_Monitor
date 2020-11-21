@@ -38,6 +38,7 @@ var IndicatorName = Me.metadata['name'];
 const INTERVAL = 'interval';
 const ICONS = 'icons';
 const DECIMALS = 'decimals';
+const SYSTEMMONITOR = 'showsystemmonitor';
 const CPU = 'cpu';
 const RAM = 'ram';
 const DISK = 'disk';
@@ -110,6 +111,11 @@ var ResourceMonitor = GObject.registerClass(
       this.displayDecimals;
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${DECIMALS}`, this.decimalsChange.bind(this));
       this.decimalsChange();
+
+      // Show System Monitor
+      this.displaySystemMonitor;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${SYSTEMMONITOR}`, this.systemMonitorChange.bind(this));
+      this.systemMonitorChange();
 
       // Cpu
       this.enCpu;
@@ -216,27 +222,27 @@ var ResourceMonitor = GObject.registerClass(
 
       // Icon
       this.cpuIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({name: 'computer-symbolic'}),
+        gicon: new Gio.ThemedIcon({ name: 'computer-symbolic' }),
         style_class: 'system-status-icon'
       });
 
       this.ramIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({name: 'emblem-system-symbolic'}),
+        gicon: new Gio.ThemedIcon({ name: 'emblem-system-symbolic' }),
         style_class: 'system-status-icon'
       });
 
       this.diskIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({name: 'drive-harddisk-symbolic'}),
+        gicon: new Gio.ThemedIcon({ name: 'drive-harddisk-symbolic' }),
         style_class: 'system-status-icon'
       });
 
-      this.ethIco  = new St.Icon({
-        gicon: new Gio.ThemedIcon({name: 'network-wired-symbolic'}),
+      this.ethIco = new St.Icon({
+        gicon: new Gio.ThemedIcon({ name: 'network-wired-symbolic' }),
         style_class: 'system-status-icon'
       });
 
       this.wlanIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({name: 'network-wireless-symbolic'}),
+        gicon: new Gio.ThemedIcon({ name: 'network-wireless-symbolic' }),
         style_class: 'system-status-icon'
       });
 
@@ -368,83 +374,89 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     _openSystemMonitor() {
-      var app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
+      if (this.displaySystemMonitor) {
+        var app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
 
-      if (app != null)
-        app.activate();
-      else
-        Util.spawn(['gnome-system-monitor']);
+        if (app != null)
+          app.activate();
+        else
+          Util.spawn(['gnome-system-monitor']);
+      }
     }
 
     /** Signals Handler **/
 
     iconsChange() {
       this.displayIcons = this._settings.get_boolean(ICONS);
-    	if (this.displayIcons) {
-    		if (this.enCpu)
-    			this.cpuIco.show();
-    		if (this.enRam)
-    			this.ramIco.show();
-    		if (this.enDisk)
-    			this.diskIco.show();
-    		if (this.enEth)
-    			this.ethIco.show();
-    		if (this.enWlan)
-    			this.wlanIco.show();
-    	} else {
-    		this.cpuIco.hide();
-    		this.ramIco.hide();
-    		this.diskIco.hide();
-    		this.ethIco.hide();
-    		this.wlanIco.hide();
-    	}
+      if (this.displayIcons) {
+        if (this.enCpu)
+          this.cpuIco.show();
+        if (this.enRam)
+          this.ramIco.show();
+        if (this.enDisk)
+          this.diskIco.show();
+        if (this.enEth)
+          this.ethIco.show();
+        if (this.enWlan)
+          this.wlanIco.show();
+      } else {
+        this.cpuIco.hide();
+        this.ramIco.hide();
+        this.diskIco.hide();
+        this.ethIco.hide();
+        this.wlanIco.hide();
+      }
     }
 
     decimalsChange() {
       this.displayDecimals = this._settings.get_boolean(DECIMALS);
     }
 
+    systemMonitorChange() {
+      this.displaySystemMonitor = this._settings.get_boolean(SYSTEMMONITOR);
+    }
+
     cpuChange() {
-    	this.enCpu = this._settings.get_boolean(CPU);
-    	if (this.enCpu) {
-    		if (this.displayIcons)
-    			this.cpuIco.show();
-    		this.cpu.show();
-    		this.cpuUnit.show();
-    	} else {
+      this.enCpu = this._settings.get_boolean(CPU);
+      if (this.enCpu) {
+        if (this.displayIcons)
+          this.cpuIco.show();
+        this.cpu.show();
+        this.cpuUnit.show();
+      } else {
         if (!this.enCpuTemperature)
-    		  this.cpuIco.hide();
-    		this.cpu.hide();
-    		this.cpuUnit.hide();
-    	}
+          this.cpuIco.hide();
+        this.cpu.hide();
+        this.cpuUnit.hide();
+      }
     }
 
     ramChange() {
-    	this.enRam = this._settings.get_boolean(RAM);
-    	if (this.enRam) {
-    		if (this.displayIcons)
-    			this.ramIco.show();
-    		this.ram.show();
-    		this.ramUnit.show();
-    	} else {
-    		this.ramIco.hide();
-    		this.ram.hide();
-    		this.ramUnit.hide();
-    	}
+      this.enRam = this._settings.get_boolean(RAM);
+      if (this.enRam) {
+        if (this.displayIcons)
+          this.ramIco.show();
+        this.ram.show();
+        this.ramUnit.show();
+      } else {
+        this.ramIco.hide();
+        this.ram.hide();
+        this.ramUnit.hide();
+      }
     }
 
     diskChange() {
-    	this.enDisk = this._settings.get_boolean(DISK);
-    	if (this.enDisk) {
-    		if (this.displayIcons)
-    			this.diskIco.show();
-    		this.disk.show();
-    		this.diskUnit.show();
-    	} else {
-    		this.diskIco.hide();
-    		this.disk.hide();
-    		this.diskUnit.hide();
-    	}
+      this.enDisk = this._settings.get_boolean(DISK);
+      if (this.enDisk) {
+        if (this.displayIcons)
+          this.diskIco.show();
+        this.disk.show();
+        this.diskUnit.show();
+      } else {
+        this.diskIco.hide();
+        this.disk.hide();
+        this.diskUnit.hide();
+      }
     }
 
     getSettingsEth() {
@@ -454,16 +466,16 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     ethChange() {
-    	if ((this.enEth && this.onEth) || (this.enEth && !this.enHide)) {
-    		if (this.displayIcons)
-    			this.ethIco.show();
-    		this.eth.show();
-    		this.ethUnit.show();
-    	} else {
-    		this.ethIco.hide();
-    		this.eth.hide();
-    		this.ethUnit.hide();
-    	}
+      if ((this.enEth && this.onEth) || (this.enEth && !this.enHide)) {
+        if (this.displayIcons)
+          this.ethIco.show();
+        this.eth.show();
+        this.ethUnit.show();
+      } else {
+        this.ethIco.hide();
+        this.eth.hide();
+        this.ethUnit.hide();
+      }
     }
 
     getSettingsWlan() {
@@ -473,37 +485,37 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     wlanChange() {
-    	if ((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide)) {
-    		if (this.displayIcons)
-    			this.wlanIco.show();
-    		this.wlan.show();
-    		this.wlanUnit.show();
-    	} else {
-    		this.wlanIco.hide();
-    		this.wlan.hide();
-    		this.wlanUnit.hide();
-    	}
+      if ((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide)) {
+        if (this.displayIcons)
+          this.wlanIco.show();
+        this.wlan.show();
+        this.wlanUnit.show();
+      } else {
+        this.wlanIco.hide();
+        this.wlan.hide();
+        this.wlanUnit.hide();
+      }
     }
 
     hideChange() {
-    	this.enHide = this._settings.get_boolean(AUTO_HIDE);
-    	if (this.enHide) {
-    		this.refreshHide();
-    	} else {
+      this.enHide = this._settings.get_boolean(AUTO_HIDE);
+      if (this.enHide) {
+        this.refreshHide();
+      } else {
         if (this.timerHide) {
           Mainloop.source_remove(this.timerHide);
           this.timerHide = null;
         }
 
-    		this.onEth = true;
-    		this.onWlan = true;
-    		this.ethChange();
-    		this.wlanChange();
-    	}
+        this.onEth = true;
+        this.onWlan = true;
+        this.ethChange();
+        this.wlanChange();
+      }
     }
 
     chosenDiskChange() {
-    	this.chosenDisk = this._settings.get_string(CHOSEN_DISK);
+      this.chosenDisk = this._settings.get_string(CHOSEN_DISK);
       this.idleDiskOld = 0;
       this.rwTotOld = [0, 0];
     }
@@ -628,34 +640,28 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshRam() {
-      var total, free, buffer, cached, used;
+      var total, available, used;
       var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
 
-      for (var i = 0; i < 5; i++) {
+      for (var i = 0; i < 3; i++) {
         var values;
         var line = lines[i];
 
         if (line.match(/^MemTotal/)) {
           values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
           total = parseInt(values[1]);
-        } else if (line.match(/^MemFree/)) {
-          values = line.match(/^MemFree:\s*([^ ]*)\s*([^ ]*)$/);
-          free = parseInt(values[1]);
-        }	else if (line.match(/^Buffers/)) {
-          values = line.match(/^Buffers:\s*([^ ]*)\s*([^ ]*)$/);
-          buffer = parseInt(values[1]);
-        }	else if (line.match(/^Cached/)) {
-          values = line.match(/^Cached:\s*([^ ]*)\s*([^ ]*)$/);
-          cached = parseInt(values[1]);
+        } else if (line.match(/^MemAvailable/)) {
+          values = line.match(/^MemAvailable:\s*([^ ]*)\s*([^ ]*)$/);
+          available = parseInt(values[1]);
         }
       }
 
-      used = total - free - buffer - cached;
+      used = total - available;
 
       if (this.displayDecimals) {
-        this.ram.text = `${(100*used/total).toFixed(1)}`;
+        this.ram.text = `${(100 * used / total).toFixed(1)}`;
       } else {
-        this.ram.text = `${(100*used/total).toFixed(0)}`;
+        this.ram.text = `${(100 * used / total).toFixed(0)}`;
       }
     }
 
@@ -696,8 +702,8 @@ var ResourceMonitor = GObject.registerClass(
       var delta = (idle - this.idleDiskOld) / 1000;
 
       if (delta > 0) {
-        for ( var i = 0; i < 2; i++) {
-          rw[i] =  (rwTot[i] - this.rwTotOld[i]) / delta;
+        for (var i = 0; i < 2; i++) {
+          rw[i] = (rwTot[i] - this.rwTotOld[i]) / delta;
           this.rwTotOld[i] = rwTot[i];
         }
 
@@ -744,28 +750,28 @@ var ResourceMonitor = GObject.registerClass(
       var delta = (idle - this.idleEthOld) / 1000;
 
       if (delta > 0) {
-        for ( var i = 0; i < 2; i++) {
-          du[i] =  (duTot[i] - this.duTotEthOld[i]) / delta;
+        for (var i = 0; i < 2; i++) {
+          du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
           this.duTotEthOld[i] = duTot[i];
         }
 
         if (du[0] > 1024 || du[1] > 1024) {
-      		this.ethUnit.text = 'K';
-      		du[0] /= 1024;
-      		du[1] /= 1024;
-      		if (du[0] > 1024 || du[1] > 1024) {
-      			this.ethUnit.text = 'M';
-      			du[0] /= 1024;
-      			du[1] /= 1024;
-      			if (du[0] > 1024 || du[1] > 1024) {
-      				this.ethUnit.text = 'G';
-      				du[0] /= 1024;
-      				du[1] /= 1024;
-      			}
-      		}
-      	} else {
-      		this.ethUnit.text = 'B';
-      	}
+          this.ethUnit.text = 'K';
+          du[0] /= 1024;
+          du[1] /= 1024;
+          if (du[0] > 1024 || du[1] > 1024) {
+            this.ethUnit.text = 'M';
+            du[0] /= 1024;
+            du[1] /= 1024;
+            if (du[0] > 1024 || du[1] > 1024) {
+              this.ethUnit.text = 'G';
+              du[0] /= 1024;
+              du[1] /= 1024;
+            }
+          }
+        } else {
+          this.ethUnit.text = 'B';
+        }
       }
 
       this.idleEthOld = idle;
@@ -797,28 +803,28 @@ var ResourceMonitor = GObject.registerClass(
       var delta = (idle - this.idleWlanOld) / 1000;
 
       if (delta > 0) {
-        for ( var i = 0; i < 2; i++) {
-          du[i] =  (duTot[i] - this.duTotWlanOld[i]) / delta;
+        for (var i = 0; i < 2; i++) {
+          du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
           this.duTotWlanOld[i] = duTot[i];
         }
 
         if (du[0] > 1024 || du[1] > 1024) {
-      		this.wlanUnit.text = 'K';
-      		du[0] /= 1024;
-      		du[1] /= 1024;
-      		if (du[0] > 1024 || du[1] > 1024) {
-      			this.wlanUnit.text = 'M';
-      			du[0] /= 1024;
-      			du[1] /= 1024;
-      			if (du[0] > 1024 || du[1] > 1024) {
-      				this.wlanUnit.text = 'G';
-      				du[0] /= 1024;
-      				du[1] /= 1024;
-      			}
-      		}
-      	} else {
-      		this.wlanUnit.text = 'B';
-      	}
+          this.wlanUnit.text = 'K';
+          du[0] /= 1024;
+          du[1] /= 1024;
+          if (du[0] > 1024 || du[1] > 1024) {
+            this.wlanUnit.text = 'M';
+            du[0] /= 1024;
+            du[1] /= 1024;
+            if (du[0] > 1024 || du[1] > 1024) {
+              this.wlanUnit.text = 'G';
+              du[0] /= 1024;
+              du[1] /= 1024;
+            }
+          }
+        } else {
+          this.wlanUnit.text = 'B';
+        }
       }
 
       this.idleWlanOld = idle;
@@ -852,7 +858,7 @@ var ResourceMonitor = GObject.registerClass(
         this.cpuTemperature.text = '[Error';
       }
     }
-});
+  });
 
 function init() {
   ExtensionUtils.initTranslations();
