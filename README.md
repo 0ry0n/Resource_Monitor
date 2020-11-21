@@ -45,6 +45,7 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 - **Refresh Time:** Choose the refresh interval, from 1 to 30 seconds.
 - **Display Icons:** Display or hide the icons.
 - **Display Decimals:** Display or hide decimal numbers.
+- **System Monitor:** Show or not Gnome System Monitor when clicking on extension.
 - **Display Cpu:** Display or hide the Cpu field.
 - **Modify Width Cpu:** Resize the Cpu field.
 - **Display Ram:** Display or hide the Ram field.
@@ -57,7 +58,6 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 - **Modify Width Eth:** Resize the Eth field.
 - **Display Wlan:** Display or hide the Wlan field.
 - **Modify Width Wlan:** Resize the Wlan field.
-- **Gnome System Monitor:** Clicking on the extension will open Gnome System Monitor.
 
 ![](https://github.com/Ory0n/Resource_Monitor/blob/master/system-monitor.png)
 
@@ -65,6 +65,10 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/Ory0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 10 (Nov 21, 2020)**
+- Ram fix.
+- Added show or not Gnome System Monitor when clicking on extension.
+
 **version 9 (Nov 6, 2020)**
 - Added support for gnome 3.38.
 - Added Display Decimals function.
