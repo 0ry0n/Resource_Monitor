@@ -26,6 +26,12 @@
       <description>
       </description>
     </key>
+    <key name="swap" type="b">
+      <default>true</default>
+      <summary>Display Swap</summary>
+      <description>
+      </description>
+    </key>
     <key name="disk" type="b">
       <default>true</default>
       <summary>Display Disk</summary>
@@ -59,6 +65,12 @@
     <key name="widthram" type="i">
       <default>35</default>
       <summary>Width Ram</summary>
+      <description>
+      </description>
+    </key>
+    <key name="widthswap" type="i">
+      <default>35</default>
+      <summary>Width Swap</summary>
       <description>
       </description>
     </key>
