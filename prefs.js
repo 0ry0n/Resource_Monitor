@@ -284,6 +284,58 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         halign: Gtk.Align.CENTER
       }));
 
+      // SWAP
+      let swapFrame = new Gtk.Grid({
+        margin: 12,
+        row_spacing: 6,
+        orientation: Gtk.Orientation.VERTICAL
+      });
+
+      let gridSwap = new Gtk.Grid({
+        row_spacing: 6
+      });
+      swapFrame.add(gridSwap);
+
+      gridSwap.attach(new Gtk.Label({
+        label: '%s'.format(_('Display')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 0, 1, 1);
+
+      let valueSwap = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('swap', valueSwap, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueSwap.connect('state-set', button => {
+        widthSwap.sensitive = button.active;
+      });
+      gridSwap.attach(valueSwap, 1, 0, 1, 1);
+
+      gridSwap.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 1, 1, 1);
+
+      let widthSwap = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 1,
+          upper: 500,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthswap', widthSwap, 'value', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      widthSwap.sensitive = valueSwap.active;
+      gridSwap.attach(widthSwap, 1, 1, 1, 1);
+
+      this.append_page(swapFrame, new Gtk.Label({
+        label: '<b>%s</b>'.format(_('Swap')),
+        use_markup: true,
+        halign: Gtk.Align.CENTER
+      }));
+
       // DISK
       let diskFrame = new Gtk.Grid({
         margin: 12,

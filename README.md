@@ -50,6 +50,8 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 - **Modify Width Cpu:** Resize the Cpu field.
 - **Display Ram:** Display or hide the Ram field.
 - **Modify Width Ram:** Resize the Ram field.
+- **Display Swap:** Display or hide the Swap field.
+- **Modify Width Swap:** Resize the Swap field.
 - **Display Disk:** Display or hide the Disk field.
 - **Chose Disk:** Lets you choose the drive or memory partition to monitor.
 - **Modify Width Disk:** Resize the Disk field.
