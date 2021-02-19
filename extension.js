@@ -41,6 +41,7 @@ const DECIMALS = 'decimals';
 const SYSTEMMONITOR = 'showsystemmonitor';
 const CPU = 'cpu';
 const RAM = 'ram';
+const SWAP = 'swap';
 const DISK = 'disk';
 const ETH = 'eth';
 const WLAN = 'wlan';
@@ -49,6 +50,7 @@ const CHOSEN_DISK = 'chosendisk';
 const AUTO_HIDE = 'autohide';
 const WIDTH_CPU = 'widthcpu';
 const WIDTH_RAM = 'widthram';
+const WIDTH_SWAP = 'widthswap';
 const WIDTH_DISK = 'widthdisk';
 const WIDTH_ETH = 'widtheth';
 const WIDTH_WLAN = 'widthwlan';
@@ -127,6 +129,11 @@ var ResourceMonitor = GObject.registerClass(
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${RAM}`, this.ramChange.bind(this));
       this.ramChange();
 
+      // SWAP
+      this.enSwap;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${SWAP}`, this.swapChange.bind(this));
+      this.swapChange();
+
       // Disk
       this.enDisk;
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK}`, this.diskChange.bind(this));
@@ -184,6 +191,12 @@ var ResourceMonitor = GObject.registerClass(
       });
       this.ram.width = this._settings.get_int(WIDTH_RAM);
 
+      // Swap
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_SWAP}`, () => {
+        this.swap.width = this._settings.get_int(WIDTH_SWAP);
+      });
+      this.swap.width = this._settings.get_int(WIDTH_SWAP);
+
       // Disk
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK}`, () => {
         this.disk.width = this._settings.get_int(WIDTH_DISK);
@@ -231,6 +244,11 @@ var ResourceMonitor = GObject.registerClass(
         style_class: 'system-status-icon'
       });
 
+      this.swapIco = new St.Icon({
+        gicon: new Gio.ThemedIcon({ name: 'system-run-symbolic' }),
+        style_class: 'system-status-icon'
+      });
+
       this.diskIco = new St.Icon({
         gicon: new Gio.ThemedIcon({ name: 'drive-harddisk-symbolic' }),
         style_class: 'system-status-icon'
@@ -254,6 +272,12 @@ var ResourceMonitor = GObject.registerClass(
       });
 
       this.ramUnit = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: '%',
+        style_class: 'unit'
+      });
+
+      this.swapUnit = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: '%',
         style_class: 'unit'
@@ -293,6 +317,12 @@ var ResourceMonitor = GObject.registerClass(
       this.ram = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: RAM,
+        style_class: 'label'
+      });
+
+      this.swap = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: SWAP,
         style_class: 'label'
       });
 
@@ -337,6 +367,10 @@ var ResourceMonitor = GObject.registerClass(
       this.box.add(this.ram);
       this.box.add(this.ramUnit);
       this.box.add(this.ramIco);
+
+      this.box.add(this.swap);
+      this.box.add(this.swapUnit);
+      this.box.add(this.swapIco);
 
       this.box.add(this.disk);
       this.box.add(this.diskUnit);
@@ -393,6 +427,8 @@ var ResourceMonitor = GObject.registerClass(
           this.cpuIco.show();
         if (this.enRam)
           this.ramIco.show();
+        if (this.enSwap)
+          this.swapIco.show();
         if (this.enDisk)
           this.diskIco.show();
         if (this.enEth)
@@ -402,6 +438,7 @@ var ResourceMonitor = GObject.registerClass(
       } else {
         this.cpuIco.hide();
         this.ramIco.hide();
+        this.swapIco.hide();
         this.diskIco.hide();
         this.ethIco.hide();
         this.wlanIco.hide();
@@ -442,6 +479,20 @@ var ResourceMonitor = GObject.registerClass(
         this.ramIco.hide();
         this.ram.hide();
         this.ramUnit.hide();
+      }
+    }
+
+    swapChange() {
+      this.enSwap = this._settings.get_boolean(SWAP);
+      if (this.enSwap) {
+        if (this.displayIcons)
+          this.swapIco.show();
+        this.swap.show();
+        this.swapUnit.show();
+      } else {
+        this.swapIco.hide();
+        this.swap.hide();
+        this.swapUnit.hide();
       }
     }
 
@@ -544,6 +595,8 @@ var ResourceMonitor = GObject.registerClass(
         this.refreshCpu();
       if (this.enRam)
         this.refreshRam();
+      if (this.enSwap)
+        this.refreshSwap();
       if (this.enDisk)
         this.refreshDisk();
       if (this.enEth)
@@ -662,6 +715,32 @@ var ResourceMonitor = GObject.registerClass(
         this.ram.text = `${(100 * used / total).toFixed(1)}`;
       } else {
         this.ram.text = `${(100 * used / total).toFixed(0)}`;
+      }
+    }
+
+    refreshSwap() {
+      var total, available, used;
+      var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
+
+      for (var i = 0; i < 16; i++) {
+        var values;
+        var line = lines[i];
+
+        if (line.match(/^SwapTotal/)) {
+          values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
+          total = parseInt(values[1]);
+        } else if (line.match(/^SwapFree/)) {
+          values = line.match(/^SwapFree:\s*([^ ]*)\s*([^ ]*)$/);
+          available = parseInt(values[1]);
+        }
+      }
+
+      used = total - available;
+
+      if (this.displayDecimals) {
+        this.swap.text = `${(100 * used / total).toFixed(1)}`;
+      } else {
+        this.swap.text = `${(100 * used / total).toFixed(0)}`;
       }
     }
 
