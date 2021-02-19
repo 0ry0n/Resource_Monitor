@@ -1,5 +1,8 @@
+/* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* exported init enable disable */
+
 /*
- * Resource_Monitor is Copyright © 2018-2020 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2021 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *

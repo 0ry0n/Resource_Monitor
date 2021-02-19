@@ -1,5 +1,8 @@
+/* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
+/* exported init enable disable */
+
 /*
- * Resource_Monitor is Copyright © 2018-2020 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2021 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
@@ -16,6 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
+
 'use strict';
 
 const { St, GObject, NM, GLib, Shell, Gio, Clutter } = imports.gi;
@@ -24,9 +28,8 @@ const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 
 const Util = imports.misc.util;
-const Mainloop = imports.mainloop;
 
-const Gettext = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
+const Gettext = imports.gettext.domain('com-github-0ry0n-Resource_Monitor');
 const _ = Gettext.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -62,6 +65,11 @@ const INTERVAL_HIDE = 2;
 
 var ResourceMonitor = GObject.registerClass(
   class ResourceMonitor extends PanelMenu.Button {
+
+    test(device) {
+      Main.notify('Message Title', device.get_device_type());
+    }
+
     _init(params) {
       super._init(params, IndicatorName);
       this.actor.connect('button-press-event', this._openSystemMonitor.bind(this));
@@ -69,6 +77,8 @@ var ResourceMonitor = GObject.registerClass(
       this._settings = ExtensionUtils.getSettings();
 
       this.client = NM.Client.new(null);
+
+      this.client.connect('any-device-added', this.test.bind(this));
 
       /** ### **/
 
@@ -97,11 +107,11 @@ var ResourceMonitor = GObject.registerClass(
         this.interval = this._settings.get_int(INTERVAL);
 
         if (this.timer) {
-          Mainloop.source_remove(this.timer);
+          GLib.source_remove(this.timer);
           this.timer = null;
         }
 
-        this.timer = Mainloop.timeout_add_seconds(this.interval, this.refresh.bind(this));
+        this.timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this.interval, this.refresh.bind(this));
       });
 
       // Icons
@@ -221,13 +231,15 @@ var ResourceMonitor = GObject.registerClass(
       });
       this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
 
-      /** ### ### ### ### **/
+      /** ### Setup Refresh Timers ### **/
 
       this.timerHide;
-      this.refreshHide();
+      this.timerHide = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, INTERVAL_HIDE, this.refreshHide.bind(this));
+      //this.refreshHide();
 
       this.timer;
-      this.refresh();
+      this.timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this.interval, this.refresh.bind(this));
+      //this.refresh();
     }
 
     initUI() {
@@ -389,12 +401,12 @@ var ResourceMonitor = GObject.registerClass(
 
     destroy() {
       if (this.timerHide) {
-        Mainloop.source_remove(this.timerHide);
+        GLib.source_remove(this.timerHide);
         this.timerHide = null;
       }
 
       if (this.timer) {
-        Mainloop.source_remove(this.timer);
+        GLib.source_remove(this.timer);
         this.timer = null;
       }
 
@@ -551,12 +563,13 @@ var ResourceMonitor = GObject.registerClass(
     hideChange() {
       this.enHide = this._settings.get_boolean(AUTO_HIDE);
       if (this.enHide) {
+        //this.timerHide = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, INTERVAL_HIDE, this.refreshHide.bind(this));
         this.refreshHide();
       } else {
-        if (this.timerHide) {
-          Mainloop.source_remove(this.timerHide);
+        /*if (this.timerHide) {
+          GLib.source_remove(this.timerHide);
           this.timerHide = null;
-        }
+        }*/
 
         this.onEth = true;
         this.onWlan = true;
@@ -606,12 +619,7 @@ var ResourceMonitor = GObject.registerClass(
       if (this.enCpuTemperature)
         this.refreshCpuTemperature();
 
-      if (this.timer) {
-        Mainloop.source_remove(this.timer);
-        this.timer = null;
-      }
-
-      this.timer = Mainloop.timeout_add_seconds(this.interval, this.refresh.bind(this));
+      return true;
     }
 
     refreshHide() {
@@ -659,12 +667,7 @@ var ResourceMonitor = GObject.registerClass(
         this.wlanChange();
       }
 
-      if (this.timerHide) {
-        Mainloop.source_remove(this.timerHide);
-        this.timerHide = null;
-      }
-
-      this.timerHide = Mainloop.timeout_add_seconds(INTERVAL_HIDE, this.refreshHide.bind(this));
+      return true;
     }
 
     refreshCpu() {
