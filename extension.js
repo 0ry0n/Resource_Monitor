@@ -61,15 +61,8 @@ const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
 
 const CPUTEMPERATUREUNIT = 'cputemperatureunit';
 
-const INTERVAL_HIDE = 2;
-
 var ResourceMonitor = GObject.registerClass(
   class ResourceMonitor extends PanelMenu.Button {
-
-    test(device) {
-      Main.notify('Message Title', device.get_device_type());
-    }
-
     _init(params) {
       super._init(params, IndicatorName);
       this.actor.connect('button-press-event', this._openSystemMonitor.bind(this));
@@ -77,8 +70,8 @@ var ResourceMonitor = GObject.registerClass(
       this._settings = ExtensionUtils.getSettings();
 
       this.client = NM.Client.new(null);
-
-      this.client.connect('any-device-added', this.test.bind(this));
+      this.client.connect('active-connection-added', this.onActiveConnectionAdded.bind(this));
+      this.client.connect('active-connection-removed', this.onActiveConnectionRemoved.bind(this));
 
       /** ### **/
 
@@ -93,6 +86,9 @@ var ResourceMonitor = GObject.registerClass(
 
       this.idleWlanOld = 0;
       this.duTotWlanOld = [0, 0];
+
+      this.onEth = true;
+      this.onWlan = true;
 
       // Create UI
       this.initUI();
@@ -148,9 +144,6 @@ var ResourceMonitor = GObject.registerClass(
       this.enDisk;
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK}`, this.diskChange.bind(this));
       this.diskChange();
-
-      this.onWlan = true;
-      this.onEth = true;
 
       // Eth
       this.enEth;
@@ -231,15 +224,13 @@ var ResourceMonitor = GObject.registerClass(
       });
       this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
 
-      /** ### Setup Refresh Timers ### **/
+      // Init Connections State
+      this.onActiveConnectionRemoved(this.client);
 
-      this.timerHide;
-      this.timerHide = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, INTERVAL_HIDE, this.refreshHide.bind(this));
-      //this.refreshHide();
-
+      /** ### Setup Refresh Timer ### **/
       this.timer;
       this.timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this.interval, this.refresh.bind(this));
-      //this.refresh();
+      this.refresh();
     }
 
     initUI() {
@@ -400,11 +391,6 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     destroy() {
-      if (this.timerHide) {
-        GLib.source_remove(this.timerHide);
-        this.timerHide = null;
-      }
-
       if (this.timer) {
         GLib.source_remove(this.timer);
         this.timer = null;
@@ -431,6 +417,60 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     /** Signals Handler **/
+    onActiveConnectionAdded(client, activeConnection) {
+      activeConnection.get_devices().forEach(device => {
+        switch (device.get_device_type()) {
+
+          case NM.DeviceType.ETHERNET: {
+            this.onEth = true;
+          } break;
+
+          case NM.DeviceType.WIFI: {
+            this.onWlan = true;
+          } break;
+
+          default:
+
+        }
+      });
+
+      this.ethChange();
+      this.wlanChange();
+    }
+
+    onActiveConnectionRemoved(client) {
+      var e = true;
+      var w = true;
+
+      client.get_active_connections().forEach(activeConnection => {
+        activeConnection.get_devices().forEach(device => {
+          switch (device.get_device_type()) {
+
+            case NM.DeviceType.ETHERNET: {
+              e = false;
+            } break;
+
+            case NM.DeviceType.WIFI: {
+              w = false;
+            } break;
+
+            default:
+
+          }
+        });
+      });
+
+      if (e) {
+        this.onEth = false;
+      }
+
+      if (w) {
+        this.onWlan = false;
+      }
+
+      this.ethChange();
+      this.wlanChange();
+    }
 
     iconsChange() {
       this.displayIcons = this._settings.get_boolean(ICONS);
@@ -562,20 +602,9 @@ var ResourceMonitor = GObject.registerClass(
 
     hideChange() {
       this.enHide = this._settings.get_boolean(AUTO_HIDE);
-      if (this.enHide) {
-        //this.timerHide = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, INTERVAL_HIDE, this.refreshHide.bind(this));
-        this.refreshHide();
-      } else {
-        /*if (this.timerHide) {
-          GLib.source_remove(this.timerHide);
-          this.timerHide = null;
-        }*/
 
-        this.onEth = true;
-        this.onWlan = true;
-        this.ethChange();
-        this.wlanChange();
-      }
+      this.ethChange();
+      this.wlanChange();
     }
 
     chosenDiskChange() {
@@ -618,54 +647,6 @@ var ResourceMonitor = GObject.registerClass(
         this.refreshWlan();
       if (this.enCpuTemperature)
         this.refreshCpuTemperature();
-
-      return true;
-    }
-
-    refreshHide() {
-      if (this.enEth || this.enWlan) {
-        var devices = this.client.get_devices();
-        var e = true, w = true;
-
-        for (var i = 0; i < devices.length; i++) {
-          var device = devices[i];
-
-          switch (device.get_device_type()) {
-
-            case NM.DeviceType.ETHERNET: {
-              e = false;
-              if (device.active_connection) {
-                if (device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
-                  this.onEth = true;
-              } else
-                this.onEth = false;
-            } break;
-
-            case NM.DeviceType.WIFI: {
-              w = false;
-              if (device.active_connection) {
-                if (device.active_connection.state === NM.ActiveConnectionState.ACTIVATED)
-                  this.onWlan = true;
-              } else
-                this.onWlan = false;
-            } break;
-
-            default:
-
-          }
-        }
-
-        if (e) {
-          this.onEth = false;
-        }
-
-        if (w) {
-          this.onWlan = false;
-        }
-
-        this.ethChange();
-        this.wlanChange();
-      }
 
       return true;
     }
