@@ -19,6 +19,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
+
 'use strict';
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
@@ -352,7 +353,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       diskFrame.add(gridDisk);
 
       gridDisk.attach(new Gtk.Label({
-        label: '%s'.format(_('Display')),
+        label: '%s'.format(_('Display Stats')),
         halign: Gtk.Align.START,
         hexpand: true
       }), 0, 0, 1, 1);
@@ -363,7 +364,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings.bind('disk', valueDisk, 'active', Gio.SettingsBindFlags.DEFAULT);
       valueDisk.connect('state-set', button => {
         widthDisk.sensitive = button.active;
-        combobox.sensitive = button.active;
       });
       gridDisk.attach(valueDisk, 1, 0, 1, 1);
 
@@ -387,19 +387,175 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       gridDisk.attach(widthDisk, 1, 1, 1, 1);
 
       gridDisk.attach(new Gtk.Label({
-        label: '%s'.format(_('Choose')),
-        halign: Gtk.Align.START
+        label: '%s'.format(_('Display Usage')),
+        halign: Gtk.Align.START,
+        hexpand: true
       }), 0, 2, 1, 1);
 
-      let combobox = new Gtk.ComboBoxText({
+      let valueDiskUsage = new Gtk.Switch({
         halign: Gtk.Align.END
       });
-      combobox.connect('changed', widget => {
-        this._settings.set_string('chosendisk', disks[combobox.active]);
+      this._settings.bind('diskusage', valueDiskUsage, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueDiskUsage.connect('state-set', button => {
+        widthDiskUsage.sensitive = button.active;
       });
+      gridDisk.attach(valueDiskUsage, 1, 2, 1, 1);
+
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Width')),
+        halign: Gtk.Align.START
+      }), 0, 3, 1, 1);
+
+      let widthDiskUsage = new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower: 1,
+          upper: 500,
+          step_increment: 1
+        }),
+        halign: Gtk.Align.END,
+        numeric: true
+      });
+      this._settings.bind('widthdiskusage', widthDiskUsage, 'value', Gio.SettingsBindFlags.DEFAULT);
       // Init
-      combobox.sensitive = valueDisk.active;
-      gridDisk.attach(combobox, 1, 2, 1, 1);
+      widthDiskUsage.sensitive = valueDiskUsage.active;
+      gridDisk.attach(widthDiskUsage, 1, 3, 1, 1);
+
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Devices')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 4, 1, 1);
+
+      let view = new Gtk.ScrolledWindow();
+      view.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+
+      let mainBox = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        vexpand: true,
+        valign: Gtk.Align.FILL
+      });
+      view.add_with_viewport(mainBox);
+
+      let list = new Gtk.ListBox({
+        selection_mode: Gtk.SelectionMode.NONE
+      });
+      mainBox.add(list);
+
+      gridDisk.attach(view, 0, 5, 2, 1);
+
+      /****************************************************/
+
+      let disksArray = this._settings.get_strv('diskslist', Gio.SettingsBindFlags.DEFAULT);
+
+      let file = GLib.file_get_contents('/proc/mounts');
+      let lines = ('' + file[1]).split('\n');
+
+      let x = 0;
+
+      for (let j = 0; j < lines.length; j++) {
+        let line = lines[j];
+        let entry = line.trim().split(/\s/);
+
+        let name = entry[0];
+        let path = entry[1];
+
+        if (typeof (name) === 'undefined' || name === '' || name.match(/\/dev\/loop\d*/) || (name.match(/^[^\/]/) && !path.match(/\/media\//)))
+          continue;
+
+        let gridElement = new Gtk.Grid({
+          row_spacing: 6,
+          orientation: Gtk.Orientation.HORIZONTAL
+        });
+
+        let dName = new Gtk.Label({
+          label: '%s'.format(_(name)),
+          halign: Gtk.Align.START,
+          margin_end: 10,
+          hexpand: true
+        });
+        gridElement.attach(dName, 0, 0, 1, 1);
+
+        gridElement.attach(new Gtk.Label({
+          label: '%s'.format(_(path)),
+          halign: Gtk.Align.START,
+          margin_end: 10,
+          hexpand: true
+        }), 1, 0, 1, 1);
+
+        let dUButton = new Gtk.CheckButton({
+          label: '%s'.format(_("Usage")),
+          active: false
+        });
+        gridElement.attach(dUButton, 2, 0, 1, 1);
+
+        let dSButton = new Gtk.CheckButton({
+          label: '%s'.format(_("Space")),
+          active: false
+        });
+        gridElement.attach(dSButton, 3, 0, 1, 1);
+
+        let found = false;
+        for (let i = 0; i < disksArray.length; i++) {
+          let element = disksArray[i];
+          let it = element.split(' ');
+
+          if (name === it[0]) {
+            let dUState = (it[1] === 'true');
+            let dSState = (it[2] === 'true');
+
+            dUButton.active = dUState;
+            dSButton.active = dSState;
+            found = true;
+            break;
+          }
+        }
+
+        if (found === false) {
+          disksArray.push(name + ' ' + dUButton.active + ' ' + dSButton.active);
+        }
+
+        dUButton.connect('toggled', button => {
+          // Save new button state
+
+          for (let i = 0; i < disksArray.length; i++) {
+            let element = disksArray[i];
+            let it = element.split(' ');
+
+            if (name === it[0]) {
+              it[1] = button.active;
+              disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
+
+              this._settings.set_strv('diskslist', disksArray);
+              break;
+            }
+          }
+        });
+
+        dSButton.connect('toggled', button => {
+          // Save new button state
+
+          for (let i = 0; i < disksArray.length; i++) {
+            let element = disksArray[i];
+            let it = element.split(' ');
+
+            if (name === it[0]) {
+              it[2] = button.active;
+              disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
+
+              this._settings.set_strv('diskslist', disksArray);
+              break;
+            }
+          }
+        });
+
+        list.insert(gridElement, x++);
+      }
+
+      // Array format
+      // name usage space
+      this._settings.set_strv('diskslist', disksArray);
+
+      /****************************************************/
 
       this.append_page(diskFrame, new Gtk.Label({
         label: '<b>%s</b>'.format(_('Disk')),
@@ -407,39 +563,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         halign: Gtk.Align.CENTER
       }));
 
-      /**********/
-      let file = GLib.file_get_contents('/proc/diskstats');
-      let lines = ('' + file[1]).split('\n');
-
-      let current = this._settings.get_string('chosendisk');
-
-      let x = 1;
-      let disks = ['All'];
-
-      combobox.insert_text(0, 'All');
-
-      for (let i = 0; i < lines.length; i++) {
-        let line = lines[i];
-        let entry = line.trim().split(/[\s]+/);
-        if (typeof (entry[1]) === 'undefined')
-          break;
-
-        let name = entry[2];
-
-        if (name.match(/loop\d*/))
-          continue;
-
-        disks[x] = name;
-        combobox.insert_text(x++, name);
-      }
-
-      for (let i = 0; i < disks.length; i++) {
-        if (current === disks[i]) {
-          combobox.set_active(i);
-          break;
-        }
-      }
-      /**********/
       let netFrame = new Gtk.Grid({
         margin: 12,
         row_spacing: 6,

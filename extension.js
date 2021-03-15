@@ -87,9 +87,6 @@ var ResourceMonitor = GObject.registerClass(
       this.idleWlanOld = 0;
       this.duTotWlanOld = [0, 0];
 
-      this.onEth = true;
-      this.onWlan = true;
-
       // Create UI
       this.initUI();
 
@@ -439,19 +436,19 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     onActiveConnectionRemoved(client) {
-      var e = true;
-      var w = true;
+      this.onEth = false;
+      this.onWlan = false;
 
       client.get_active_connections().forEach(activeConnection => {
         activeConnection.get_devices().forEach(device => {
           switch (device.get_device_type()) {
 
             case NM.DeviceType.ETHERNET: {
-              e = false;
+              this.onEth = true;
             } break;
 
             case NM.DeviceType.WIFI: {
-              w = false;
+              this.onWlan = true;
             } break;
 
             default:
@@ -459,14 +456,6 @@ var ResourceMonitor = GObject.registerClass(
           }
         });
       });
-
-      if (e) {
-        this.onEth = false;
-      }
-
-      if (w) {
-        this.onWlan = false;
-      }
 
       this.ethChange();
       this.wlanChange();
