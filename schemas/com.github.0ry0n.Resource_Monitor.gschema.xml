@@ -38,6 +38,12 @@
       <description>
       </description>
     </key>
+    <key name="diskusage" type="b">
+      <default>true</default>
+      <summary>Display Disk Usage</summary>
+      <description>
+      </description>
+    </key>
     <key name="eth" type="b">
       <default>true</default>
       <summary>Display Eth</summary>
@@ -77,6 +83,12 @@
     <key name="widthdisk" type="i">
       <default>65</default>
       <summary>Width Disk</summary>
+      <description>
+      </description>
+    </key>
+    <key name="widthdiskusage" type="i">
+      <default>65</default>
+      <summary>Width Disk Usage</summary>
       <description>
       </description>
     </key>
@@ -125,6 +137,12 @@
     <key name="showsystemmonitor" type="b">
       <default>true</default>
       <summary>Show System Monitor</summary>
+      <description>
+      </description>
+    </key>
+    <key name="diskslist" type="as">
+      <default>[]</default>
+      <summary>Disks List</summary>
       <description>
       </description>
     </key>

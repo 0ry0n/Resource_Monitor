@@ -23,7 +23,7 @@
 'use strict';
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
-const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
+const Gettex = imports.gettext.domain('com-github-0ry0n-Resource_Monitor');
 const _ = Gettex.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
