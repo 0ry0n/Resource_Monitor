@@ -45,16 +45,20 @@ const SYSTEMMONITOR = 'showsystemmonitor';
 const CPU = 'cpu';
 const RAM = 'ram';
 const SWAP = 'swap';
-const DISK = 'disk';
+const DISK_STATS = 'diskstats';
+const DISK_SPACE = 'diskspace';
 const ETH = 'eth';
 const WLAN = 'wlan';
 const CPUTEMPERATURE = 'cputemperature';
-const CHOSEN_DISK = 'chosendisk';
+const DISKS_LIST = 'diskslist';
+const DISK_STATS_MODE = 'diskstatsmode';
+const DISK_SPACE_UNIT = 'diskspaceunit';
 const AUTO_HIDE = 'autohide';
 const WIDTH_CPU = 'widthcpu';
 const WIDTH_RAM = 'widthram';
 const WIDTH_SWAP = 'widthswap';
-const WIDTH_DISK = 'widthdisk';
+const WIDTH_DISK_STATS = 'widthdiskstats';
+const WIDTH_DISK_SPACE = 'widthdiskspace';
 const WIDTH_ETH = 'widtheth';
 const WIDTH_WLAN = 'widthwlan';
 const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
@@ -78,8 +82,8 @@ var ResourceMonitor = GObject.registerClass(
       this.idleOld = 0;
       this.cpuTotOld = 0;
 
-      this.idleDiskOld = 0;
-      this.rwTotOld = [0, 0];
+      this.idleDiskOld = [];
+      this.rwTotOld = [];
 
       this.idleEthOld = 0;
       this.duTotEthOld = [0, 0];
@@ -132,15 +136,20 @@ var ResourceMonitor = GObject.registerClass(
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${RAM}`, this.ramChange.bind(this));
       this.ramChange();
 
-      // SWAP
+      // Swap
       this.enSwap;
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${SWAP}`, this.swapChange.bind(this));
       this.swapChange();
 
-      // Disk
-      this.enDisk;
-      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK}`, this.diskChange.bind(this));
-      this.diskChange();
+      // Disk Stats
+      this.enDiskStats;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_STATS}`, this.diskStatsChange.bind(this));
+      this.diskStatsChange();
+
+      // Disk Space
+      this.enDiskSpace;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_SPACE}`, this.diskSpaceChange.bind(this));
+      this.diskSpaceChange();
 
       // Eth
       this.enEth;
@@ -157,11 +166,6 @@ var ResourceMonitor = GObject.registerClass(
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${AUTO_HIDE}`, this.hideChange.bind(this));
       this.hideChange();
 
-      // Chosen Disk
-      this.chosenDisk;
-      this.sigId[this.numSigId++] = this._settings.connect(`changed::${CHOSEN_DISK}`, this.chosenDiskChange.bind(this));
-      this.chosenDiskChange();
-
       // Cpu Temperature
       this.cpuTemperature;
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATURE}`, this.cpuTemperatureChange.bind(this));
@@ -176,6 +180,27 @@ var ResourceMonitor = GObject.registerClass(
       });
       this.cpuTemperatureFahrenheit = this._settings.get_boolean(CPUTEMPERATUREUNIT);
       this.cpuTemperatureUnit.text = this.cpuTemperatureFahrenheit ? '°F' : '°C'
+
+      // Disks List
+      this.disksList;
+      this.diskStatsItems = [];
+      this.diskSpaceItems = [];
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISKS_LIST}`, this.disksListChange.bind(this));
+
+      // Disk Stats Mode
+      this.diskStatsMode;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_STATS_MODE}`, this.diskStatsModeChange.bind(this));
+
+      // Disks Space Unit
+      this.disksSpaceUnit;
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_SPACE_UNIT}`, () => {
+        this.disksSpaceUnit = this._settings.get_boolean(DISK_SPACE_UNIT);
+
+        this.refreshDiskSpace();
+      });
+      this.disksSpaceUnit = this._settings.get_boolean(DISK_SPACE_UNIT);
+
+      this.disksListChange();
 
       /** ## WIDTH ## **/
 
@@ -197,11 +222,17 @@ var ResourceMonitor = GObject.registerClass(
       });
       this.swap.width = this._settings.get_int(WIDTH_SWAP);
 
-      // Disk
-      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK}`, () => {
-        this.disk.width = this._settings.get_int(WIDTH_DISK);
+      // Disk Stats
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK_STATS}`, () => {
+        this.diskStatsWidthUpdate();
       });
-      this.disk.width = this._settings.get_int(WIDTH_DISK);
+      this.diskStatsWidthUpdate();
+
+      // Disk Space
+      this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK_SPACE}`, () => {
+        this.diskSpaceWidthUpdate();
+      });
+      this.diskSpaceWidthUpdate();
 
       // Eth
       this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_ETH}`, () => {
@@ -249,7 +280,12 @@ var ResourceMonitor = GObject.registerClass(
         style_class: 'system-status-icon'
       });
 
-      this.diskIco = new St.Icon({
+      this.diskStatsIco = new St.Icon({
+        gicon: new Gio.ThemedIcon({ name: 'drive-harddisk-symbolic' }),
+        style_class: 'system-status-icon'
+      });
+
+      this.diskSpaceIco = new St.Icon({
         gicon: new Gio.ThemedIcon({ name: 'drive-harddisk-symbolic' }),
         style_class: 'system-status-icon'
       });
@@ -280,12 +316,6 @@ var ResourceMonitor = GObject.registerClass(
       this.swapUnit = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: '%',
-        style_class: 'unit'
-      });
-
-      this.diskUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: 'K',
         style_class: 'unit'
       });
 
@@ -326,11 +356,8 @@ var ResourceMonitor = GObject.registerClass(
         style_class: 'label'
       });
 
-      this.disk = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: DISK,
-        style_class: 'label'
-      });
+      this.diskStats = new St.BoxLayout();
+      this.diskSpace = new St.BoxLayout();
 
       this.eth = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -372,9 +399,10 @@ var ResourceMonitor = GObject.registerClass(
       this.box.add(this.swapUnit);
       this.box.add(this.swapIco);
 
-      this.box.add(this.disk);
-      this.box.add(this.diskUnit);
-      this.box.add(this.diskIco);
+      this.box.add(this.diskStats);
+      this.box.add(this.diskStatsIco);
+      this.box.add(this.diskSpace);
+      this.box.add(this.diskSpaceIco);
 
       this.box.add(this.eth);
       this.box.add(this.ethUnit);
@@ -394,7 +422,7 @@ var ResourceMonitor = GObject.registerClass(
       }
 
       /** ## Signals Disconnection ## **/
-      for (var i = 0; i < this.numSigId; i++) {
+      for (let i = 0; i < this.numSigId; i++) {
         this._settings.disconnect(this.sigId[i]);
         this.sigId[i] = 0;
       }
@@ -470,8 +498,10 @@ var ResourceMonitor = GObject.registerClass(
           this.ramIco.show();
         if (this.enSwap)
           this.swapIco.show();
-        if (this.enDisk)
-          this.diskIco.show();
+        if (this.enDiskStats)
+          this.diskStatsIco.show();
+        if (this.enDiskSpace)
+          this.diskSpaceIco.show();
         if (this.enEth)
           this.ethIco.show();
         if (this.enWlan)
@@ -480,7 +510,8 @@ var ResourceMonitor = GObject.registerClass(
         this.cpuIco.hide();
         this.ramIco.hide();
         this.swapIco.hide();
-        this.diskIco.hide();
+        this.diskStatsIco.hide();
+        this.diskSpaceIco.hide();
         this.ethIco.hide();
         this.wlanIco.hide();
       }
@@ -537,17 +568,27 @@ var ResourceMonitor = GObject.registerClass(
       }
     }
 
-    diskChange() {
-      this.enDisk = this._settings.get_boolean(DISK);
-      if (this.enDisk) {
+    diskStatsChange() {
+      this.enDiskStats = this._settings.get_boolean(DISK_STATS);
+      if (this.enDiskStats) {
         if (this.displayIcons)
-          this.diskIco.show();
-        this.disk.show();
-        this.diskUnit.show();
+          this.diskStatsIco.show();
+        this.diskStats.show();
       } else {
-        this.diskIco.hide();
-        this.disk.hide();
-        this.diskUnit.hide();
+        this.diskStatsIco.hide();
+        this.diskStats.hide();
+      }
+    }
+
+    diskSpaceChange() {
+      this.enDiskSpace = this._settings.get_boolean(DISK_SPACE);
+      if (this.enDiskSpace) {
+        if (this.displayIcons)
+          this.diskSpaceIco.show();
+        this.diskSpace.show();
+      } else {
+        this.diskSpaceIco.hide();
+        this.diskSpace.hide();
       }
     }
 
@@ -596,10 +637,162 @@ var ResourceMonitor = GObject.registerClass(
       this.wlanChange();
     }
 
-    chosenDiskChange() {
-      this.chosenDisk = this._settings.get_string(CHOSEN_DISK);
-      this.idleDiskOld = 0;
-      this.rwTotOld = [0, 0];
+    diskStatsWidthUpdate() {
+      for (let i = 0; i < this.disksList.length; i++) {
+        let element = this.disksList[i];
+        let it = element.split(' ');
+        let field = this.diskStatsItems[it[0]];
+
+        if (typeof (field) !== 'undefined') {
+          field[0].width = this._settings.get_int(WIDTH_DISK_STATS);
+        }
+      }
+
+      let field = this.diskStatsItems['All'];
+      if (typeof (field) !== 'undefined') {
+        field[0].width = this._settings.get_int(WIDTH_DISK_STATS);
+      }
+    }
+
+    diskSpaceWidthUpdate() {
+      for (let i = 0; i < this.disksList.length; i++) {
+        let element = this.disksList[i];
+        let it = element.split(' ');
+        let field = this.diskSpaceItems[it[0]];
+
+        if (typeof (field) !== 'undefined') {
+          field[0].width = this._settings.get_int(WIDTH_DISK_SPACE);
+        }
+      }
+    }
+
+    diskStatsUpdate() {
+      // Cleanup gui
+      this.diskStats.remove_all_children();
+
+      this.diskStatsItems = [];
+      let width = this._settings.get_int(WIDTH_DISK_STATS);
+
+      this.idleDiskOld = [];
+      this.rwTotOld = [];
+
+      // Stats
+      if (this.diskStatsMode === true) {
+        // All In One
+        let field = new St.Label({
+          y_align: Clutter.ActorAlign.CENTER,
+          text: DISK_STATS,
+          width: width,
+          style_class: 'label'
+        });
+
+        let unit = new St.Label({
+          y_align: Clutter.ActorAlign.CENTER,
+          text: 'K',
+          style_class: 'unit'
+        });
+
+        this.diskStats.add(field);
+        this.diskStats.add(unit);
+
+        this.diskStatsItems['All'] = [field, unit];
+
+        this.idleDiskOld['All'] = 0;
+        this.rwTotOld['All'] = [0, 0];
+      } else {
+        for (let i = 0; i < this.disksList.length; i++) {
+          let element = this.disksList[i];
+          let it = element.split(' ');
+
+          let dStButton = (it[1] === 'true');
+          if (dStButton) {
+            let name = new St.Label({
+              y_align: Clutter.ActorAlign.CENTER,
+              text: it[0] + ':',
+              style_class: 'label'
+            });
+
+            let field = new St.Label({
+              y_align: Clutter.ActorAlign.CENTER,
+              text: '0',
+              width: width,
+              style_class: 'label'
+            });
+
+            let unit = new St.Label({
+              y_align: Clutter.ActorAlign.CENTER,
+              text: 'K',
+              style_class: 'unit'
+            });
+
+            this.diskStats.add(name);
+            this.diskStats.add(field);
+            this.diskStats.add(unit);
+
+            this.diskStatsItems[it[0]] = [field, unit];
+
+            this.idleDiskOld[it[0]] = 0;
+            this.rwTotOld[it[0]] = [0, 0];
+          }
+        }
+      }
+    }
+
+    diskSpaceUpdate() {
+      // Cleanup gui
+      this.diskSpace.remove_all_children();
+
+      this.diskSpaceItems = [];
+      let width = this._settings.get_int(WIDTH_DISK_SPACE);
+
+      // Space
+      for (let i = 0; i < this.disksList.length; i++) {
+        let element = this.disksList[i];
+        let it = element.split(' ');
+
+        let dSpButton = (it[2] === 'true');
+
+        if (dSpButton) {
+          let name = new St.Label({
+            y_align: Clutter.ActorAlign.CENTER,
+            text: it[0] + ':',
+            style_class: 'label'
+          });
+
+          let field = new St.Label({
+            y_align: Clutter.ActorAlign.CENTER,
+            text: '0',
+            width: width,
+            style_class: 'label'
+          });
+
+          let unit = new St.Label({
+            y_align: Clutter.ActorAlign.CENTER,
+            text: this.disksSpaceUnit ? '%' : 'K',
+            style_class: 'unit'
+          });
+
+          this.diskSpace.add(name);
+          this.diskSpace.add(field);
+          this.diskSpace.add(unit);
+
+          this.diskSpaceItems[it[0]] = [field, unit];
+        }
+      }
+    }
+
+    disksListChange() {
+      this.disksList = this._settings.get_strv(DISKS_LIST);
+
+      this.diskStatsUpdate();
+      this.diskSpaceUpdate();
+    }
+
+    diskStatsModeChange() {
+      this.diskStatsMode = this._settings.get_boolean(DISK_STATS_MODE);
+
+      this.diskStatsUpdate();
+      this.refreshDiskStats();
     }
 
     cpuTemperatureChange() {
@@ -628,8 +821,10 @@ var ResourceMonitor = GObject.registerClass(
         this.refreshRam();
       if (this.enSwap)
         this.refreshSwap();
-      if (this.enDisk)
-        this.refreshDisk();
+      if (this.enDiskStats)
+        this.refreshDiskStats();
+      if (this.enDiskSpace)
+        this.refreshDiskSpace();
       if (this.enEth)
         this.refreshEth();
       if (this.enWlan)
@@ -647,7 +842,7 @@ var ResourceMonitor = GObject.registerClass(
       var idle = parseInt(entry[4]);
 
       // user sys nice idle iowait
-      for (var i = 1; i < 5; i++)
+      for (let i = 1; i < 5; i++)
         cpuTot += parseInt(entry[i]);
 
       var delta = cpuTot - this.cpuTotOld;
@@ -669,7 +864,7 @@ var ResourceMonitor = GObject.registerClass(
       var total, available, used;
       var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
 
-      for (var i = 0; i < 3; i++) {
+      for (let i = 0; i < 3; i++) {
         var values;
         var line = lines[i];
 
@@ -695,7 +890,7 @@ var ResourceMonitor = GObject.registerClass(
       var total, available, used;
       var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
 
-      for (var i = 0; i < 16; i++) {
+      for (let i = 0; i < 16; i++) {
         var values;
         var line = lines[i];
 
@@ -718,12 +913,13 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshDisk() {
+      // TODO
       var rwTot = [0, 0];
       var rw = [0, 0];
       var lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
 
       if (this.chosenDisk === 'All') {
-        for (var i = 0; i < lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
           var line = lines[i];
           var entry = line.trim().split(/[\s]+/);
           if (typeof (entry[1]) === 'undefined')
@@ -736,7 +932,7 @@ var ResourceMonitor = GObject.registerClass(
           rwTot[1] += parseInt(entry[9]);
         }
       } else {
-        for (var i = 0; i < lines.length; i++) {
+        for (let i = 0; i < lines.length; i++) {
           var line = lines[i];
           var entry = line.trim().split(/[\s]+/);
           if (typeof (entry[1]) === 'undefined')
@@ -754,7 +950,7 @@ var ResourceMonitor = GObject.registerClass(
       var delta = (idle - this.idleDiskOld) / 1000;
 
       if (delta > 0) {
-        for (var i = 0; i < 2; i++) {
+        for (let i = 0; i < 2; i++) {
           rw[i] = (rwTot[i] - this.rwTotOld[i]) / delta;
           this.rwTotOld[i] = rwTot[i];
         }
@@ -782,12 +978,136 @@ var ResourceMonitor = GObject.registerClass(
       }
     }
 
+    refreshDiskStats() {
+      var lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
+
+      if (this.diskStatsMode === true) {
+        let field = this.diskStatsItems['All'];
+
+        var rwTot = [0, 0];
+        var rw = [0, 0];
+
+        for (let i = 0; i < this.disksList.length; i++) {
+          let element = this.disksList[i];
+          let it = element.split(' ');
+
+          for (let j = 0; j < lines.length; j++) {
+            var line = lines[j];
+            var entry = line.trim().split(/[\s]+/); // TODO search by name
+            if (typeof (entry[1]) === 'undefined')
+              break;
+
+            // All
+            // Same Name
+            if (it[0].endsWith(entry[2])) {
+              rwTot[0] += parseInt(entry[5]);
+              rwTot[1] += parseInt(entry[9]);
+            }
+          }
+        }
+
+        var idle = GLib.get_monotonic_time() / 1000;
+        var delta = (idle - this.idleDiskOld['All']) / 1000;
+
+        if (delta > 0) {
+          for (let i = 0; i < 2; i++) {
+            rw[i] = (rwTot[i] - this.rwTotOld['All'][i]) / delta;
+            this.rwTotOld['All'][i] = rwTot[i];
+          }
+
+          if (rw[0] > 1024 || rw[1] > 1024) {
+            field[1].text = 'M';
+            rw[0] /= 1024;
+            rw[1] /= 1024;
+            if (rw[0] > 1024 || rw[1] > 1024) {
+              field[1].text = 'G';
+              rw[0] /= 1024;
+              rw[1] /= 1024;
+            }
+          } else {
+            field[1].text = 'K';
+          }
+        }
+
+        this.idleDiskOld['All'] = idle;
+
+        if (this.displayDecimals) {
+          field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+        } else {
+          field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
+        }
+      } else {
+        for (let i = 0; i < this.disksList.length; i++) {
+          let element = this.disksList[i];
+          let it = element.split(' ');
+          let field = this.diskStatsItems[it[0]];
+
+          if (typeof (field) === 'undefined') {
+            continue;
+          }
+
+          var rwTot = [0, 0];
+          var rw = [0, 0];
+
+          for (let j = 0; j < lines.length; j++) {
+            var line = lines[j];
+
+            var entry = line.trim().split(/[\s]+/); // TODO search by name
+            if (typeof (entry[1]) === 'undefined')
+              break;
+
+            // Same Name
+            if (it[0].endsWith(entry[2])) {
+              rwTot[0] += parseInt(entry[5]);
+              rwTot[1] += parseInt(entry[9]);
+              break;
+            }
+          }
+
+          var idle = GLib.get_monotonic_time() / 1000;
+          var delta = (idle - this.idleDiskOld[it[0]]) / 1000;
+
+          if (delta > 0) {
+            for (let i = 0; i < 2; i++) {
+              rw[i] = (rwTot[i] - this.rwTotOld[it[0]][i]) / delta;
+              this.rwTotOld[it[0]][i] = rwTot[i];
+            }
+
+            if (rw[0] > 1024 || rw[1] > 1024) {
+              field[1].text = 'M';
+              rw[0] /= 1024;
+              rw[1] /= 1024;
+              if (rw[0] > 1024 || rw[1] > 1024) {
+                field[1].text = 'G';
+                rw[0] /= 1024;
+                rw[1] /= 1024;
+              }
+            } else {
+              field[1].text = 'K';
+            }
+          }
+
+          this.idleDiskOld[it[0]] = idle;
+
+          if (this.displayDecimals) {
+            field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+          } else {
+            field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
+          }
+        }
+      }
+    }
+
+    refreshDiskSpace() {
+
+    }
+
     refreshEth() {
       var duTot = [0, 0];
       var du = [0, 0];
       var lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
-      for (var i = 2; i < lines.length - 1; i++) {
+      for (let i = 2; i < lines.length - 1; i++) {
         var line = lines[i];
         var entry = line.trim().split(':');
         if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
@@ -802,7 +1122,7 @@ var ResourceMonitor = GObject.registerClass(
       var delta = (idle - this.idleEthOld) / 1000;
 
       if (delta > 0) {
-        for (var i = 0; i < 2; i++) {
+        for (let i = 0; i < 2; i++) {
           du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
           this.duTotEthOld[i] = duTot[i];
         }
@@ -840,7 +1160,7 @@ var ResourceMonitor = GObject.registerClass(
       var du = [0, 0];
       var lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
-      for (var i = 2; i < lines.length - 1; i++) {
+      for (let i = 2; i < lines.length - 1; i++) {
         var line = lines[i];
         var entry = line.trim().split(':');
         if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
@@ -855,7 +1175,7 @@ var ResourceMonitor = GObject.registerClass(
       var delta = (idle - this.idleWlanOld) / 1000;
 
       if (delta > 0) {
-        for (var i = 0; i < 2; i++) {
+        for (let i = 0; i < 2; i++) {
           du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
           this.duTotWlanOld[i] = duTot[i];
         }

@@ -358,21 +358,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         hexpand: true
       }), 0, 0, 1, 1);
 
-      let valueDisk = new Gtk.Switch({
+      let valueDiskStats = new Gtk.Switch({
         halign: Gtk.Align.END
       });
-      this._settings.bind('disk', valueDisk, 'active', Gio.SettingsBindFlags.DEFAULT);
-      valueDisk.connect('state-set', button => {
-        widthDisk.sensitive = button.active;
+      this._settings.bind('diskstats', valueDiskStats, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueDiskStats.connect('state-set', button => {
+        widthDiskStats.sensitive = button.active;
+        valueDiskStatsMode.sensitive = button.active;
       });
-      gridDisk.attach(valueDisk, 1, 0, 1, 1);
+      gridDisk.attach(valueDiskStats, 1, 0, 1, 1);
 
       gridDisk.attach(new Gtk.Label({
         label: '%s'.format(_('Width')),
         halign: Gtk.Align.START
       }), 0, 1, 1, 1);
 
-      let widthDisk = new Gtk.SpinButton({
+      let widthDiskStats = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 1,
           upper: 500,
@@ -381,32 +382,47 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         halign: Gtk.Align.END,
         numeric: true
       });
-      this._settings.bind('widthdisk', widthDisk, 'value', Gio.SettingsBindFlags.DEFAULT);
+      this._settings.bind('widthdiskstats', widthDiskStats, 'value', Gio.SettingsBindFlags.DEFAULT);
       // Init
-      widthDisk.sensitive = valueDisk.active;
-      gridDisk.attach(widthDisk, 1, 1, 1, 1);
+      widthDiskStats.sensitive = valueDiskStats.active;
+      gridDisk.attach(widthDiskStats, 1, 1, 1, 1);
 
       gridDisk.attach(new Gtk.Label({
-        label: '%s'.format(_('Display Usage')),
+        label: '%s'.format(_('Display All In One')),
         halign: Gtk.Align.START,
         hexpand: true
       }), 0, 2, 1, 1);
 
-      let valueDiskUsage = new Gtk.Switch({
+      let valueDiskStatsMode = new Gtk.Switch({
         halign: Gtk.Align.END
       });
-      this._settings.bind('diskusage', valueDiskUsage, 'active', Gio.SettingsBindFlags.DEFAULT);
-      valueDiskUsage.connect('state-set', button => {
-        widthDiskUsage.sensitive = button.active;
+      this._settings.bind('diskstatsmode', valueDiskStatsMode, 'active', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      valueDiskStatsMode.sensitive = valueDiskStats.active;
+      gridDisk.attach(valueDiskStatsMode, 1, 2, 1, 1);
+
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Display Space')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 3, 1, 1);
+
+      let valueDiskSpace = new Gtk.Switch({
+        halign: Gtk.Align.END
       });
-      gridDisk.attach(valueDiskUsage, 1, 2, 1, 1);
+      this._settings.bind('diskspace', valueDiskSpace, 'active', Gio.SettingsBindFlags.DEFAULT);
+      valueDiskSpace.connect('state-set', button => {
+        widthDiskSpace.sensitive = button.active;
+        valueDiskSpaceUnit.sensitive = button.active;
+      });
+      gridDisk.attach(valueDiskSpace, 1, 3, 1, 1);
 
       gridDisk.attach(new Gtk.Label({
         label: '%s'.format(_('Width')),
         halign: Gtk.Align.START
-      }), 0, 3, 1, 1);
+      }), 0, 4, 1, 1);
 
-      let widthDiskUsage = new Gtk.SpinButton({
+      let widthDiskSpace = new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower: 1,
           upper: 500,
@@ -415,16 +431,30 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         halign: Gtk.Align.END,
         numeric: true
       });
-      this._settings.bind('widthdiskusage', widthDiskUsage, 'value', Gio.SettingsBindFlags.DEFAULT);
+      this._settings.bind('widthdiskspace', widthDiskSpace, 'value', Gio.SettingsBindFlags.DEFAULT);
       // Init
-      widthDiskUsage.sensitive = valueDiskUsage.active;
-      gridDisk.attach(widthDiskUsage, 1, 3, 1, 1);
+      widthDiskSpace.sensitive = valueDiskSpace.active;
+      gridDisk.attach(widthDiskSpace, 1, 4, 1, 1);
+
+      gridDisk.attach(new Gtk.Label({
+        label: '%s'.format(_('Percentage Unit')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 5, 1, 1);
+
+      let valueDiskSpaceUnit = new Gtk.Switch({
+        halign: Gtk.Align.END
+      });
+      this._settings.bind('diskspaceunit', valueDiskSpaceUnit, 'active', Gio.SettingsBindFlags.DEFAULT);
+      // Init
+      valueDiskSpaceUnit.sensitive = valueDiskSpace.active;
+      gridDisk.attach(valueDiskSpaceUnit, 1, 5, 1, 1);
 
       gridDisk.attach(new Gtk.Label({
         label: '%s'.format(_('Devices')),
         halign: Gtk.Align.START,
         hexpand: true
-      }), 0, 4, 1, 1);
+      }), 0, 6, 1, 1);
 
       let view = new Gtk.ScrolledWindow();
       view.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
@@ -441,10 +471,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
       mainBox.add(list);
 
-      gridDisk.attach(view, 0, 5, 2, 1);
+      gridDisk.attach(view, 0, 7, 2, 1);
 
       /****************************************************/
 
+      // Array format
+      // name stats space
+      // Get current disks settings
       let disksArray = this._settings.get_strv('diskslist', Gio.SettingsBindFlags.DEFAULT);
 
       let file = GLib.file_get_contents('/proc/mounts');
@@ -482,40 +515,36 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           hexpand: true
         }), 1, 0, 1, 1);
 
-        let dUButton = new Gtk.CheckButton({
-          label: '%s'.format(_("Usage")),
+        let dStatsButton = new Gtk.CheckButton({
+          label: '%s'.format(_("Stats")),
           active: false
         });
-        gridElement.attach(dUButton, 2, 0, 1, 1);
+        gridElement.attach(dStatsButton, 2, 0, 1, 1);
 
-        let dSButton = new Gtk.CheckButton({
+        let dSpaceButton = new Gtk.CheckButton({
           label: '%s'.format(_("Space")),
           active: false
         });
-        gridElement.attach(dSButton, 3, 0, 1, 1);
+        gridElement.attach(dSpaceButton, 3, 0, 1, 1);
 
-        let found = false;
         for (let i = 0; i < disksArray.length; i++) {
           let element = disksArray[i];
           let it = element.split(' ');
 
           if (name === it[0]) {
-            let dUState = (it[1] === 'true');
-            let dSState = (it[2] === 'true');
+            let dStButton = (it[1] === 'true');
+            let dSpButton = (it[2] === 'true');
 
-            dUButton.active = dUState;
-            dSButton.active = dSState;
-            found = true;
+            dStatsButton.active = dStButton;
+            dSpaceButton.active = dSpButton;
+
             break;
           }
         }
 
-        if (found === false) {
-          disksArray.push(name + ' ' + dUButton.active + ' ' + dSButton.active);
-        }
-
-        dUButton.connect('toggled', button => {
+        dStatsButton.connect('toggled', button => {
           // Save new button state
+          let found = false;
 
           for (let i = 0; i < disksArray.length; i++) {
             let element = disksArray[i];
@@ -525,14 +554,24 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               it[1] = button.active;
               disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
 
-              this._settings.set_strv('diskslist', disksArray);
+              found = true;
               break;
             }
           }
+
+          // Add new disks
+          if (found === false) {
+            disksArray.push(name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active);
+            found = false;
+          }
+
+          // Save all
+          this._settings.set_strv('diskslist', disksArray);
         });
 
-        dSButton.connect('toggled', button => {
+        dSpaceButton.connect('toggled', button => {
           // Save new button state
+          let found = false;
 
           for (let i = 0; i < disksArray.length; i++) {
             let element = disksArray[i];
@@ -542,18 +581,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               it[2] = button.active;
               disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
 
-              this._settings.set_strv('diskslist', disksArray);
+              found = true;
               break;
             }
           }
+
+          // Add new disks
+          if (found === false) {
+            disksArray.push(name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active);
+            found = false;
+          }
+
+          // Save all
+          this._settings.set_strv('diskslist', disksArray);
         });
 
         list.insert(gridElement, x++);
       }
-
-      // Array format
-      // name usage space
-      this._settings.set_strv('diskslist', disksArray);
 
       /****************************************************/
 

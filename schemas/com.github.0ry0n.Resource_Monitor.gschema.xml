@@ -32,15 +32,27 @@
       <description>
       </description>
     </key>
-    <key name="disk" type="b">
+    <key name="diskstats" type="b">
       <default>true</default>
-      <summary>Display Disk</summary>
+      <summary>Display Disk Stats</summary>
       <description>
       </description>
     </key>
-    <key name="diskusage" type="b">
+    <key name="diskspace" type="b">
       <default>true</default>
-      <summary>Display Disk Usage</summary>
+      <summary>Display Disk Space</summary>
+      <description>
+      </description>
+    </key>
+    <key name="diskstatsmode" type="b">
+      <default>true</default>
+      <summary>Display Disk Stats Mode</summary>
+      <description>
+      </description>
+    </key>
+    <key name="diskspaceunit" type="b">
+      <default>true</default>
+      <summary>Display Disk Space Mode</summary>
       <description>
       </description>
     </key>
@@ -80,15 +92,15 @@
       <description>
       </description>
     </key>
-    <key name="widthdisk" type="i">
+    <key name="widthdiskstats" type="i">
       <default>65</default>
-      <summary>Width Disk</summary>
+      <summary>Width Disk Stats</summary>
       <description>
       </description>
     </key>
-    <key name="widthdiskusage" type="i">
+    <key name="widthdiskspace" type="i">
       <default>65</default>
-      <summary>Width Disk Usage</summary>
+      <summary>Width Disk Space</summary>
       <description>
       </description>
     </key>
@@ -107,12 +119,6 @@
     <key name="widthcputemperature" type="i">
       <default>35</default>
       <summary>Width Cpu Temperature</summary>
-      <description>
-      </description>
-    </key>
-    <key name="chosendisk" type="s">
-      <default>'All'</default>
-      <summary>Selected Disk</summary>
       <description>
       </description>
     </key>
