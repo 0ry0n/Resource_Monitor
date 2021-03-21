@@ -837,7 +837,7 @@ var ResourceMonitor = GObject.registerClass(
 
     refreshCpu() {
       var lines = Shell.get_file_contents_utf8_sync('/proc/stat').split('\n');
-      var entry = lines[0].trim().split(/[\s]+/);
+      var entry = lines[0].trim().split(/\s+/);
       var cpuTot = 0;
       var idle = parseInt(entry[4]);
 
@@ -912,72 +912,6 @@ var ResourceMonitor = GObject.registerClass(
       }
     }
 
-    refreshDisk() {
-      // TODO
-      var rwTot = [0, 0];
-      var rw = [0, 0];
-      var lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
-
-      if (this.chosenDisk === 'All') {
-        for (let i = 0; i < lines.length; i++) {
-          var line = lines[i];
-          var entry = line.trim().split(/[\s]+/);
-          if (typeof (entry[1]) === 'undefined')
-            break;
-
-          if (entry[2].match(/loop\d*/))
-            continue;
-
-          rwTot[0] += parseInt(entry[5]);
-          rwTot[1] += parseInt(entry[9]);
-        }
-      } else {
-        for (let i = 0; i < lines.length; i++) {
-          var line = lines[i];
-          var entry = line.trim().split(/[\s]+/);
-          if (typeof (entry[1]) === 'undefined')
-            break;
-
-          if (entry[2] === this.chosenDisk) {
-            rwTot[0] += parseInt(entry[5]);
-            rwTot[1] += parseInt(entry[9]);
-            break;
-          }
-        }
-      }
-
-      var idle = GLib.get_monotonic_time() / 1000;
-      var delta = (idle - this.idleDiskOld) / 1000;
-
-      if (delta > 0) {
-        for (let i = 0; i < 2; i++) {
-          rw[i] = (rwTot[i] - this.rwTotOld[i]) / delta;
-          this.rwTotOld[i] = rwTot[i];
-        }
-
-        if (rw[0] > 1024 || rw[1] > 1024) {
-          this.diskUnit.text = 'M';
-          rw[0] /= 1024;
-          rw[1] /= 1024;
-          if (rw[0] > 1024 || rw[1] > 1024) {
-            this.diskUnit.text = 'G';
-            rw[0] /= 1024;
-            rw[1] /= 1024;
-          }
-        } else {
-          this.diskUnit.text = 'K';
-        }
-      }
-
-      this.idleDiskOld = idle;
-
-      if (this.displayDecimals) {
-        this.disk.text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
-      } else {
-        this.disk.text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
-      }
-    }
-
     refreshDiskStats() {
       var lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
 
@@ -993,7 +927,7 @@ var ResourceMonitor = GObject.registerClass(
 
           for (let j = 0; j < lines.length; j++) {
             var line = lines[j];
-            var entry = line.trim().split(/[\s]+/); // TODO search by name
+            var entry = line.trim().split(/\s+/); // TODO search by name
             if (typeof (entry[1]) === 'undefined')
               break;
 
@@ -1052,7 +986,7 @@ var ResourceMonitor = GObject.registerClass(
           for (let j = 0; j < lines.length; j++) {
             var line = lines[j];
 
-            var entry = line.trim().split(/[\s]+/); // TODO search by name
+            var entry = line.trim().split(/\s+/); // TODO search by name
             if (typeof (entry[1]) === 'undefined')
               break;
 
@@ -1099,7 +1033,67 @@ var ResourceMonitor = GObject.registerClass(
     }
 
     refreshDiskSpace() {
+      let proc = Gio.Subprocess.new(['/usr/bin/df'], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
 
+      proc.communicate_utf8_async(null, null, (proc, res) => {
+        try {
+            let [, stdout, stderr] = proc.communicate_utf8_finish(res);
+
+            if (proc.get_successful()) {
+              let lines = stdout.split('\n');
+
+              for (let i = 0; i < this.disksList.length; i++) {
+                let element = this.disksList[i];
+                let it = element.split(' ');
+                let field = this.diskSpaceItems[it[0]];
+
+                for (let j = 0; j < lines.length; j++) {
+                  var line = lines[j];
+                  var entry = line.trim().split(/\s+/);
+                  if (typeof (entry[1]) === 'undefined')
+                    break;
+
+                  // Same Name
+                  if (it[0].endsWith(entry[0])) {
+                    if (this.disksSpaceUnit === true) {
+                      // Used %
+                      field[1].text = '%';
+                      field[0].text = `${entry[4].slice(0, -1)}`;
+                    } else {
+                      // Used
+                      let used = entry[2]
+
+                      if (used > 1024) {
+                        field[1].text = 'M';
+                        used /= 1024;
+                        if (used > 1024) {
+                          field[1].text = 'G';
+                          used /= 1024;
+                          if (used > 1024) {
+                            field[1].text = 'T';
+                            used /= 1024;
+                          }
+                        }
+                      } else {
+                        field[1].text = 'K';
+                      }
+
+                      if (this.displayDecimals) {
+                        field[0].text = `${used.toFixed(1)}`;
+                      } else {
+                        field[0].text = `${used.toFixed(0)}`;
+                      }
+                    }
+                  }
+                }
+              }
+            } else {
+              throw new Error(stderr);
+            }
+        } catch (e) {
+            throw new Error(e);
+        }
+    });
     }
 
     refreshEth() {
@@ -1111,7 +1105,7 @@ var ResourceMonitor = GObject.registerClass(
         var line = lines[i];
         var entry = line.trim().split(':');
         if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
-          var values = entry[1].trim().split(/[\s]+/);
+          var values = entry[1].trim().split(/\s+/);
 
           duTot[0] += parseInt(values[0]);
           duTot[1] += parseInt(values[8]);
@@ -1164,7 +1158,7 @@ var ResourceMonitor = GObject.registerClass(
         var line = lines[i];
         var entry = line.trim().split(':');
         if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
-          var values = entry[1].trim().split(/[\s]+/);
+          var values = entry[1].trim().split(/\s+/);
 
           duTot[0] += parseInt(values[0]);
           duTot[1] += parseInt(values[8]);
