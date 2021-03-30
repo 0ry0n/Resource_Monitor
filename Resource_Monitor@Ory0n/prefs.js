@@ -118,6 +118,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings.bind('icons', valueIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
       gridIcons.attach(valueIcons, 1, 0, 1, 1);
 
+      gridIcons.attach(new Gtk.Label({
+        label: '%s'.format(_('Position')),
+        halign: Gtk.Align.START,
+        hexpand: true
+      }), 0, 1, 1, 1);
+
+      let valueIconsPosition = new Gtk.ComboBoxText({
+        halign: Gtk.Align.END
+      });
+      valueIconsPosition.insert_text(0, 'LEFT');
+      valueIconsPosition.insert_text(1, 'RIGHT');
+      this._settings.bind('iconsposition', valueIconsPosition, 'active', Gio.SettingsBindFlags.DEFAULT);
+      
+      valueIcons.connect('state-set', button => {
+        valueIconsPosition.sensitive = button.active;
+      });
+      valueIconsPosition.sensitive = valueIcons.active;
+
+      gridIcons.attach(valueIconsPosition, 1, 1, 1, 1);
+
       // DECIMALS
       let alignmentDecimals = new Gtk.Alignment({
         left_padding: 12,

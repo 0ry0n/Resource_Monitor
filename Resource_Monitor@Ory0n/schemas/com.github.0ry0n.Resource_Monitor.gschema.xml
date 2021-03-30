@@ -14,6 +14,12 @@
       <description>
       </description>
     </key>
+    <key name="iconsposition" type="i">
+      <default>1</default>
+      <summary>Icons Position</summary>
+      <description>
+      </description>
+    </key>
     <key name="cpu" type="b">
       <default>true</default>
       <summary>Display Cpu</summary>
