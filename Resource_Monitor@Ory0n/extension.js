@@ -266,37 +266,37 @@ var ResourceMonitor = GObject.registerClass(
 
       // Icon
       this.cpuIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'computer-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 
       this.ramIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'emblem-system-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/ram-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 
       this.swapIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'system-run-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/swap-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 
       this.diskStatsIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'drive-harddisk-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-stats-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 
       this.diskSpaceIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'drive-harddisk-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-space-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 
       this.ethIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'network-wired-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/eth-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 
       this.wlanIco = new St.Icon({
-        gicon: new Gio.ThemedIcon({ name: 'network-wireless-symbolic' }),
+        gicon: Gio.icon_new_for_string(Me.path + '/icons/wlan-symbolic.svg'),
         style_class: 'system-status-icon'
       });
 

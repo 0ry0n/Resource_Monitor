@@ -1,0 +1,38 @@
+<svg id="Livello_1" data-name="Livello 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15.5 15.5">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-width: 4px;
+      }
+    </style>
+  </defs>
+  <title>cpu-symbolic</title>
+  <path class="cls-1" d="M5.75,3V1a.75.75,0,0,0-1.5,0V3a.75.75,0,0,0,1.5,0V1a.75.75,0,0,0-1.5,0V3a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M11.75,3V1a.75.75,0,0,0-1.5,0V3a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M8.75,3V1a.75.75,0,0,0-1.5,0V3a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M5.75,15V13a.75.75,0,0,0-1.5,0v2a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M11.75,15V13a.75.75,0,0,0-1.5,0v2a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M8.75,15V13a.75.75,0,0,0-1.5,0v2a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M3.75,13V3a.75.75,0,0,0-1.5,0V13a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M13.75,13V3a.75.75,0,0,0-1.5,0V13a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M3,13.75H13a.75.75,0,0,0,0-1.5H3a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M3,3.75H13a.75.75,0,0,0,0-1.5H3a.75.75,0,0,0,0,1.5H13a.75.75,0,0,0,0-1.5H3A.75.75,0,0,0,3,3.75Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M1,5.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M1,11.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M1,8.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M13,5.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M13,11.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M13,8.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M6.75,10V6a.75.75,0,0,0-1.5,0v4a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M10.75,10V6a.75.75,0,0,0-1.5,0v4a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M6,10.75h4a.75.75,0,0,0,0-1.5H6a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <path class="cls-1" d="M6,6.75h4a.75.75,0,0,0,0-1.5H6a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)"/>
+  <line class="cls-2" x1="7.75" y1="5.75" x2="7.75" y2="9.75"/>
+</svg>
