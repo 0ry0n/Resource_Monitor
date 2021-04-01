@@ -1,0 +1,37 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16.01 16.01">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #fff;
+      }
+
+      .cls-2 {
+        fill: none;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+        stroke-width: 0.01px;
+      }
+    </style>
+  </defs>
+  <title>eth-symbolic</title>
+  <path class="cls-1" d="M1.5,8.75h13a.75.75,0,0,0,0-1.5H1.5a.75.75,0,0,0,0,1.5h13a.75.75,0,0,0,0-1.5H1.5A.75.75,0,0,0,1.5,8.75Z" transform="translate(0.01 0.01)" />
+  <line class="cls-2" x1="0.01" y1="0.01" x2="0.01" y2="16.01" />
+  <line class="cls-2" x1="16.01" y1="0.01" x2="16.01" y2="16.01" />
+  <line class="cls-2" x1="0.01" y1="0.01" x2="16.01" y2="0.01" />
+  <line class="cls-2" x1="0.01" y1="16.01" x2="16.01" y2="16.01" />
+  <path class="cls-1" d="M8.75,7.5v-3a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M3.75,11.5v-3a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M13.75,11.5v-3a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M7.25,4V1a.75.75,0,0,0-1.5,0V4a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M10.25,4V1a.75.75,0,0,0-1.5,0V4a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M6.5,4.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M6.5,1.75h3A.76.76,0,0,0,10.25,1,.76.76,0,0,0,9.5.25h-3A.76.76,0,0,0,5.75,1a.76.76,0,0,0,.75.75Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M2.25,15V12a.76.76,0,0,0-.75-.75A.76.76,0,0,0,.75,12v3a.76.76,0,0,0,.75.75A.76.76,0,0,0,2.25,15Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M5.25,15V12a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M1.5,15.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M1.5,12.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M12.25,15V12a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M15.25,15V12a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M11.5,15.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
+  <path class="cls-1" d="M11.5,12.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
+</svg>

@@ -1,0 +1,21 @@
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 15.5 15.5">
+    <defs>
+        <style>.cls-1,.cls-2{fill:#fff;}.cls-2{font-size:7px;font-family:Arial-Black, Arial;font-weight:800;}</style>
+    </defs>
+    <title>ram-symbolic</title>
+    <path class="cls-1" d="M3.75,15V1a.75.75,0,0,0-1.5,0V15a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M13.75,15V1a.75.75,0,0,0-1.5,0V15a.75.75,0,0,0,1.5,0Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M3,15.75H13a.75.75,0,0,0,0-1.5H3a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M3,1.75H13a.75.75,0,0,0,0-1.5H3a.75.75,0,0,0,0,1.5H13a.75.75,0,0,0,0-1.5H3A.75.75,0,0,0,3,1.75Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M1,5.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M1,11.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M1,8.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M13,5.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M13,11.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M13,8.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <text class="cls-2" transform="translate(5.03 10.01)">R</text>
+    <path class="cls-1" d="M1,2.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M1,14.75H3a.75.75,0,0,0,0-1.5H1a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M13,2.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+    <path class="cls-1" d="M13,14.75h2a.75.75,0,0,0,0-1.5H13a.75.75,0,0,0,0,1.5Z" transform="translate(-0.25 -0.25)" />
+</svg>
