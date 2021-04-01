@@ -1,5 +1,5 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
-/* exported init enable disable */
+/* exported init, enable, disable */
 
 /*
  * Resource_Monitor is Copyright © 2018-2021 Giuseppe Silvestro
@@ -37,9 +37,7 @@ const _ = Gettext.gettext;
 const Me = ExtensionUtils.getCurrentExtension();
 
 const Convenience = Me.imports.extensionUtils;
-var IndicatorName = Me.metadata['name'];
-
-var ResourceMonitorIndicator;
+const IndicatorName = Me.metadata['name'];
 
 const SHELL_MINOR = parseInt(Config.PACKAGE_VERSION.split('.')[1]);
 const INTERVAL = 'interval';
@@ -68,6 +66,8 @@ const WIDTH_ETH = 'widtheth';
 const WIDTH_WLAN = 'widthwlan';
 const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
 const CPUTEMPERATUREUNIT = 'cputemperatureunit';
+
+var ResourceMonitorIndicator = null;
 
 var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     _init(params) {
@@ -493,7 +493,7 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
 
     _openSystemMonitor() {
         if (this.displaySystemMonitor) {
-            var app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
+            let app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
 
             if (app != null)
                 app.activate();
@@ -908,19 +908,19 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshCpu() {
-        var lines = Shell.get_file_contents_utf8_sync('/proc/stat').split('\n');
-        var entry = lines[0].trim().split(/\s+/);
-        var cpuTot = 0;
-        var idle = parseInt(entry[4]);
+        let lines = Shell.get_file_contents_utf8_sync('/proc/stat').split('\n');
+        let entry = lines[0].trim().split(/\s+/);
+        let cpuTot = 0;
+        let idle = parseInt(entry[4]);
 
         // user sys nice idle iowait
         for (let i = 1; i < 5; i++)
             cpuTot += parseInt(entry[i]);
 
-        var delta = cpuTot - this.cpuTotOld;
-        var deltaIdle = idle - this.idleOld;
+        let delta = cpuTot - this.cpuTotOld;
+        let deltaIdle = idle - this.idleOld;
 
-        var cpuCurr = 100 * (delta - deltaIdle) / delta;
+        let cpuCurr = 100 * (delta - deltaIdle) / delta;
 
         this.cpuTotOld = cpuTot;
         this.idleOld = idle;
@@ -933,12 +933,12 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshRam() {
-        var total, available, used;
-        var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
+        let total, available, used;
+        let lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
 
         for (let i = 0; i < 3; i++) {
-            var values;
-            var line = lines[i];
+            let values;
+            let line = lines[i];
 
             if (line.match(/^MemTotal/)) {
                 values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
@@ -959,12 +959,12 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshSwap() {
-        var total, available, used;
-        var lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
+        let total, available, used;
+        let lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
 
         for (let i = 0; i < 16; i++) {
-            var values;
-            var line = lines[i];
+            let values;
+            let line = lines[i];
 
             if (line.match(/^SwapTotal/)) {
                 values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
@@ -985,13 +985,13 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshDiskStats() {
-        var lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
+        let lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
 
         if (this.diskStatsMode === true) {
             let field = this.diskStatsItems['All'];
 
-            var rwTot = [0, 0];
-            var rw = [0, 0];
+            let rwTot = [0, 0];
+            let rw = [0, 0];
 
             for (let i = 0; i < this.disksList.length; i++) {
                 let element = this.disksList[i];
@@ -1000,8 +1000,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
                 // if disk stats enabled
                 if (it[1] === 'true') {
                     for (let j = 0; j < lines.length; j++) {
-                        var line = lines[j];
-                        var entry = line.trim().split(/\s+/); // TODO search by name
+                        let line = lines[j];
+                        let entry = line.trim().split(/\s+/); // TODO search by name
                         if (typeof (entry[1]) === 'undefined')
                             break;
 
@@ -1015,8 +1015,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
                 }
             }
 
-            var idle = GLib.get_monotonic_time() / 1000;
-            var delta = (idle - this.idleDiskOld['All']) / 1000;
+            let idle = GLib.get_monotonic_time() / 1000;
+            let delta = (idle - this.idleDiskOld['All']) / 1000;
 
             if (delta > 0) {
                 for (let i = 0; i < 2; i++) {
@@ -1056,15 +1056,15 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
                     continue;
                 }
 
-                var rwTot = [0, 0];
-                var rw = [0, 0];
+                let rwTot = [0, 0];
+                let rw = [0, 0];
 
-                var found = false; // found in /proc/diskstats
+                let found = false; // found in /proc/diskstats
 
                 for (let j = 0; j < lines.length; j++) {
-                    var line = lines[j];
+                    let line = lines[j];
 
-                    var entry = line.trim().split(/\s+/); // TODO search by name
+                    let entry = line.trim().split(/\s+/); // TODO search by name
                     if (typeof (entry[1]) === 'undefined')
                         break;
 
@@ -1078,8 +1078,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
                 }
 
                 if (found) {
-                    var idle = GLib.get_monotonic_time() / 1000;
-                    var delta = (idle - this.idleDiskOld[it[0]]) / 1000;
+                    let idle = GLib.get_monotonic_time() / 1000;
+                    let delta = (idle - this.idleDiskOld[it[0]]) / 1000;
 
                     if (delta > 0) {
                         for (let i = 0; i < 2; i++) {
@@ -1136,8 +1136,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
                         }
 
                         for (let j = 0; j < lines.length; j++) {
-                            var line = lines[j];
-                            var entry = line.trim().split(/\s+/);
+                            let line = lines[j];
+                            let entry = line.trim().split(/\s+/);
                             if (typeof (entry[1]) === 'undefined')
                                 break;
 
@@ -1185,23 +1185,23 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshEth() {
-        var duTot = [0, 0];
-        var du = [0, 0];
-        var lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
+        let duTot = [0, 0];
+        let du = [0, 0];
+        let lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
         for (let i = 2; i < lines.length - 1; i++) {
-            var line = lines[i];
-            var entry = line.trim().split(':');
+            let line = lines[i];
+            let entry = line.trim().split(':');
             if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
-                var values = entry[1].trim().split(/\s+/);
+                let values = entry[1].trim().split(/\s+/);
 
                 duTot[0] += parseInt(values[0]);
                 duTot[1] += parseInt(values[8]);
             }
         }
 
-        var idle = GLib.get_monotonic_time() / 1000;
-        var delta = (idle - this.idleEthOld) / 1000;
+        let idle = GLib.get_monotonic_time() / 1000;
+        let delta = (idle - this.idleEthOld) / 1000;
 
         if (delta > 0) {
             for (let i = 0; i < 2; i++) {
@@ -1238,23 +1238,23 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshWlan() {
-        var duTot = [0, 0];
-        var du = [0, 0];
-        var lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
+        let duTot = [0, 0];
+        let du = [0, 0];
+        let lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
         for (let i = 2; i < lines.length - 1; i++) {
-            var line = lines[i];
-            var entry = line.trim().split(':');
+            let line = lines[i];
+            let entry = line.trim().split(':');
             if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
-                var values = entry[1].trim().split(/\s+/);
+                let values = entry[1].trim().split(/\s+/);
 
                 duTot[0] += parseInt(values[0]);
                 duTot[1] += parseInt(values[8]);
             }
         }
 
-        var idle = GLib.get_monotonic_time() / 1000;
-        var delta = (idle - this.idleWlanOld) / 1000;
+        let idle = GLib.get_monotonic_time() / 1000;
+        let delta = (idle - this.idleWlanOld) / 1000;
 
         if (delta > 0) {
             for (let i = 0; i < 2; i++) {
@@ -1291,12 +1291,12 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     }
 
     _refreshCpuTemperature() {
-        var cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone0/temp';
+        let cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone0/temp';
         if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
-            var file = Gio.file_new_for_path(cpuTemperatureFile);
+            let file = Gio.file_new_for_path(cpuTemperatureFile);
             file.load_contents_async(null, (source, result) => {
-                var contents = source.load_contents_finish(result);
-                var temperature = parseInt(contents[1]) / 1000;
+                let contents = source.load_contents_finish(result);
+                let temperature = parseInt(contents[1]) / 1000;
 
                 if (this.cpuTemperatureFahrenheit) {
                     temperature = (temperature * 1.8) + 32;
@@ -1332,6 +1332,8 @@ function enable() {
 }
 
 function disable() {
-    ResourceMonitorIndicator.destroy();
-    ResourceMonitorIndicator = null;
+    if (ResourceMonitorIndicator !== null) {
+        ResourceMonitorIndicator.destroy();
+        ResourceMonitorIndicator = null;
+    }
 }

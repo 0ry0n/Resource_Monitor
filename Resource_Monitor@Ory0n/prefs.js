@@ -1,5 +1,5 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
-/* exported init enable disable */
+/* exported init, buildPrefsWidget */
 
 /*
  * Resource_Monitor is Copyright © 2018-2021 Giuseppe Silvestro
@@ -27,28 +27,24 @@ const { Gio, GObject, Gtk, GLib } = imports.gi;
 const Gettex = imports.gettext.domain('com-github-0ry0n-Resource_Monitor');
 const _ = Gettex.gettext;
 
-const Config = imports.misc.config;
 const ExtensionUtils = imports.misc.extensionUtils;
 
 const Me = ExtensionUtils.getCurrentExtension();
 
 const Convenience = Me.imports.extensionUtils;
 
-const SHELL_MINOR = parseInt(Config.PACKAGE_VERSION.split('.')[1]);
-
 function init() {
     Convenience.initTranslations();
 }
 
-var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.Notebook {
-    _init(params) {
-        super._init(params);
+const ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget {
+    constructor() {
+        this.main_widget = new Gtk.Notebook({
+            margin: 12
+        });
 
         // Settings
         this._settings = Convenience.getSettings();
-
-        // Parent
-        this.margin = 12;
 
         // GLOBAL
         let globalFrame = new Gtk.Grid({
@@ -204,7 +200,7 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
         this._settings.bind('showsystemmonitor', valueShowSM, 'active', Gio.SettingsBindFlags.DEFAULT);
         gridShowSM.attach(valueShowSM, 1, 0, 1, 1);
 
-        this.append_page(globalFrame, new Gtk.Label({
+        this.main_widget.append_page(globalFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Global')),
             use_markup: true,
             halign: Gtk.Align.CENTER
@@ -256,7 +252,7 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
         widthCpu.sensitive = valueCpu.active;
         gridCpu.attach(widthCpu, 1, 1, 1, 1);
 
-        this.append_page(cpuFrame, new Gtk.Label({
+        this.main_widget.append_page(cpuFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Cpu')),
             use_markup: true,
             halign: Gtk.Align.CENTER
@@ -308,7 +304,7 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
         widthRam.sensitive = valueRam.active;
         gridRam.attach(widthRam, 1, 1, 1, 1);
 
-        this.append_page(ramFrame, new Gtk.Label({
+        this.main_widget.append_page(ramFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Ram')),
             use_markup: true,
             halign: Gtk.Align.CENTER
@@ -360,7 +356,7 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
         widthSwap.sensitive = valueSwap.active;
         gridSwap.attach(widthSwap, 1, 1, 1, 1);
 
-        this.append_page(swapFrame, new Gtk.Label({
+        this.main_widget.append_page(swapFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Swap')),
             use_markup: true,
             halign: Gtk.Align.CENTER
@@ -636,7 +632,7 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
 
         /****************************************************/
 
-        this.append_page(diskFrame, new Gtk.Label({
+        this.main_widget.append_page(diskFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Disk')),
             use_markup: true,
             halign: Gtk.Align.CENTER
@@ -782,7 +778,7 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
         widthWlan.sensitive = valueWlan.active;
         gridWlan.attach(widthWlan, 1, 1, 1, 1);
 
-        this.append_page(netFrame, new Gtk.Label({
+        this.main_widget.append_page(netFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Net')),
             use_markup: true,
             halign: Gtk.Align.CENTER
@@ -865,25 +861,18 @@ var ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget extends Gtk.No
         valueCpuTemperatureUnit.sensitive = valueTemperature.active;
         gridTemperature.attach(widthTemperature, 1, 1, 1, 1);
 
-        this.append_page(temperatureFrame, new Gtk.Label({
+        this.main_widget.append_page(temperatureFrame, new Gtk.Label({
             label: '<b>%s</b>'.format(_('Thermal')),
             use_markup: true,
             halign: Gtk.Align.CENTER
         }));
-    }
-}
 
-// Compatibility with gnome-shell >= 3.32
-if (SHELL_MINOR > 30) {
-    ResourceMonitorPrefsWidget = GObject.registerClass(
-        { GTypeName: 'ResourceMonitorPrefsWidget' },
-        ResourceMonitorPrefsWidget
-    );
+        this.main_widget.show_all();
+    }
 }
 
 function buildPrefsWidget() {
     let widget = new ResourceMonitorPrefsWidget();
-    widget.show_all();
 
-    return widget;
+    return widget.main_widget;
 }
