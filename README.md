@@ -1,65 +1,53 @@
 # Resource_Monitor
-Resource_Monitor is a Gnome Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in gnome shell top bar.
+Resource_Monitor is a GNOME Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in GNOME shell top bar.
 
 # Screenshots
 ![](https://github.com/0ry0n/Resource_Monitor/blob/master/main.png)
+
+# GNOME Shell versions supported
+**3.28, 3.30, 3.32, 3.34, 3.36, 3.38**
 
 # How-To Install
 ## Download
 You can get this extension:
 
-- From [Gnome Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/).
+- From [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/).
 - Downloading the latest [Release](https://github.com/0ry0n/Resource_Monitor/releases) released on GitHub.
 - Cloning the [Master](https://github.com/0ry0n/Resource_Monitor/tree/master) repository.
 ## Install
 ### Using the latest release
 1. Unzip the file `Resource_Monitor-x.zip`.
-2. Move the `Resource_Monitor-x` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Activate the extensions with Gnome Extensions.
+2. Open `Resource_Monitor-x` folder.
+3. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
+4. Activate the extensions with Gnome Extensions.
 
 For example...
 ```
 unzip Resource_Monitor-x.zip
-mv Resource_Monitor-x ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
+cd Resource_Monitor-x
+mv Resource_Monitor@Ory0n ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
 
 gnome-extensions enable Resource_Monitor@Ory0n
 ```
 
 ### Cloning the repository
 1. Clone the Master repository.
-2. Move the `Resource_Monitor` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Activate the extensions with Gnome Extensions.
+2. Open `Resource_Monitor` folder.
+3. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
+4. Activate the extensions with Gnome Extensions.
 
 For example...
 ```
 git clone https://github.com/0ry0n/Resource_Monitor
-mv Resource_Monitor ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
+cd Resource_Monitor
+mv Resource_Monitor@Ory0n ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
 
 gnome-extensions enable Resource_Monitor@Ory0n
 ```
 Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 
-# General Settings
+# Preferences
 ![](https://github.com/0ry0n/Resource_Monitor/blob/master/settings.png)
-
-- **Refresh Time:** Choose the refresh interval, from 1 to 30 seconds.
-- **Display Icons:** Display or hide the icons.
-- **Display Decimals:** Display or hide decimal numbers.
-- **System Monitor:** Show or not Gnome System Monitor when clicking on extension.
-- **Display Cpu:** Display or hide the Cpu field.
-- **Modify Width Cpu:** Resize the Cpu field.
-- **Display Ram:** Display or hide the Ram field.
-- **Modify Width Ram:** Resize the Ram field.
-- **Display Swap:** Display or hide the Swap field.
-- **Modify Width Swap:** Resize the Swap field.
-- **Display Disk:** Display or hide the Disk field.
-- **Chose Disk:** Lets you choose the drive or memory partition to monitor.
-- **Modify Width Disk:** Resize the Disk field.
-- **Auto Hide Net:** If enabled, it automatically hides the unused network interface field.
-- **Display Eth:** Display or hide the Ethernet field.
-- **Modify Width Eth:** Resize the Eth field.
-- **Display Wlan:** Display or hide the Wlan field.
-- **Modify Width Wlan:** Resize the Wlan field.
 
 ![](https://github.com/0ry0n/Resource_Monitor/blob/master/system-monitor.png)
 
@@ -67,6 +55,16 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/0ry0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 11 (Apr 1, 2021)**
+- Added new better icons.
+- Changed the detection of network devices via signals.
+- Added disks space monitoring.
+- Added the ability to show multiple disks at the same time.
+- Added backward compatibility with gnome 3.28, 3.30
+- Added the position of icons.
+- Added swap monitoring: thanks to @henrique3g
+- Removed deprecated functions.
+
 **version 10 (Nov 21, 2020)**
 - Ram fix.
 - Added show or not Gnome System Monitor when clicking on extension.
