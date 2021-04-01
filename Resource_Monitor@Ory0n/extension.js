@@ -77,6 +77,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
         this._settings = Convenience.getSettings();
 
         this.client = NM.Client.new(null);
+        this.onEth = false;
+        this.onWlan = false;
         this.client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
         this.client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
 
@@ -561,9 +563,9 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
                 this.diskStatsIco.show();
             if (this.enDiskSpace)
                 this.diskSpaceIco.show();
-            if (this.enEth)
+            if ((this.enEth && this.onEth) || (this.enEth && !this.enHide))
                 this.ethIco.show();
-            if (this.enWlan)
+            if ((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide))
                 this.wlanIco.show();
         } else {
             this.cpuIco.hide();
