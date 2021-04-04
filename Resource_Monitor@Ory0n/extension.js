@@ -24,6 +24,8 @@
 
 const { St, GObject, NM, GLib, Shell, Gio, Clutter } = imports.gi;
 
+const ByteArray = imports.byteArray;
+
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 
@@ -31,7 +33,7 @@ const Util = imports.misc.util;
 const Config = imports.misc.config;
 const ExtensionUtils = imports.misc.extensionUtils;
 
-const Gettext = imports.gettext.domain('com-github-0ry0n-Resource_Monitor');
+const Gettext = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
 const _ = Gettext.gettext;
 
 const Me = ExtensionUtils.getCurrentExtension();
@@ -904,215 +906,234 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
         if (this.enCpuTemperature)
             this._refreshCpuTemperature();
 
-        return true;
+        return GLib.SOURCE_CONTINUE;
     }
 
     _refreshCpu() {
-        let lines = Shell.get_file_contents_utf8_sync('/proc/stat').split('\n');
-        let entry = lines[0].trim().split(/\s+/);
-        let cpuTot = 0;
-        let idle = parseInt(entry[4]);
+        let file = Gio.file_new_for_path('/proc/stat');
+        file.load_contents_async(null, (source, result) => {
+            let contents = source.load_contents_finish(result);
+            let lines = ByteArray.toString(contents[1]).split('\n');
 
-        // user sys nice idle iowait
-        for (let i = 1; i < 5; i++)
-            cpuTot += parseInt(entry[i]);
+            let entry = lines[0].trim().split(/\s+/);
+            let cpuTot = 0;
+            let idle = parseInt(entry[4]);
 
-        let delta = cpuTot - this.cpuTotOld;
-        let deltaIdle = idle - this.idleOld;
+            // user sys nice idle iowait
+            for (let i = 1; i < 5; i++)
+                cpuTot += parseInt(entry[i]);
 
-        let cpuCurr = 100 * (delta - deltaIdle) / delta;
+            let delta = cpuTot - this.cpuTotOld;
+            let deltaIdle = idle - this.idleOld;
 
-        this.cpuTotOld = cpuTot;
-        this.idleOld = idle;
+            let cpuCurr = 100 * (delta - deltaIdle) / delta;
 
-        if (this.displayDecimals) {
-            this.cpu.text = `${cpuCurr.toFixed(1)}`;
-        } else {
-            this.cpu.text = `${cpuCurr.toFixed(0)}`;
-        }
+            this.cpuTotOld = cpuTot;
+            this.idleOld = idle;
+
+            if (this.displayDecimals) {
+                this.cpu.text = `${cpuCurr.toFixed(1)}`;
+            } else {
+                this.cpu.text = `${cpuCurr.toFixed(0)}`;
+            }
+        });
     }
 
     _refreshRam() {
-        let total, available, used;
-        let lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
+        let file = Gio.file_new_for_path('/proc/meminfo');
+        file.load_contents_async(null, (source, result) => {
+            let contents = source.load_contents_finish(result);
+            let lines = ByteArray.toString(contents[1]).split('\n');
 
-        for (let i = 0; i < 3; i++) {
-            let values;
-            let line = lines[i];
+            let total, available, used;
 
-            if (line.match(/^MemTotal/)) {
-                values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
-                total = parseInt(values[1]);
-            } else if (line.match(/^MemAvailable/)) {
-                values = line.match(/^MemAvailable:\s*([^ ]*)\s*([^ ]*)$/);
-                available = parseInt(values[1]);
+            for (let i = 0; i < 3; i++) {
+                let values;
+                let line = lines[i];
+
+                if (line.match(/^MemTotal/)) {
+                    values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
+                    total = parseInt(values[1]);
+                } else if (line.match(/^MemAvailable/)) {
+                    values = line.match(/^MemAvailable:\s*([^ ]*)\s*([^ ]*)$/);
+                    available = parseInt(values[1]);
+                }
             }
-        }
 
-        used = total - available;
+            used = total - available;
 
-        if (this.displayDecimals) {
-            this.ram.text = `${(100 * used / total).toFixed(1)}`;
-        } else {
-            this.ram.text = `${(100 * used / total).toFixed(0)}`;
-        }
+            if (this.displayDecimals) {
+                this.ram.text = `${(100 * used / total).toFixed(1)}`;
+            } else {
+                this.ram.text = `${(100 * used / total).toFixed(0)}`;
+            }
+        });
     }
 
     _refreshSwap() {
-        let total, available, used;
-        let lines = Shell.get_file_contents_utf8_sync('/proc/meminfo').split('\n');
+        let file = Gio.file_new_for_path('/proc/meminfo');
+        file.load_contents_async(null, (source, result) => {
+            let contents = source.load_contents_finish(result);
+            let lines = ByteArray.toString(contents[1]).split('\n');
 
-        for (let i = 0; i < 16; i++) {
-            let values;
-            let line = lines[i];
+            let total, available, used;
 
-            if (line.match(/^SwapTotal/)) {
-                values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
-                total = parseInt(values[1]);
-            } else if (line.match(/^SwapFree/)) {
-                values = line.match(/^SwapFree:\s*([^ ]*)\s*([^ ]*)$/);
-                available = parseInt(values[1]);
+            for (let i = 0; i < 16; i++) {
+                let values;
+                let line = lines[i];
+
+                if (line.match(/^SwapTotal/)) {
+                    values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
+                    total = parseInt(values[1]);
+                } else if (line.match(/^SwapFree/)) {
+                    values = line.match(/^SwapFree:\s*([^ ]*)\s*([^ ]*)$/);
+                    available = parseInt(values[1]);
+                }
             }
-        }
 
-        used = total - available;
+            used = total - available;
 
-        if (this.displayDecimals) {
-            this.swap.text = `${(100 * used / total).toFixed(1)}`;
-        } else {
-            this.swap.text = `${(100 * used / total).toFixed(0)}`;
-        }
+            if (this.displayDecimals) {
+                this.swap.text = `${(100 * used / total).toFixed(1)}`;
+            } else {
+                this.swap.text = `${(100 * used / total).toFixed(0)}`;
+            }
+        });
     }
 
     _refreshDiskStats() {
-        let lines = Shell.get_file_contents_utf8_sync('/proc/diskstats').split('\n');
+        let file = Gio.file_new_for_path('/proc/diskstats');
+        file.load_contents_async(null, (source, result) => {
+            let contents = source.load_contents_finish(result);
+            let lines = ByteArray.toString(contents[1]).split('\n');
 
-        if (this.diskStatsMode === true) {
-            let field = this.diskStatsItems['All'];
-
-            let rwTot = [0, 0];
-            let rw = [0, 0];
-
-            for (let i = 0; i < this.disksList.length; i++) {
-                let element = this.disksList[i];
-                let it = element.split(' ');
-
-                // if disk stats enabled
-                if (it[1] === 'true') {
-                    for (let j = 0; j < lines.length; j++) {
-                        let line = lines[j];
-                        let entry = line.trim().split(/\s+/); // TODO search by name
-                        if (typeof (entry[1]) === 'undefined')
-                            break;
-
-                        // All
-                        // Same Name
-                        if (it[0].endsWith(entry[2])) {
-                            rwTot[0] += parseInt(entry[5]);
-                            rwTot[1] += parseInt(entry[9]);
-                        }
-                    }
-                }
-            }
-
-            let idle = GLib.get_monotonic_time() / 1000;
-            let delta = (idle - this.idleDiskOld['All']) / 1000;
-
-            if (delta > 0) {
-                for (let i = 0; i < 2; i++) {
-                    rw[i] = (rwTot[i] - this.rwTotOld['All'][i]) / delta;
-                    this.rwTotOld['All'][i] = rwTot[i];
-                }
-
-                if (rw[0] > 1024 || rw[1] > 1024) {
-                    field[1].text = 'M';
-                    rw[0] /= 1024;
-                    rw[1] /= 1024;
-                    if (rw[0] > 1024 || rw[1] > 1024) {
-                        field[1].text = 'G';
-                        rw[0] /= 1024;
-                        rw[1] /= 1024;
-                    }
-                } else {
-                    field[1].text = 'K';
-                }
-            }
-
-            this.idleDiskOld['All'] = idle;
-
-            if (this.displayDecimals) {
-                field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
-            } else {
-                field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
-            }
-        } else {
-            for (let i = 0; i < this.disksList.length; i++) {
-                let element = this.disksList[i];
-                let it = element.split(' ');
-                let field = this.diskStatsItems[it[0]];
-
-                // undefined if stats disabled
-                if (typeof (field) === 'undefined') {
-                    continue;
-                }
+            if (this.diskStatsMode === true) {
+                let field = this.diskStatsItems['All'];
 
                 let rwTot = [0, 0];
                 let rw = [0, 0];
 
-                let found = false; // found in /proc/diskstats
+                for (let i = 0; i < this.disksList.length; i++) {
+                    let element = this.disksList[i];
+                    let it = element.split(' ');
 
-                for (let j = 0; j < lines.length; j++) {
-                    let line = lines[j];
+                    // if disk stats enabled
+                    if (it[1] === 'true') {
+                        for (let j = 0; j < lines.length; j++) {
+                            let line = lines[j];
+                            let entry = line.trim().split(/\s+/); // TODO search by name
+                            if (typeof (entry[1]) === 'undefined')
+                                break;
 
-                    let entry = line.trim().split(/\s+/); // TODO search by name
-                    if (typeof (entry[1]) === 'undefined')
-                        break;
-
-                    // Same Name
-                    if (it[0].endsWith(entry[2])) {
-                        rwTot[0] += parseInt(entry[5]);
-                        rwTot[1] += parseInt(entry[9]);
-                        found = true;
-                        break;
+                            // All
+                            // Same Name
+                            if (it[0].endsWith(entry[2])) {
+                                rwTot[0] += parseInt(entry[5]);
+                                rwTot[1] += parseInt(entry[9]);
+                            }
+                        }
                     }
                 }
 
-                if (found) {
-                    let idle = GLib.get_monotonic_time() / 1000;
-                    let delta = (idle - this.idleDiskOld[it[0]]) / 1000;
+                let idle = GLib.get_monotonic_time() / 1000;
+                let delta = (idle - this.idleDiskOld['All']) / 1000;
 
-                    if (delta > 0) {
-                        for (let i = 0; i < 2; i++) {
-                            rw[i] = (rwTot[i] - this.rwTotOld[it[0]][i]) / delta;
-                            this.rwTotOld[it[0]][i] = rwTot[i];
-                        }
+                if (delta > 0) {
+                    for (let i = 0; i < 2; i++) {
+                        rw[i] = (rwTot[i] - this.rwTotOld['All'][i]) / delta;
+                        this.rwTotOld['All'][i] = rwTot[i];
+                    }
 
+                    if (rw[0] > 1024 || rw[1] > 1024) {
+                        field[1].text = 'M';
+                        rw[0] /= 1024;
+                        rw[1] /= 1024;
                         if (rw[0] > 1024 || rw[1] > 1024) {
-                            field[1].text = 'M';
+                            field[1].text = 'G';
                             rw[0] /= 1024;
                             rw[1] /= 1024;
-                            if (rw[0] > 1024 || rw[1] > 1024) {
-                                field[1].text = 'G';
-                                rw[0] /= 1024;
-                                rw[1] /= 1024;
-                            }
-                        } else {
-                            field[1].text = 'K';
+                        }
+                    } else {
+                        field[1].text = 'K';
+                    }
+                }
+
+                this.idleDiskOld['All'] = idle;
+
+                if (this.displayDecimals) {
+                    field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+                } else {
+                    field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
+                }
+            } else {
+                for (let i = 0; i < this.disksList.length; i++) {
+                    let element = this.disksList[i];
+                    let it = element.split(' ');
+                    let field = this.diskStatsItems[it[0]];
+
+                    // undefined if stats disabled
+                    if (typeof (field) === 'undefined') {
+                        continue;
+                    }
+
+                    let rwTot = [0, 0];
+                    let rw = [0, 0];
+
+                    let found = false; // found in /proc/diskstats
+
+                    for (let j = 0; j < lines.length; j++) {
+                        let line = lines[j];
+
+                        let entry = line.trim().split(/\s+/); // TODO search by name
+                        if (typeof (entry[1]) === 'undefined')
+                            break;
+
+                        // Same Name
+                        if (it[0].endsWith(entry[2])) {
+                            rwTot[0] += parseInt(entry[5]);
+                            rwTot[1] += parseInt(entry[9]);
+                            found = true;
+                            break;
                         }
                     }
 
-                    this.idleDiskOld[it[0]] = idle;
+                    if (found) {
+                        let idle = GLib.get_monotonic_time() / 1000;
+                        let delta = (idle - this.idleDiskOld[it[0]]) / 1000;
 
-                    if (this.displayDecimals) {
-                        field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
-                    } else {
-                        field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
+                        if (delta > 0) {
+                            for (let i = 0; i < 2; i++) {
+                                rw[i] = (rwTot[i] - this.rwTotOld[it[0]][i]) / delta;
+                                this.rwTotOld[it[0]][i] = rwTot[i];
+                            }
+
+                            if (rw[0] > 1024 || rw[1] > 1024) {
+                                field[1].text = 'M';
+                                rw[0] /= 1024;
+                                rw[1] /= 1024;
+                                if (rw[0] > 1024 || rw[1] > 1024) {
+                                    field[1].text = 'G';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                }
+                            } else {
+                                field[1].text = 'K';
+                            }
+                        }
+
+                        this.idleDiskOld[it[0]] = idle;
+
+                        if (this.displayDecimals) {
+                            field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+                        } else {
+                            field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
+                        }
+                    } else { // Not found
+                        field[0].text = '--|--';
                     }
-                } else { // Not found
-                    field[0].text = '--|--';
                 }
             }
-        }
+        });
     }
 
     _refreshDiskSpace() {
@@ -1187,107 +1208,117 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     _refreshEth() {
         let duTot = [0, 0];
         let du = [0, 0];
-        let lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
-        for (let i = 2; i < lines.length - 1; i++) {
-            let line = lines[i];
-            let entry = line.trim().split(':');
-            if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
-                let values = entry[1].trim().split(/\s+/);
+        let file = Gio.file_new_for_path('/proc/net/dev');
+        file.load_contents_async(null, (source, result) => {
+            let contents = source.load_contents_finish(result);
+            let lines = ByteArray.toString(contents[1]).split('\n');
 
-                duTot[0] += parseInt(values[0]);
-                duTot[1] += parseInt(values[8]);
-            }
-        }
+            for (let i = 2; i < lines.length - 1; i++) {
+                let line = lines[i];
+                let entry = line.trim().split(':');
+                if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
+                    let values = entry[1].trim().split(/\s+/);
 
-        let idle = GLib.get_monotonic_time() / 1000;
-        let delta = (idle - this.idleEthOld) / 1000;
-
-        if (delta > 0) {
-            for (let i = 0; i < 2; i++) {
-                du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
-                this.duTotEthOld[i] = duTot[i];
+                    duTot[0] += parseInt(values[0]);
+                    duTot[1] += parseInt(values[8]);
+                }
             }
 
-            if (du[0] > 1024 || du[1] > 1024) {
-                this.ethUnit.text = 'K';
-                du[0] /= 1024;
-                du[1] /= 1024;
+            let idle = GLib.get_monotonic_time() / 1000;
+            let delta = (idle - this.idleEthOld) / 1000;
+
+            if (delta > 0) {
+                for (let i = 0; i < 2; i++) {
+                    du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
+                    this.duTotEthOld[i] = duTot[i];
+                }
+
                 if (du[0] > 1024 || du[1] > 1024) {
-                    this.ethUnit.text = 'M';
+                    this.ethUnit.text = 'K';
                     du[0] /= 1024;
                     du[1] /= 1024;
                     if (du[0] > 1024 || du[1] > 1024) {
-                        this.ethUnit.text = 'G';
+                        this.ethUnit.text = 'M';
                         du[0] /= 1024;
                         du[1] /= 1024;
+                        if (du[0] > 1024 || du[1] > 1024) {
+                            this.ethUnit.text = 'G';
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                        }
                     }
+                } else {
+                    this.ethUnit.text = 'B';
                 }
-            } else {
-                this.ethUnit.text = 'B';
             }
-        }
 
-        this.idleEthOld = idle;
+            this.idleEthOld = idle;
 
-        if (this.displayDecimals) {
-            this.eth.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
-        } else {
-            this.eth.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
-        }
+            if (this.displayDecimals) {
+                this.eth.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+            } else {
+                this.eth.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
+            }
+        });
     }
 
     _refreshWlan() {
         let duTot = [0, 0];
         let du = [0, 0];
-        let lines = Shell.get_file_contents_utf8_sync('/proc/net/dev').split('\n');
 
-        for (let i = 2; i < lines.length - 1; i++) {
-            let line = lines[i];
-            let entry = line.trim().split(':');
-            if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
-                let values = entry[1].trim().split(/\s+/);
+        let file = Gio.file_new_for_path('/proc/net/dev');
+        file.load_contents_async(null, (source, result) => {
+            let contents = source.load_contents_finish(result);
+            let lines = ByteArray.toString(contents[1]).split('\n');
 
-                duTot[0] += parseInt(values[0]);
-                duTot[1] += parseInt(values[8]);
-            }
-        }
+            for (let i = 2; i < lines.length - 1; i++) {
+                let line = lines[i];
+                let entry = line.trim().split(':');
+                if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
+                    let values = entry[1].trim().split(/\s+/);
 
-        let idle = GLib.get_monotonic_time() / 1000;
-        let delta = (idle - this.idleWlanOld) / 1000;
-
-        if (delta > 0) {
-            for (let i = 0; i < 2; i++) {
-                du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
-                this.duTotWlanOld[i] = duTot[i];
+                    duTot[0] += parseInt(values[0]);
+                    duTot[1] += parseInt(values[8]);
+                }
             }
 
-            if (du[0] > 1024 || du[1] > 1024) {
-                this.wlanUnit.text = 'K';
-                du[0] /= 1024;
-                du[1] /= 1024;
+            let idle = GLib.get_monotonic_time() / 1000;
+            let delta = (idle - this.idleWlanOld) / 1000;
+
+            if (delta > 0) {
+                for (let i = 0; i < 2; i++) {
+                    du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
+                    this.duTotWlanOld[i] = duTot[i];
+                }
+
                 if (du[0] > 1024 || du[1] > 1024) {
-                    this.wlanUnit.text = 'M';
+                    this.wlanUnit.text = 'K';
                     du[0] /= 1024;
                     du[1] /= 1024;
                     if (du[0] > 1024 || du[1] > 1024) {
-                        this.wlanUnit.text = 'G';
+                        this.wlanUnit.text = 'M';
                         du[0] /= 1024;
                         du[1] /= 1024;
+                        if (du[0] > 1024 || du[1] > 1024) {
+                            this.wlanUnit.text = 'G';
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                        }
                     }
+                } else {
+                    this.wlanUnit.text = 'B';
                 }
-            } else {
-                this.wlanUnit.text = 'B';
             }
-        }
 
-        this.idleWlanOld = idle;
+            this.idleWlanOld = idle;
 
-        if (this.displayDecimals) {
-            this.wlan.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
-        } else {
-            this.wlan.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
-        }
+            if (this.displayDecimals) {
+                this.wlan.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+            } else {
+                this.wlan.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
+            }
+        });
     }
 
     _refreshCpuTemperature() {
@@ -1296,7 +1327,7 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
             let file = Gio.file_new_for_path(cpuTemperatureFile);
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result);
-                let temperature = parseInt(contents[1]) / 1000;
+                let temperature = parseInt(ByteArray.toString(contents[1])) / 1000;
 
                 if (this.cpuTemperatureFahrenheit) {
                     temperature = (temperature * 1.8) + 32;
