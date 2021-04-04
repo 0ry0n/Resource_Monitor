@@ -55,6 +55,10 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/0ry0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 12 (Apr 4, 2021)**
+- Added asynchronous file reading.
+- Bug fixed.
+
 **version 11 (Apr 1, 2021)**
 - Added new better icons.
 - Changed the detection of network devices via signals.

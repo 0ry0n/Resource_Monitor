@@ -10,9 +10,9 @@
         "3.36",
         "3.38"
     ],
-    "gettext-domain": "com-github-0ry0n-Resource_Monitor",
-    "settings-schema": "com.github.0ry0n.Resource_Monitor",
+    "gettext-domain": "com-github-Ory0n-Resource_Monitor",
+    "settings-schema": "com.github.Ory0n.Resource_Monitor",
     "url": "https://github.com/0ry0n/Resource_Monitor/",
     "author": "Giuseppe Silvestro",
-    "version": 12
+    "version": 13
 }
