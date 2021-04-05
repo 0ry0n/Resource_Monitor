@@ -24,8 +24,6 @@
 
 const { St, GObject, NM, GLib, Shell, Gio, Clutter } = imports.gi;
 
-const ByteArray = imports.byteArray;
-
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 
@@ -912,8 +910,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     _refreshCpu() {
         let file = Gio.file_new_for_path('/proc/stat');
         file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result);
-            let lines = ByteArray.toString(contents[1]).split('\n');
+            let contents = source.load_contents_finish(result)[1];
+            let lines = String(contents).split('\n');
 
             let entry = lines[0].trim().split(/\s+/);
             let cpuTot = 0;
@@ -942,8 +940,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     _refreshRam() {
         let file = Gio.file_new_for_path('/proc/meminfo');
         file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result);
-            let lines = ByteArray.toString(contents[1]).split('\n');
+            let contents = source.load_contents_finish(result)[1];
+            let lines = String(contents).split('\n');
 
             let total, available, used;
 
@@ -973,8 +971,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     _refreshSwap() {
         let file = Gio.file_new_for_path('/proc/meminfo');
         file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result);
-            let lines = ByteArray.toString(contents[1]).split('\n');
+            let contents = source.load_contents_finish(result)[1];
+            let lines = String(contents).split('\n');
 
             let total, available, used;
 
@@ -1004,8 +1002,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
     _refreshDiskStats() {
         let file = Gio.file_new_for_path('/proc/diskstats');
         file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result);
-            let lines = ByteArray.toString(contents[1]).split('\n');
+            let contents = source.load_contents_finish(result)[1];
+            let lines = String(contents).split('\n');
 
             if (this.diskStatsMode === true) {
                 let field = this.diskStatsItems['All'];
@@ -1211,8 +1209,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
 
         let file = Gio.file_new_for_path('/proc/net/dev');
         file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result);
-            let lines = ByteArray.toString(contents[1]).split('\n');
+            let contents = source.load_contents_finish(result)[1];
+            let lines = String(contents).split('\n');
 
             for (let i = 2; i < lines.length - 1; i++) {
                 let line = lines[i];
@@ -1269,8 +1267,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
 
         let file = Gio.file_new_for_path('/proc/net/dev');
         file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result);
-            let lines = ByteArray.toString(contents[1]).split('\n');
+            let contents = source.load_contents_finish(result)[1];
+            let lines = String(contents).split('\n');
 
             for (let i = 2; i < lines.length - 1; i++) {
                 let line = lines[i];
@@ -1326,8 +1324,8 @@ var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
         if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
             let file = Gio.file_new_for_path(cpuTemperatureFile);
             file.load_contents_async(null, (source, result) => {
-                let contents = source.load_contents_finish(result);
-                let temperature = parseInt(ByteArray.toString(contents[1])) / 1000;
+                let contents = source.load_contents_finish(result)[1];
+                let temperature = parseInt(String(contents)) / 1000;
 
                 if (this.cpuTemperatureFahrenheit) {
                     temperature = (temperature * 1.8) + 32;
