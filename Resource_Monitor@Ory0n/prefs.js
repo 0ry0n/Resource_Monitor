@@ -46,28 +46,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             // GLOBAL
             let globalFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
             });
 
             // REFRESH
-            let alignmentRefresh = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             globalFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Refresh Time')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            globalFrame.add(alignmentRefresh);
 
             let gridRefresh = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentRefresh.add(gridRefresh);
+            globalFrame.add(gridRefresh);
 
             gridRefresh.attach(new Gtk.Label({
                 label: '%s'.format(_('Seconds')),
@@ -89,22 +84,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }), 1, 0, 1, 1);
 
             // ICONS
-            let alignmentIcons = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             globalFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Icons')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            globalFrame.add(alignmentIcons);
 
             let gridIcons = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentIcons.add(gridIcons);
+            globalFrame.add(gridIcons);
 
             gridIcons.attach(new Gtk.Label({
                 label: '%s'.format(_('Display')),
@@ -139,22 +130,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             gridIcons.attach(valueIconsPosition, 1, 1, 1, 1);
 
             // DECIMALS
-            let alignmentDecimals = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             globalFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Decimals')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            globalFrame.add(alignmentDecimals);
 
             let gridDecimals = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentDecimals.add(gridDecimals);
+            globalFrame.add(gridDecimals);
 
             gridDecimals.attach(new Gtk.Label({
                 label: '%s'.format(_('Display')),
@@ -169,22 +156,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             gridDecimals.attach(valueDecimals, 1, 0, 1, 1);
 
             // ENABLE SHOW SYSTEM MONITOR
-            let alignmentShowSM = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             globalFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('System Monitor')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            globalFrame.add(alignmentShowSM);
 
             let gridShowSM = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentShowSM.add(gridShowSM);
+            globalFrame.add(gridShowSM);
 
             gridShowSM.attach(new Gtk.Label({
                 label: '%s'.format(_('Show System Monitor when clicking on extension')),
@@ -206,7 +189,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             // CPU
             let cpuFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
             });
@@ -258,7 +240,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             // RAM
             let ramFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
             });
@@ -310,7 +291,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             // SWAP
             let swapFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
             });
@@ -362,7 +342,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             // DISK
             let diskFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
             });
@@ -637,28 +616,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }));
 
             let netFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
             });
 
             // AUTO HIDE
-            let alignmentAutoHide = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             netFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Auto Hide')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            netFrame.add(alignmentAutoHide);
 
             let gridAutoHide = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentAutoHide.add(gridAutoHide);
+            netFrame.add(gridAutoHide);
 
             gridAutoHide.attach(new Gtk.Label({
                 label: '%s'.format(_('Enable')),
@@ -673,22 +647,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             gridAutoHide.attach(valueAutoHide, 1, 0, 1, 1);
 
             // ETH
-            let alignmentEth = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             netFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Eth')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            netFrame.add(alignmentEth);
 
             let gridEth = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentEth.add(gridEth);
+            netFrame.add(gridEth);
 
             gridEth.attach(new Gtk.Label({
                 label: '%s'.format(_('Display')),
@@ -725,22 +695,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             gridEth.attach(widthEth, 1, 1, 1, 1);
 
             // WLAN
-            let alignmentWlan = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
-            });
-
             netFrame.add(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Wlan')),
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            netFrame.add(alignmentWlan);
 
             let gridWlan = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentWlan.add(gridWlan);
+            netFrame.add(gridWlan);
 
             gridWlan.attach(new Gtk.Label({
                 label: '%s'.format(_('Display')),
@@ -784,14 +750,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             // TEMPERATURE
             let temperatureFrame = new Gtk.Grid({
-                margin: 12,
                 row_spacing: 6,
                 orientation: Gtk.Orientation.VERTICAL
-            });
-
-            let alignmentTemperature = new Gtk.Alignment({
-                left_padding: 12,
-                right_padding: 12
             });
 
             temperatureFrame.add(new Gtk.Label({
@@ -799,12 +759,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 use_markup: true,
                 halign: Gtk.Align.START
             }));
-            temperatureFrame.add(alignmentTemperature);
 
             let gridTemperature = new Gtk.Grid({
-                row_spacing: 6
+                row_spacing: 6,
+                left_padding: 12,
+                right_padding: 12
             });
-            alignmentTemperature.add(gridTemperature);
+            temperatureFrame.add(gridTemperature);
 
             gridTemperature.attach(new Gtk.Label({
                 label: '%s'.format(_('Display')),
