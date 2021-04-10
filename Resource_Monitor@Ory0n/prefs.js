@@ -34,804 +34,723 @@ function init() {
 }
 
 const ResourceMonitorPrefsWidget = GObject.registerClass(
-    class ResourceMonitorPrefsWidget extends Gtk.Notebook {
-        _init(params) {
-            super._init(params);
-
-            // Parent
-            this.margin = 12;
+    class ResourceMonitorPrefsWidget extends Gtk.ScrolledWindow {
+        _init() {
+            super._init({
+                hscrollbar_policy: Gtk.PolicyType.NEVER,
+            });
 
             // Settings
             this._settings = ExtensionUtils.getSettings();
 
-            // GLOBAL
-            let globalFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
-            });
+            const box = new Gtk.Box();
+            this.child = box;
 
-            // REFRESH
-            globalFrame.add(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Refresh Time')),
+            this._notebook = new Gtk.Notebook({
+                halign: Gtk.Align.CENTER,
+                valign: Gtk.Align.START,
+                hexpand: true,
+                margin_start: 60,
+                margin_end: 60,
+                margin_top: 60,
+                margin_bottom: 60,
+            });
+            box.append(this._notebook);
+
+            // GLOBAL FRAME
+            this._notebook.append_page(this._buildGlobal(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Global')),
                 use_markup: true,
-                halign: Gtk.Align.START
+                halign: Gtk.Align.CENTER,
             }));
 
-            let gridRefresh = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
-            });
-            globalFrame.add(gridRefresh);
+            // CPU FRAME
+            this._notebook.append_page(this._buildCpu(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Cpu')),
+                use_markup: true,
+                halign: Gtk.Align.CENTER,
+            }));
 
-            gridRefresh.attach(new Gtk.Label({
-                label: '%s'.format(_('Seconds')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
+            // RAM FRAME
+            this._notebook.append_page(this._buildRam(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Ram')),
+                use_markup: true,
+                halign: Gtk.Align.CENTER,
+            }));
+
+            // SWAP FRAME
+            this._notebook.append_page(this._buildSwap(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Swap')),
+                use_markup: true,
+                halign: Gtk.Align.CENTER,
+            }));
+
+            // DISK FRAME
+            /*this._notebook.append_page(this._buildDisk(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Disk')),
+                use_markup: true,
+                halign: Gtk.Align.CENTER,
+            }));*/
+
+            // NET FRAME
+            this._notebook.append_page(this._buildNet(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Net')),
+                use_markup: true,
+                halign: Gtk.Align.CENTER,
+            }));
+
+            // THERMAL FRAME
+            this._notebook.append_page(this._buildThermal(), new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Thermal')),
+                use_markup: true,
+                halign: Gtk.Align.CENTER,
+            }));
+        }
+
+        _buildGlobal() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
+            });
+
+
+            // Refresh
+            // Row 0 - 1
+            grid.attach(
+                new Gtk.Label({
+                    label: '<b>%s</b>'.format(_('Refresh Time')),
+                    use_markup: true,
+                    halign: Gtk.Align.START,
+                }), 0, 0, 1, 1);
+
+            grid.attach(
+                new Gtk.Label({
+                    label: '%s'.format(_('Seconds')),
+                    halign: Gtk.Align.START,
+                }), 0, 1, 1, 1);
 
             let adjustment = new Gtk.Adjustment({
                 lower: 1,
                 upper: 30,
-                step_increment: 1
+                step_increment: 1,
             });
             this._settings.bind('interval', adjustment, 'value', Gio.SettingsBindFlags.DEFAULT);
 
-            gridRefresh.attach(new Gtk.HScale({
+            grid.attach(new Gtk.Scale({
                 adjustment: adjustment,
-                hexpand: true,
-                digits: 0
-            }), 1, 0, 1, 1);
+                digits: 0,
+                halign: Gtk.Align.END,
+            }), 1, 1, 1, 1);
 
-            // ICONS
-            globalFrame.add(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Icons')),
-                use_markup: true,
-                halign: Gtk.Align.START
-            }));
+            // Icons
+            // Row 2 - 3 - 4
+            grid.attach(
+                new Gtk.Label({
+                    label: '<b>%s</b>'.format(_('Icons')),
+                    use_markup: true,
+                    halign: Gtk.Align.START,
+                }), 0, 2, 1, 1);
 
-            let gridIcons = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
+            let icons = new SwitchRow(
+                'Display',
+                this._settings,
+                'icons'
+            );
+            grid.attach(icons, 0, 3, 1, 1);
+
+
+            let position = new ComboBoxRow('Position', this._settings, 'iconsposition', ['LEFT', 'RIGHT']);
+            grid.attach(position, 0, 4, 1, 1);
+
+            icons.button.connect('state-set', button => {
+                position.combobox.sensitive = button.active;
             });
-            globalFrame.add(gridIcons);
+            position.combobox.sensitive = icons.button.active;
 
-            gridIcons.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
+            // Decimals
+            // Row 5 - 6
 
-            let valueIcons = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('icons', valueIcons, 'active', Gio.SettingsBindFlags.DEFAULT);
-            gridIcons.attach(valueIcons, 1, 0, 1, 1);
+            grid.attach(
+                new Gtk.Label({
+                    label: '<b>%s</b>'.format(_('Decimals')),
+                    use_markup: true,
+                    halign: Gtk.Align.START,
+                }), 0, 5, 1, 1);
 
-            gridIcons.attach(new Gtk.Label({
-                label: '%s'.format(_('Position')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 1, 1, 1);
-
-            let valueIconsPosition = new Gtk.ComboBoxText({
-                halign: Gtk.Align.END
-            });
-            valueIconsPosition.insert_text(0, 'LEFT');
-            valueIconsPosition.insert_text(1, 'RIGHT');
-            this._settings.bind('iconsposition', valueIconsPosition, 'active', Gio.SettingsBindFlags.DEFAULT);
-
-            valueIcons.connect('state-set', button => {
-                valueIconsPosition.sensitive = button.active;
-            });
-            valueIconsPosition.sensitive = valueIcons.active;
-
-            gridIcons.attach(valueIconsPosition, 1, 1, 1, 1);
-
-            // DECIMALS
-            globalFrame.add(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Decimals')),
-                use_markup: true,
-                halign: Gtk.Align.START
-            }));
-
-            let gridDecimals = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
-            });
-            globalFrame.add(gridDecimals);
-
-            gridDecimals.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueDecimals = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('decimals', valueDecimals, 'active', Gio.SettingsBindFlags.DEFAULT);
-            gridDecimals.attach(valueDecimals, 1, 0, 1, 1);
+            grid.attach(
+                new SwitchRow(
+                    'Display',
+                    this._settings,
+                    'decimals'
+                ), 0, 6, 1, 1);
 
             // ENABLE SHOW SYSTEM MONITOR
-            globalFrame.add(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('System Monitor')),
-                use_markup: true,
-                halign: Gtk.Align.START
-            }));
-
-            let gridShowSM = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
-            });
-            globalFrame.add(gridShowSM);
-
-            gridShowSM.attach(new Gtk.Label({
-                label: '%s'.format(_('Show System Monitor when clicking on extension')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueShowSM = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('showsystemmonitor', valueShowSM, 'active', Gio.SettingsBindFlags.DEFAULT);
-            gridShowSM.attach(valueShowSM, 1, 0, 1, 1);
-
-            this.append_page(globalFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Global')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
-
-            // CPU
-            let cpuFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
-            });
-
-            let gridCpu = new Gtk.Grid({
-                row_spacing: 6
-            });
-            cpuFrame.add(gridCpu);
-
-            gridCpu.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueCpu = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('cpu', valueCpu, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueCpu.connect('state-set', button => {
-                widthCpu.sensitive = button.active;
-            });
-            gridCpu.attach(valueCpu, 1, 0, 1, 1);
-
-            gridCpu.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
-
-            let widthCpu = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthcpu', widthCpu, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthCpu.sensitive = valueCpu.active;
-            gridCpu.attach(widthCpu, 1, 1, 1, 1);
-
-            this.append_page(cpuFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Cpu')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
-
-            // RAM
-            let ramFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
-            });
-
-            let gridRam = new Gtk.Grid({
-                row_spacing: 6
-            });
-            ramFrame.add(gridRam);
-
-            gridRam.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueRam = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('ram', valueRam, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueRam.connect('state-set', button => {
-                widthRam.sensitive = button.active;
-            });
-            gridRam.attach(valueRam, 1, 0, 1, 1);
-
-            gridRam.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
-
-            let widthRam = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthram', widthRam, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthRam.sensitive = valueRam.active;
-            gridRam.attach(widthRam, 1, 1, 1, 1);
-
-            this.append_page(ramFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Ram')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
-
-            // SWAP
-            let swapFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
-            });
-
-            let gridSwap = new Gtk.Grid({
-                row_spacing: 6
-            });
-            swapFrame.add(gridSwap);
-
-            gridSwap.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueSwap = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('swap', valueSwap, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueSwap.connect('state-set', button => {
-                widthSwap.sensitive = button.active;
-            });
-            gridSwap.attach(valueSwap, 1, 0, 1, 1);
-
-            gridSwap.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
-
-            let widthSwap = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthswap', widthSwap, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthSwap.sensitive = valueSwap.active;
-            gridSwap.attach(widthSwap, 1, 1, 1, 1);
-
-            this.append_page(swapFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Swap')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
-
-            // DISK
-            let diskFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
-            });
-
-            let gridDisk = new Gtk.Grid({
-                row_spacing: 6
-            });
-            diskFrame.add(gridDisk);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Display Stats')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueDiskStats = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('diskstats', valueDiskStats, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueDiskStats.connect('state-set', button => {
-                widthDiskStats.sensitive = button.active;
-                valueDiskStatsMode.sensitive = button.active;
-            });
-            gridDisk.attach(valueDiskStats, 1, 0, 1, 1);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
-
-            let widthDiskStats = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthdiskstats', widthDiskStats, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthDiskStats.sensitive = valueDiskStats.active;
-            gridDisk.attach(widthDiskStats, 1, 1, 1, 1);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Display All In One')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 2, 1, 1);
-
-            let valueDiskStatsMode = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('diskstatsmode', valueDiskStatsMode, 'active', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            valueDiskStatsMode.sensitive = valueDiskStats.active;
-            gridDisk.attach(valueDiskStatsMode, 1, 2, 1, 1);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Display Space')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 3, 1, 1);
-
-            let valueDiskSpace = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('diskspace', valueDiskSpace, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueDiskSpace.connect('state-set', button => {
-                widthDiskSpace.sensitive = button.active;
-                valueDiskSpaceUnit.sensitive = button.active;
-            });
-            gridDisk.attach(valueDiskSpace, 1, 3, 1, 1);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 4, 1, 1);
-
-            let widthDiskSpace = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthdiskspace', widthDiskSpace, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthDiskSpace.sensitive = valueDiskSpace.active;
-            gridDisk.attach(widthDiskSpace, 1, 4, 1, 1);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Percentage Unit')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 5, 1, 1);
-
-            let valueDiskSpaceUnit = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('diskspaceunit', valueDiskSpaceUnit, 'active', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            valueDiskSpaceUnit.sensitive = valueDiskSpace.active;
-            gridDisk.attach(valueDiskSpaceUnit, 1, 5, 1, 1);
-
-            gridDisk.attach(new Gtk.Label({
-                label: '%s'.format(_('Devices')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 6, 1, 1);
-
-            let view = new Gtk.ScrolledWindow();
-            view.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
-
-            let mainBox = new Gtk.Box({
-                orientation: Gtk.Orientation.VERTICAL,
-                vexpand: true,
-                valign: Gtk.Align.FILL
-            });
-            view.add_with_viewport(mainBox);
-
-            let list = new Gtk.ListBox({
-                selection_mode: Gtk.SelectionMode.NONE
-            });
-            mainBox.add(list);
-
-            gridDisk.attach(view, 0, 7, 2, 1);
-
-            /****************************************************/
-
-            // Array format
-            // name stats space
-            // Get current disks settings
-            let disksArray = this._settings.get_strv('diskslist', Gio.SettingsBindFlags.DEFAULT);
-            let newDisksArray = [];
-
-            let file = GLib.file_get_contents('/proc/mounts');
-            let lines = ('' + file[1]).split('\n');
-
-            let x = 0;
-
-            for (let j = 0; j < lines.length; j++) {
-                let line = lines[j];
-                let entry = line.trim().split(/\s/);
-
-                let name = entry[0];
-                let path = entry[1];
-
-                if (typeof (name) === 'undefined' || name === '' || name.match(/\/dev\/loop\d*/) || (name.match(/^[^\/]/) && !path.match(/\/media\//)))
-                    continue;
-
-                let gridElement = new Gtk.Grid({
-                    row_spacing: 6,
-                    orientation: Gtk.Orientation.HORIZONTAL
-                });
-
-                let dName = new Gtk.Label({
-                    label: '%s'.format(_(name)),
+            // Row 7 - 8
+            grid.attach(
+                new Gtk.Label({
+                    label: '<b>%s</b>'.format(_('System Monitor')),
+                    use_markup: true,
                     halign: Gtk.Align.START,
-                    margin_end: 10,
-                    hexpand: true
-                });
-                gridElement.attach(dName, 0, 0, 1, 1);
+                }), 0, 7, 1, 1);
 
-                gridElement.attach(new Gtk.Label({
-                    label: '%s'.format(_(path)),
-                    halign: Gtk.Align.START,
-                    margin_end: 10,
-                    hexpand: true
-                }), 1, 0, 1, 1);
+            grid.attach(
+                new SwitchRow(
+                    'Show System Monitor when clicking on extension',
+                    this._settings,
+                    'showsystemmonitor'
+                ), 0, 8, 1, 1);
 
-                let dStatsButton = new Gtk.CheckButton({
-                    label: '%s'.format(_("Stats")),
-                    active: false
-                });
-                gridElement.attach(dStatsButton, 2, 0, 1, 1);
+            return grid;
+        }
 
-                let dSpaceButton = new Gtk.CheckButton({
-                    label: '%s'.format(_("Space")),
-                    active: false
-                });
-                gridElement.attach(dSpaceButton, 3, 0, 1, 1);
-
-                // Init gui
-                for (let i = 0; i < disksArray.length; i++) {
-                    let element = disksArray[i];
-                    let it = element.split(' ');
-
-                    if (name === it[0]) {
-                        let dStButton = (it[1] === 'true');
-                        let dSpButton = (it[2] === 'true');
-
-                        dStatsButton.active = dStButton;
-                        dSpaceButton.active = dSpButton;
-
-                        break;
-                    }
-                }
-
-                dStatsButton.connect('toggled', button => {
-                    // Save new button state
-                    let found = false;
-
-                    for (let i = 0; i < disksArray.length; i++) {
-                        let element = disksArray[i];
-                        let it = element.split(' ');
-
-                        if (name === it[0]) {
-                            it[1] = button.active;
-                            disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
-
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    // Add new disks
-                    if (found === false) {
-                        disksArray.push(name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active);
-                        found = false;
-                    }
-
-                    // Save all
-                    this._settings.set_strv('diskslist', disksArray);
-                });
-
-                dSpaceButton.connect('toggled', button => {
-                    // Save new button state
-                    let found = false;
-
-                    for (let i = 0; i < disksArray.length; i++) {
-                        let element = disksArray[i];
-                        let it = element.split(' ');
-
-                        if (name === it[0]) {
-                            it[2] = button.active;
-                            disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
-
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    // Add new disks
-                    if (found === false) {
-                        disksArray.push(name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active);
-                        found = false;
-                    }
-
-                    // Save all
-                    this._settings.set_strv('diskslist', disksArray);
-                });
-
-                // Add disk to newDisksArray
-                newDisksArray[x] = name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active;
-
-                list.insert(gridElement, x++);
-            }
-
-            // Save newDisksArray with the list of new disks (to remove old disks)
-            disksArray = newDisksArray;
-            this._settings.set_strv('diskslist', disksArray);
-
-            /****************************************************/
-
-            this.append_page(diskFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Disk')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
-
-            let netFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
+        _buildCpu() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
             });
 
-            // AUTO HIDE
-            netFrame.add(new Gtk.Label({
+            let cpu = new SwitchRow('Display', this._settings, 'cpu');
+            let width = new SpinButtonRow('Width', this._settings, 'widthcpu');
+
+            grid.attach(cpu, 0, 0, 1, 1);
+            grid.attach(width, 0, 1, 1, 1);
+
+            cpu.button.connect('state-set', button => {
+                width.button.sensitive = button.active;
+            });
+            width.button.sensitive = cpu.button.active;
+
+            return grid;
+        }
+
+        _buildRam() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
+            });
+
+            let ram = new SwitchRow('Display', this._settings, 'ram');
+            let width = new SpinButtonRow('Width', this._settings, 'widthram');
+
+            grid.attach(ram, 0, 0, 1, 1);
+            grid.attach(width, 0, 1, 1, 1);
+
+            ram.button.connect('state-set', button => {
+                width.button.sensitive = button.active;
+            });
+            width.button.sensitive = ram.button.active;
+
+            return grid;
+        }
+
+        _buildSwap() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
+            });
+
+            let swap = new SwitchRow('Display', this._settings, 'swap');
+            let width = new SpinButtonRow('Width', this._settings, 'widthswap');
+
+            grid.attach(swap, 0, 0, 1, 1);
+            grid.attach(width, 0, 1, 1, 1);
+
+            swap.button.connect('state-set', button => {
+                width.button.sensitive = button.active;
+            });
+            width.button.sensitive = swap.button.active;
+
+            return grid;
+        }
+
+        _buildDisk() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
+            });
+
+            let cpu = new SwitchRow('Display', this._settings, 'cpu');
+            let width = new SpinButtonRow('Width', this._settings, 'widthcpu');
+
+            grid.attach(cpu, 0, 0, 1, 1);
+            grid.attach(width, 0, 1, 1, 1);
+
+            cpu.button.connect('state-set', button => {
+                width.button.sensitive = button.active;
+            });
+            width.button.sensitive = cpu.button.active;
+
+            return grid;
+
+
+
+
+            // // DISK
+            // let diskFrame = new Gtk.Grid({
+            //     row_spacing: 6,
+            //     orientation: Gtk.Orientation.VERTICAL
+            // });
+
+            // let gridDisk = new Gtk.Grid({
+            //     row_spacing: 6
+            // });
+            // diskFrame.attach(gridDisk);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Display Stats')),
+            //     halign: Gtk.Align.START,
+            //     hexpand: true
+            // }), 0, 0, 1, 1);
+
+            // let valueDiskStats = new Gtk.Switch({
+            //     halign: Gtk.Align.END
+            // });
+            // this._settings.bind('diskstats', valueDiskStats, 'active', Gio.SettingsBindFlags.DEFAULT);
+            // valueDiskStats.connect('state-set', button => {
+            //     widthDiskStats.sensitive = button.active;
+            //     valueDiskStatsMode.sensitive = button.active;
+            // });
+            // gridDisk.attach(valueDiskStats, 1, 0, 1, 1);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Width')),
+            //     halign: Gtk.Align.START
+            // }), 0, 1, 1, 1);
+
+            // let widthDiskStats = new Gtk.SpinButton({
+            //     adjustment: new Gtk.Adjustment({
+            //         lower: 1,
+            //         upper: 500,
+            //         step_increment: 1
+            //     }),
+            //     halign: Gtk.Align.END,
+            //     numeric: true
+            // });
+            // this._settings.bind('widthdiskstats', widthDiskStats, 'value', Gio.SettingsBindFlags.DEFAULT);
+            // // Init
+            // widthDiskStats.sensitive = valueDiskStats.active;
+            // gridDisk.attach(widthDiskStats, 1, 1, 1, 1);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Display All In One')),
+            //     halign: Gtk.Align.START,
+            //     hexpand: true
+            // }), 0, 2, 1, 1);
+
+            // let valueDiskStatsMode = new Gtk.Switch({
+            //     halign: Gtk.Align.END
+            // });
+            // this._settings.bind('diskstatsmode', valueDiskStatsMode, 'active', Gio.SettingsBindFlags.DEFAULT);
+            // // Init
+            // valueDiskStatsMode.sensitive = valueDiskStats.active;
+            // gridDisk.attach(valueDiskStatsMode, 1, 2, 1, 1);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Display Space')),
+            //     halign: Gtk.Align.START,
+            //     hexpand: true
+            // }), 0, 3, 1, 1);
+
+            // let valueDiskSpace = new Gtk.Switch({
+            //     halign: Gtk.Align.END
+            // });
+            // this._settings.bind('diskspace', valueDiskSpace, 'active', Gio.SettingsBindFlags.DEFAULT);
+            // valueDiskSpace.connect('state-set', button => {
+            //     widthDiskSpace.sensitive = button.active;
+            //     valueDiskSpaceUnit.sensitive = button.active;
+            // });
+            // gridDisk.attach(valueDiskSpace, 1, 3, 1, 1);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Width')),
+            //     halign: Gtk.Align.START
+            // }), 0, 4, 1, 1);
+
+            // let widthDiskSpace = new Gtk.SpinButton({
+            //     adjustment: new Gtk.Adjustment({
+            //         lower: 1,
+            //         upper: 500,
+            //         step_increment: 1
+            //     }),
+            //     halign: Gtk.Align.END,
+            //     numeric: true
+            // });
+            // this._settings.bind('widthdiskspace', widthDiskSpace, 'value', Gio.SettingsBindFlags.DEFAULT);
+            // // Init
+            // widthDiskSpace.sensitive = valueDiskSpace.active;
+            // gridDisk.attach(widthDiskSpace, 1, 4, 1, 1);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Percentage Unit')),
+            //     halign: Gtk.Align.START,
+            //     hexpand: true
+            // }), 0, 5, 1, 1);
+
+            // let valueDiskSpaceUnit = new Gtk.Switch({
+            //     halign: Gtk.Align.END
+            // });
+            // this._settings.bind('diskspaceunit', valueDiskSpaceUnit, 'active', Gio.SettingsBindFlags.DEFAULT);
+            // // Init
+            // valueDiskSpaceUnit.sensitive = valueDiskSpace.active;
+            // gridDisk.attach(valueDiskSpaceUnit, 1, 5, 1, 1);
+
+            // gridDisk.attach(new Gtk.Label({
+            //     label: '%s'.format(_('Devices')),
+            //     halign: Gtk.Align.START,
+            //     hexpand: true
+            // }), 0, 6, 1, 1);
+
+            // let view = new Gtk.ScrolledWindow();
+            // view.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC);
+
+            // let mainBox = new Gtk.Box({
+            //     orientation: Gtk.Orientation.VERTICAL,
+            //     vexpand: true,
+            //     valign: Gtk.Align.FILL
+            // });
+            // view.add_with_viewport(mainBox);
+
+            // let list = new Gtk.ListBox({
+            //     selection_mode: Gtk.SelectionMode.NONE
+            // });
+            // mainBox.add(list);
+
+            // gridDisk.attach(view, 0, 7, 2, 1);
+
+            // /****************************************************/
+
+            // // Array format
+            // // name stats space
+            // // Get current disks settings
+            // let disksArray = this._settings.get_strv('diskslist', Gio.SettingsBindFlags.DEFAULT);
+            // let newDisksArray = [];
+
+            // let file = GLib.file_get_contents('/proc/mounts');
+            // let lines = ('' + file[1]).split('\n');
+
+            // let x = 0;
+
+            // for (let j = 0; j < lines.length; j++) {
+            //     let line = lines[j];
+            //     let entry = line.trim().split(/\s/);
+
+            //     let name = entry[0];
+            //     let path = entry[1];
+
+            //     if (typeof (name) === 'undefined' || name === '' || name.match(/\/dev\/loop\d*/) || (name.match(/^[^\/]/) && !path.match(/\/media\//)))
+            //         continue;
+
+            //     let gridElement = new Gtk.Grid({
+            //         row_spacing: 6,
+            //         orientation: Gtk.Orientation.HORIZONTAL
+            //     });
+
+            //     let dName = new Gtk.Label({
+            //         label: '%s'.format(_(name)),
+            //         halign: Gtk.Align.START,
+            //         margin_end: 10,
+            //         hexpand: true
+            //     });
+            //     gridElement.attach(dName, 0, 0, 1, 1);
+
+            //     gridElement.attach(new Gtk.Label({
+            //         label: '%s'.format(_(path)),
+            //         halign: Gtk.Align.START,
+            //         margin_end: 10,
+            //         hexpand: true
+            //     }), 1, 0, 1, 1);
+
+            //     let dStatsButton = new Gtk.CheckButton({
+            //         label: '%s'.format(_("Stats")),
+            //         active: false
+            //     });
+            //     gridElement.attach(dStatsButton, 2, 0, 1, 1);
+
+            //     let dSpaceButton = new Gtk.CheckButton({
+            //         label: '%s'.format(_("Space")),
+            //         active: false
+            //     });
+            //     gridElement.attach(dSpaceButton, 3, 0, 1, 1);
+
+            //     // Init gui
+            //     for (let i = 0; i < disksArray.length; i++) {
+            //         let element = disksArray[i];
+            //         let it = element.split(' ');
+
+            //         if (name === it[0]) {
+            //             let dStButton = (it[1] === 'true');
+            //             let dSpButton = (it[2] === 'true');
+
+            //             dStatsButton.active = dStButton;
+            //             dSpaceButton.active = dSpButton;
+
+            //             break;
+            //         }
+            //     }
+
+            //     dStatsButton.connect('toggled', button => {
+            //         // Save new button state
+            //         let found = false;
+
+            //         for (let i = 0; i < disksArray.length; i++) {
+            //             let element = disksArray[i];
+            //             let it = element.split(' ');
+
+            //             if (name === it[0]) {
+            //                 it[1] = button.active;
+            //                 disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
+
+            //                 found = true;
+            //                 break;
+            //             }
+            //         }
+
+            //         // Add new disks
+            //         if (found === false) {
+            //             disksArray.push(name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active);
+            //             found = false;
+            //         }
+
+            //         // Save all
+            //         this._settings.set_strv('diskslist', disksArray);
+            //     });
+
+            //     dSpaceButton.connect('toggled', button => {
+            //         // Save new button state
+            //         let found = false;
+
+            //         for (let i = 0; i < disksArray.length; i++) {
+            //             let element = disksArray[i];
+            //             let it = element.split(' ');
+
+            //             if (name === it[0]) {
+            //                 it[2] = button.active;
+            //                 disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
+
+            //                 found = true;
+            //                 break;
+            //             }
+            //         }
+
+            //         // Add new disks
+            //         if (found === false) {
+            //             disksArray.push(name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active);
+            //             found = false;
+            //         }
+
+            //         // Save all
+            //         this._settings.set_strv('diskslist', disksArray);
+            //     });
+
+            //     // Add disk to newDisksArray
+            //     newDisksArray[x] = name + ' ' + dStatsButton.active + ' ' + dSpaceButton.active;
+
+            //     list.insert(gridElement, x++);
+            // }
+
+            // // Save newDisksArray with the list of new disks (to remove old disks)
+            // disksArray = newDisksArray;
+            // this._settings.set_strv('diskslist', disksArray);
+
+            // /****************************************************/
+
+            // this.append_page(diskFrame, new Gtk.Label({
+            //     label: '<b>%s</b>'.format(_('Disk')),
+            //     use_markup: true,
+            //     halign: Gtk.Align.CENTER
+            // }));
+        }
+
+        _buildNet() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
+            });
+
+            let auto = new SwitchRow('Enable', this._settings, 'autohide');
+            let wlan = new SwitchRow('Display', this._settings, 'wlan');
+            let eth = new SwitchRow('Display', this._settings, 'eth');
+            let widthWlan = new SpinButtonRow('Width', this._settings, 'widthwlan');
+            let widthEth = new SpinButtonRow('Width', this._settings, 'widtheth');
+
+            grid.attach(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Auto Hide')),
                 use_markup: true,
                 halign: Gtk.Align.START
-            }));
-
-            let gridAutoHide = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
-            });
-            netFrame.add(gridAutoHide);
-
-            gridAutoHide.attach(new Gtk.Label({
-                label: '%s'.format(_('Enable')),
-                halign: Gtk.Align.START,
-                hexpand: true
             }), 0, 0, 1, 1);
-
-            let valueAutoHide = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('autohide', valueAutoHide, 'active', Gio.SettingsBindFlags.DEFAULT);
-            gridAutoHide.attach(valueAutoHide, 1, 0, 1, 1);
-
-            // ETH
-            netFrame.add(new Gtk.Label({
+            grid.attach(auto, 0, 1, 1, 1);
+            grid.attach(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Eth')),
                 use_markup: true,
                 halign: Gtk.Align.START
-            }));
-
-            let gridEth = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
-            });
-            netFrame.add(gridEth);
-
-            gridEth.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueEth = new Gtk.Switch({
-                halign: Gtk.Align.END
-            });
-            this._settings.bind('eth', valueEth, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueEth.connect('state-set', button => {
-                widthEth.sensitive = button.active;
-            });
-            gridEth.attach(valueEth, 1, 0, 1, 1);
-
-            gridEth.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
-
-            let widthEth = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widtheth', widthEth, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthEth.sensitive = valueEth.active;
-            gridEth.attach(widthEth, 1, 1, 1, 1);
-
-            // WLAN
-            netFrame.add(new Gtk.Label({
+            }), 0, 2, 1, 1);
+            grid.attach(eth, 0, 3, 1, 1);
+            grid.attach(widthEth, 0, 4, 1, 1);
+            grid.attach(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Wlan')),
                 use_markup: true,
                 halign: Gtk.Align.START
-            }));
+            }), 0, 5, 1, 1);
+            grid.attach(wlan, 0, 6, 1, 1);
+            grid.attach(widthWlan, 0, 7, 1, 1);
 
-            let gridWlan = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
+            eth.button.connect('state-set', button => {
+                widthEth.button.sensitive = button.active;
             });
-            netFrame.add(gridWlan);
+            widthEth.button.sensitive = eth.button.active;
 
-            gridWlan.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 0, 1, 1);
-
-            let valueWlan = new Gtk.Switch({
-                halign: Gtk.Align.END
+            wlan.button.connect('state-set', button => {
+                widthWlan.button.sensitive = button.active;
             });
-            this._settings.bind('wlan', valueWlan, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueWlan.connect('state-set', button => {
-                widthWlan.sensitive = button.active;
-            });
-            gridWlan.attach(valueWlan, 1, 0, 1, 1);
+            widthWlan.button.sensitive = wlan.button.active;
 
-            gridWlan.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
+            return grid;
+        }
 
-            let widthWlan = new Gtk.SpinButton({
-                adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
-                    step_increment: 1
-                }),
-                halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthwlan', widthWlan, 'value', Gio.SettingsBindFlags.DEFAULT);
-            // Init
-            widthWlan.sensitive = valueWlan.active;
-            gridWlan.attach(widthWlan, 1, 1, 1, 1);
-
-            this.append_page(netFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Net')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
-
-            // TEMPERATURE
-            let temperatureFrame = new Gtk.Grid({
-                row_spacing: 6,
-                orientation: Gtk.Orientation.VERTICAL
+        _buildThermal() {
+            let grid = new Gtk.Grid({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                column_spacing: 12,
             });
 
-            temperatureFrame.add(new Gtk.Label({
+            let thermal = new SwitchRow('Display', this._settings, 'cputemperature');
+            let unit = new SwitchRow('Fahrenheit Unit', this._settings, 'cputemperatureunit');
+            let width = new SpinButtonRow('Width', this._settings, 'widthcputemperature');
+
+            grid.attach(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Cpu Temperature')),
                 use_markup: true,
                 halign: Gtk.Align.START
-            }));
-
-            let gridTemperature = new Gtk.Grid({
-                row_spacing: 6,
-                left_padding: 12,
-                right_padding: 12
-            });
-            temperatureFrame.add(gridTemperature);
-
-            gridTemperature.attach(new Gtk.Label({
-                label: '%s'.format(_('Display')),
-                halign: Gtk.Align.START,
-                hexpand: true
             }), 0, 0, 1, 1);
+            grid.attach(thermal, 0, 1, 1, 1);
+            grid.attach(width, 0, 2, 1, 1);
+            grid.attach(unit, 0, 3, 1, 1);
 
-            let valueTemperature = new Gtk.Switch({
-                halign: Gtk.Align.END
+            thermal.button.connect('state-set', button => {
+                width.button.sensitive = button.active;
+                unit.button.sensitive = button.active;
             });
-            this._settings.bind('cputemperature', valueTemperature, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueTemperature.connect('state-set', button => {
-                widthTemperature.sensitive = button.active;
-                valueCpuTemperatureUnit.sensitive = button.active;
+            width.button.sensitive = thermal.button.active;
+            unit.button.sensitive = thermal.button.active;
+
+            return grid;
+        }
+    });
+
+
+const SwitchRow = GObject.registerClass(
+    class SwitchRow extends Gtk.Grid {
+        _init(label, settings, settingsName) {
+            super._init({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
             });
-            gridTemperature.attach(valueTemperature, 1, 0, 1, 1);
 
-            gridTemperature.attach(new Gtk.Label({
-                label: '%s'.format(_('Width')),
-                halign: Gtk.Align.START
-            }), 0, 1, 1, 1);
+            this.attach(
+                new Gtk.Label({
+                    label: '%s'.format(_(label)),
+                    halign: Gtk.Align.START,
+                    hexpand: true,
+                }), 0, 0, 1, 1);
 
-            let widthTemperature = new Gtk.SpinButton({
+            this.button = new Gtk.Switch({
+                halign: Gtk.Align.END,
+            });
+
+            settings.bind(settingsName, this.button, 'active', Gio.SettingsBindFlags.DEFAULT);
+            this.attach(this.button, 1, 0, 1, 1);
+        }
+    });
+
+
+const SpinButtonRow = GObject.registerClass(
+    class SpinButtonRow extends Gtk.Grid {
+        _init(label, settings, settingsName) {
+            super._init({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+            });
+
+            this.attach(
+                new Gtk.Label({
+                    label: '%s'.format(_(label)),
+                    halign: Gtk.Align.START,
+                    hexpand: true,
+                }), 0, 0, 1, 1);
+
+            this.button = new Gtk.SpinButton({
                 adjustment: new Gtk.Adjustment({
                     lower: 1,
                     upper: 500,
-                    step_increment: 1
+                    step_increment: 1,
                 }),
                 halign: Gtk.Align.END,
-                numeric: true
-            });
-            this._settings.bind('widthcputemperature', widthTemperature, 'value', Gio.SettingsBindFlags.DEFAULT);
-
-            gridTemperature.attach(new Gtk.Label({
-                label: '%s'.format(_('Fahrenheit Unit')),
-                halign: Gtk.Align.START,
-                hexpand: true
-            }), 0, 3, 1, 1);
-
-            let valueCpuTemperatureUnit = new Gtk.Switch({
-                halign: Gtk.Align.END
+                numeric: true,
             });
 
-            this._settings.bind('cputemperatureunit', valueCpuTemperatureUnit, 'active', Gio.SettingsBindFlags.DEFAULT);
-            valueCpuTemperatureUnit.connect('state-set', button => {
-                valueCpuTemperatureUnit.value = button.active;
+            settings.bind(settingsName, this.button, 'value', Gio.SettingsBindFlags.DEFAULT);
+            this.attach(this.button, 1, 0, 1, 1);
+        }
+    });
+
+const ComboBoxRow = GObject.registerClass(
+    class ComboBoxRow extends Gtk.Grid {
+        _init(label, settings, settingsName, initValue) {
+            super._init({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
             });
-            gridTemperature.attach(valueCpuTemperatureUnit, 1, 3, 1, 1);
 
-            // Init
-            widthTemperature.sensitive = valueTemperature.active;
-            valueCpuTemperatureUnit.sensitive = valueTemperature.active;
-            gridTemperature.attach(widthTemperature, 1, 1, 1, 1);
+            this.attach(
+                new Gtk.Label({
+                    label: '%s'.format(_(label)),
+                    halign: Gtk.Align.START,
+                    hexpand: true,
+                }), 0, 0, 1, 1);
 
-            this.append_page(temperatureFrame, new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Thermal')),
-                use_markup: true,
-                halign: Gtk.Align.CENTER
-            }));
+            this.combobox = new Gtk.ComboBoxText({
+                halign: Gtk.Align.END,
+            });
+
+            if (initValue !== null) {
+                for (let i = 0; i < initValue.length; i++) {
+                    this.combobox.insert_text(i, initValue[i]);
+                }
+            }
+
+            settings.bind(settingsName, this.combobox, 'active', Gio.SettingsBindFlags.DEFAULT);
+            this.attach(this.combobox, 1, 0, 1, 1);
         }
     });
 
 function buildPrefsWidget() {
-    let widget = new ResourceMonitorPrefsWidget();
-
-    widget.show_all();
-
-    return widget;
+    return new ResourceMonitorPrefsWidget();
 }
+
