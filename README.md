@@ -55,6 +55,10 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 Use the GitHub [Issues](https://github.com/0ry0n/Resource_Monitor/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 16 (Apr 26, 2021)**
+- Added bps network unit.
+- Bug fixed.
+
 **version 15 (Apr 15, 2021)**
 - Added support for gnome 40.0.
 - New preferences window.

@@ -63,6 +63,7 @@ const WIDTH_ETH = 'widtheth';
 const WIDTH_WLAN = 'widthwlan';
 const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
 const CPUTEMPERATUREUNIT = 'cputemperatureunit';
+const NETWORKUNIT = 'networkunit';
 
 var ResourceMonitorIndicator = null;
 
@@ -188,6 +189,11 @@ const ResourceMonitor = GObject.registerClass(
             });
             this.cpuTemperatureFahrenheit = this._settings.get_boolean(CPUTEMPERATUREUNIT);
             this.cpuTemperatureUnit.text = this.cpuTemperatureFahrenheit ? '°F' : '°C'
+
+            // Network Unit
+            this.networkUnit;
+            this.sigId[this.numSigId++] = this._settings.connect(`changed::${NETWORKUNIT}`, this._networkUnitChange.bind(this));
+            this.networkUnit = this._settings.get_boolean(NETWORKUNIT);
 
             // Disks List
             this.disksList;
@@ -707,6 +713,10 @@ const ResourceMonitor = GObject.registerClass(
             this._wlanChange();
         }
 
+        _networkUnitChange() {
+            this.networkUnit = this._settings.get_boolean(NETWORKUNIT);
+        }
+
         _diskStatsWidthUpdate() {
             for (let i = 0; i < this.disksList.length; i++) {
                 let element = this.disksList[i];
@@ -1224,28 +1234,31 @@ const ResourceMonitor = GObject.registerClass(
                 let idle = GLib.get_monotonic_time() / 1000;
                 let delta = (idle - this.idleEthOld) / 1000;
 
+                let unit = this.networkUnit ? 1000 : 1024;
+                let factor = this.networkUnit ? 8 : 1;
+
                 if (delta > 0) {
                     for (let i = 0; i < 2; i++) {
-                        du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
+                        du[i] = ((duTot[i] - this.duTotEthOld[i]) * factor) / delta;
                         this.duTotEthOld[i] = duTot[i];
                     }
 
-                    if (du[0] > 1024 || du[1] > 1024) {
-                        this.ethUnit.text = 'K';
-                        du[0] /= 1024;
-                        du[1] /= 1024;
-                        if (du[0] > 1024 || du[1] > 1024) {
-                            this.ethUnit.text = 'M';
-                            du[0] /= 1024;
-                            du[1] /= 1024;
-                            if (du[0] > 1024 || du[1] > 1024) {
-                                this.ethUnit.text = 'G';
-                                du[0] /= 1024;
-                                du[1] /= 1024;
+                    if (du[0] > unit || du[1] > unit) {
+                        this.ethUnit.text = this.networkUnit ? 'k' : 'K';
+                        du[0] /= unit;
+                        du[1] /= unit;
+                        if (du[0] > unit || du[1] > unit) {
+                            this.ethUnit.text = this.networkUnit ? 'm' : 'M';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            if (du[0] > unit || du[1] > unit) {
+                                this.ethUnit.text = this.networkUnit ? 'g' : 'G';
+                                du[0] /= unit;
+                                du[1] /= unit;
                             }
                         }
                     } else {
-                        this.ethUnit.text = 'B';
+                        this.ethUnit.text = this.networkUnit ? 'b' : 'B';
                     }
                 }
 
@@ -1282,28 +1295,31 @@ const ResourceMonitor = GObject.registerClass(
                 let idle = GLib.get_monotonic_time() / 1000;
                 let delta = (idle - this.idleWlanOld) / 1000;
 
+                let unit = this.networkUnit ? 1000 : 1024;
+                let factor = this.networkUnit ? 8 : 1;
+
                 if (delta > 0) {
                     for (let i = 0; i < 2; i++) {
-                        du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
+                        du[i] = ((duTot[i] - this.duTotWlanOld[i]) * factor) / delta;
                         this.duTotWlanOld[i] = duTot[i];
                     }
 
-                    if (du[0] > 1024 || du[1] > 1024) {
-                        this.wlanUnit.text = 'K';
-                        du[0] /= 1024;
-                        du[1] /= 1024;
-                        if (du[0] > 1024 || du[1] > 1024) {
-                            this.wlanUnit.text = 'M';
-                            du[0] /= 1024;
-                            du[1] /= 1024;
-                            if (du[0] > 1024 || du[1] > 1024) {
-                                this.wlanUnit.text = 'G';
-                                du[0] /= 1024;
-                                du[1] /= 1024;
+                    if (du[0] > unit || du[1] > unit) {
+                        this.wlanUnit.text = this.networkUnit ? 'k' : 'K';
+                        du[0] /= unit;
+                        du[1] /= unit;
+                        if (du[0] > unit || du[1] > unit) {
+                            this.wlanUnit.text = this.networkUnit ? 'm' : 'M';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            if (du[0] > unit || du[1] > unit) {
+                                this.wlanUnit.text = this.networkUnit ? 'g' : 'G';
+                                du[0] /= unit;
+                                du[1] /= unit;
                             }
                         }
                     } else {
-                        this.wlanUnit.text = 'B';
+                        this.wlanUnit.text = this.networkUnit ? 'b' : 'B';
                     }
                 }
 

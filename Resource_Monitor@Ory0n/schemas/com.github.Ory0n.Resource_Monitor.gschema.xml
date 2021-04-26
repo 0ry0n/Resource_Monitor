@@ -111,6 +111,11 @@
             <summary>Auto Hide Net</summary>
             <description></description>
         </key>
+        <key name="networkunit" type="b">
+            <default>false</default>
+            <summary>Network Unit Bits per second</summary>
+            <description></description>
+        </key>
         <key name="cputemperatureunit" type="b">
             <default>false</default>
             <summary>Cpu Temperature Unit Fahrenheit</summary>

@@ -236,17 +236,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let stats = new SwitchRow('Display Stats', this._settings, 'diskstats');
+            let stats = new SwitchRow('Display', this._settings, 'diskstats');
             let widthStats = new SpinButtonRow('Width', this._settings, 'widthdiskstats');
             let mode = new SwitchRow('Display All In One', this._settings, 'diskstatsmode');
-            let space = new SwitchRow('Display Space', this._settings, 'diskspace');
-            let widthSpace = new SpinButtonRow('widthdiskspace', this._settings, 'widthdiskspace');
+            let space = new SwitchRow('Display', this._settings, 'diskspace');
+            let widthSpace = new SpinButtonRow('Width', this._settings, 'widthdiskspace');
             let unit = new SwitchRow('Percentage Unit', this._settings, 'diskspaceunit');
             let devices = new ListRow('Devices');
 
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Stats')),
+                use_markup: true,
+                halign: Gtk.Align.START
+            }));
             box.append(stats);
             box.append(widthStats);
             box.append(mode);
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Space')),
+                use_markup: true,
+                halign: Gtk.Align.START
+            }));
             box.append(space);
             box.append(widthSpace);
             box.append(unit);
@@ -385,6 +395,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             let eth = new SwitchRow('Display', this._settings, 'eth');
             let widthWlan = new SpinButtonRow('Width', this._settings, 'widthwlan');
             let widthEth = new SpinButtonRow('Width', this._settings, 'widtheth');
+            let unit = new SwitchRow('Show in bits per second', this._settings, 'networkunit');
 
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Auto Hide')),
@@ -392,6 +403,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 halign: Gtk.Align.START
             }));
             box.append(auto);
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Unit')),
+                use_markup: true,
+                halign: Gtk.Align.START
+            }));
+            box.append(unit);
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Eth')),
                 use_markup: true,
