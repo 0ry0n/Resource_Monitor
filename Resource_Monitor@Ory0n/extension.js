@@ -54,6 +54,7 @@ const DISKS_LIST = 'diskslist';
 const DISK_STATS_MODE = 'diskstatsmode';
 const DISK_SPACE_UNIT = 'diskspaceunit';
 const AUTO_HIDE = 'autohide';
+const BPS_SPEED = "bpsspeed";
 const WIDTH_CPU = 'widthcpu';
 const WIDTH_RAM = 'widthram';
 const WIDTH_SWAP = 'widthswap';
@@ -173,6 +174,11 @@ const ResourceMonitor = GObject.registerClass(
             this.enHide;
             this.sigId[this.numSigId++] = this._settings.connect(`changed::${AUTO_HIDE}`, this._hideChange.bind(this));
             this.enHide = this._settings.get_boolean(AUTO_HIDE);
+
+            // Bps Speed
+            this.bpsSpeed;
+            this.sigId[this.numSigId++] = this._settings.connect(`changed::${BPS_SPEED}`, this._getSettingsBps.bind(this));
+            this.bpsSpeed = this._settings.get_boolean(BPS_SPEED);
 
             // Cpu Temperature
             this.enCpuTemperature;
@@ -332,13 +338,13 @@ const ResourceMonitor = GObject.registerClass(
 
             this.ethUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: 'K',
+                text: (this.bpsSpeed) ? 'k' : 'K',
                 style_class: 'unit'
             });
 
             this.wlanUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: 'K',
+                text: (this.bpsSpeed) ? 'k' : 'K',
                 style_class: 'unit'
             });
 
@@ -469,6 +475,7 @@ const ResourceMonitor = GObject.registerClass(
             this._diskSpaceChange();
             this._getSettingsEth();
             this._getSettingsWlan();
+            this._getSettingsBps();
             this._hideChange();
             this._cpuTemperatureChange();
             this._disksListChange();
@@ -698,6 +705,13 @@ const ResourceMonitor = GObject.registerClass(
                 this.wlan.hide();
                 this.wlanUnit.hide();
             }
+        }
+
+        _getSettingsBps() {
+            this.bpsSpeed = this._settings.get_boolean(BPS_SPEED);
+
+            this._ethChange();
+            this._wlanChange();
         }
 
         _hideChange() {
@@ -1223,29 +1237,31 @@ const ResourceMonitor = GObject.registerClass(
 
                 let idle = GLib.get_monotonic_time() / 1000;
                 let delta = (idle - this.idleEthOld) / 1000;
+                let unit = (this.bpsSpeed) ? 1000 : 1024;
+                let factor = (this.bpsSpeed) ? 8 : 1;
 
                 if (delta > 0) {
                     for (let i = 0; i < 2; i++) {
-                        du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
+                        du[i] = ((duTot[i] - this.duTotEthOld[i]) / delta) * factor;
                         this.duTotEthOld[i] = duTot[i];
                     }
 
-                    if (du[0] > 1024 || du[1] > 1024) {
-                        this.ethUnit.text = 'K';
-                        du[0] /= 1024;
-                        du[1] /= 1024;
-                        if (du[0] > 1024 || du[1] > 1024) {
-                            this.ethUnit.text = 'M';
-                            du[0] /= 1024;
-                            du[1] /= 1024;
-                            if (du[0] > 1024 || du[1] > 1024) {
-                                this.ethUnit.text = 'G';
-                                du[0] /= 1024;
-                                du[1] /= 1024;
+                    if (du[0] > unit || du[1] > unit) {
+                        this.ethUnit.text = (this.bpsSpeed) ? 'k' : 'K';
+                        du[0] /= unit;
+                        du[1] /= unit;
+                        if (du[0] > unit || du[1] > unit) {
+                            this.ethUnit.text = (this.bpsSpeed) ? 'm' : 'M';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            if (du[0] > unit || du[1] > unit) {
+                                this.ethUnit.text = (this.bpsSpeed) ? 'g' : 'G';
+                                du[0] /= unit;
+                                du[1] /= unit;
                             }
                         }
                     } else {
-                        this.ethUnit.text = 'B';
+                        this.ethUnit.text = (this.bpsSpeed) ? 'b' : 'B';
                     }
                 }
 
@@ -1281,29 +1297,31 @@ const ResourceMonitor = GObject.registerClass(
 
                 let idle = GLib.get_monotonic_time() / 1000;
                 let delta = (idle - this.idleWlanOld) / 1000;
+                let unit = (this.bpsSpeed) ? 1000 : 1024;
+                let factor = (this.bpsSpeed) ? 8 : 1;
 
                 if (delta > 0) {
                     for (let i = 0; i < 2; i++) {
-                        du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
+                        du[i] = ((duTot[i] - this.duTotWlanOld[i]) / delta) * factor;
                         this.duTotWlanOld[i] = duTot[i];
                     }
 
-                    if (du[0] > 1024 || du[1] > 1024) {
-                        this.wlanUnit.text = 'K';
-                        du[0] /= 1024;
-                        du[1] /= 1024;
-                        if (du[0] > 1024 || du[1] > 1024) {
-                            this.wlanUnit.text = 'M';
-                            du[0] /= 1024;
-                            du[1] /= 1024;
-                            if (du[0] > 1024 || du[1] > 1024) {
-                                this.wlanUnit.text = 'G';
-                                du[0] /= 1024;
-                                du[1] /= 1024;
+                    if (du[0] > unit || du[1] > unit) {
+                        this.wlanUnit.text = (this.bpsSpeed) ? 'k' : 'K';
+                        du[0] /= unit;
+                        du[1] /= unit;
+                        if (du[0] > unit || du[1] > unit) {
+                            this.wlanUnit.text = (this.bpsSpeed) ? 'm' : 'M';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            if (du[0] > unit || du[1] > unit) {
+                                this.wlanUnit.text = (this.bpsSpeed) ? 'g' : 'G';
+                                du[0] /= unit;
+                                du[1] /= unit;
                             }
                         }
                     } else {
-                        this.wlanUnit.text = 'B';
+                        this.wlanUnit.text = (this.bpsSpeed) ? 'b' : 'B';
                     }
                 }
 

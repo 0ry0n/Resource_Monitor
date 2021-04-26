@@ -111,6 +111,11 @@
             <summary>Auto Hide Net</summary>
             <description></description>
         </key>
+        <key name="bpsspeed" type="b">
+            <default>false</default>
+            <summary>Speed in Bits per Second</summary>
+            <description></description>
+        </key>
         <key name="cputemperatureunit" type="b">
             <default>false</default>
             <summary>Cpu Temperature Unit Fahrenheit</summary>

@@ -381,6 +381,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             });
 
             let auto = new SwitchRow('Enable', this._settings, 'autohide');
+            let bps = new SwitchRow('Enable', this._settings, 'bpsspeed');
             let wlan = new SwitchRow('Display', this._settings, 'wlan');
             let eth = new SwitchRow('Display', this._settings, 'eth');
             let widthWlan = new SpinButtonRow('Width', this._settings, 'widthwlan');
@@ -392,6 +393,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 halign: Gtk.Align.START
             }));
             box.append(auto);
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Bits per second')),
+                use_markup: true,
+                halign: Gtk.Align.START
+            }));
+            box.append(bps);
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Eth')),
                 use_markup: true,
