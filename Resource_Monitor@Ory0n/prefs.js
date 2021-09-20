@@ -867,6 +867,73 @@ const ResourceMonitorPrefsWidget = class ResourceMonitorPrefsWidget {
             halign: Gtk.Align.CENTER
         }));
 
+
+        // FREQUENCY
+        let frequencyFrame = new Gtk.Grid({
+            margin: 12,
+            row_spacing: 6,
+            orientation: Gtk.Orientation.VERTICAL
+        });
+
+        let alignmentFrequency = new Gtk.Alignment({
+            left_padding: 12,
+            right_padding: 12
+        });
+
+        frequencyFrame.add(new Gtk.Label({
+            label: '<b>%s</b>'.format(_('Cpu Frequency')),
+            use_markup: true,
+            halign: Gtk.Align.START
+        }));
+        frequencyFrame.add(alignmentFrequency);
+
+        let gridFrequency= new Gtk.Grid({
+            row_spacing: 6
+        });
+        alignmentFrequency.add(gridFrequency);
+
+        gridFrequency.attach(new Gtk.Label({
+            label: '%s'.format(_('Display')),
+            halign: Gtk.Align.START,
+            hexpand: true
+        }), 0, 0, 1, 1);
+
+        let valueFrequency= new Gtk.Switch({
+            halign: Gtk.Align.END
+        });
+
+        this._settings.bind('cpufrequency', valueFrequency, 'active', Gio.SettingsBindFlags.DEFAULT);
+        valueFrequency.connect('state-set', button => {
+            widthFrequency.sensitive = button.active;
+        });
+        gridFrequency.attach(valueFrequency, 1, 0, 1, 1);
+
+        gridFrequency.attach(new Gtk.Label({
+            label: '%s'.format(_('Width')),
+            halign: Gtk.Align.START
+        }), 0, 1, 1, 1);
+
+        let widthFrequency = new Gtk.SpinButton({
+            adjustment: new Gtk.Adjustment({
+                lower: 1,
+                upper: 500,
+                step_increment: 1
+            }),
+            halign: Gtk.Align.END,
+            numeric: true
+        });
+        this._settings.bind('widthcpufrequency', widthFrequency, 'value', Gio.SettingsBindFlags.DEFAULT);
+
+        // Init
+        widthFrequency.sensitive = valueFrequency.active;
+        gridFrequency.attach(widthFrequency, 1, 1, 1, 1);
+
+        this.main_widget.append_page(frequencyFrame, new Gtk.Label({
+            label: '<b>%s</b>'.format(_('Frequency')),
+            use_markup: true,
+            halign: Gtk.Align.CENTER
+        }));
+
         this.main_widget.show_all();
     }
 }
