@@ -184,6 +184,11 @@ const ResourceMonitor = GObject.registerClass(
             this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATURE}`, this._cpuTemperatureChange.bind(this));
             this.enCpuTemperature = this._settings.get_boolean(CPUTEMPERATURE);
 
+            // Cpu Frequency
+            this.enCpuFrequency;
+            this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUFREQUENCY}`, this._cpuFrequencyChange.bind(this));
+            this.enCpuFrequency = this._settings.get_boolean(CPUFREQUENCY);
+
             // Cpu Temperature Unit
             this.cpuTemperatureFahrenheit;
             this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATUREUNIT}`, () => {
@@ -644,7 +649,7 @@ const ResourceMonitor = GObject.registerClass(
                 this.cpu.show();
                 this.cpuUnit.show();
             } else {
-                if (!this.enCpuTemperature)
+                if (!this.enCpuTemperature && !this.enCpuFrequency)
                     this.cpuIco.hide();
                 this.cpu.hide();
                 this.cpuUnit.hide();
@@ -919,7 +924,7 @@ const ResourceMonitor = GObject.registerClass(
                 this.cpuTemperature.show();
                 this.cpuTemperatureUnit.show();
             } else {
-                if (!this.enCpu)
+                if (!this.enCpu && !this.enCpuFrequency)
                     this.cpuIco.hide();
                 this.temperatureBrackets.hide();
                 this.cpuTemperature.hide();
@@ -936,7 +941,7 @@ const ResourceMonitor = GObject.registerClass(
                 this.cpuFrequency.show();
                 this.cpuFrequencyUnit.show();
             } else {
-                if (!this.enCpu)
+                if (!this.enCpu && !this.enCpuTemperature)
                     this.cpuIco.hide();
                 this.cpuFrequencyBrackets.hide();
                 this.cpuFrequency.hide();
