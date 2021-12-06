@@ -3,7 +3,7 @@
     "description": "Monitor the use of system resources like cpu, ram, disk, network and display them in gnome shell top bar.",
     "uuid": "Resource_Monitor@Ory0n",
     "shell-version": [
-        "40.0"
+        "40", "41"
     ],
     "gettext-domain": "com-github-Ory0n-Resource_Monitor",
     "settings-schema": "com.github.Ory0n.Resource_Monitor",

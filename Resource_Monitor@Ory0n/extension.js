@@ -27,6 +27,8 @@ const { St, GObject, NM, GLib, Shell, Gio, Clutter } = imports.gi;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 
+const ByteArray = imports.byteArray;
+
 const Util = imports.misc.util;
 const ExtensionUtils = imports.misc.extensionUtils;
 
@@ -73,7 +75,7 @@ const ResourceMonitor = GObject.registerClass(
     class ResourceMonitor extends PanelMenu.Button {
         _init(params) {
             super._init(params, IndicatorName);
-            this.actor.connect('button-press-event', this._openSystemMonitor.bind(this));
+            this.connect('button-press-event', this._openSystemMonitor.bind(this));
 
             this._settings = ExtensionUtils.getSettings();
 
@@ -495,7 +497,7 @@ const ResourceMonitor = GObject.registerClass(
                 this.box.add(this.wlanIco);
             }
 
-            this.actor.add_actor(this.box);
+            this.add_actor(this.box);
         }
 
         _initMainGui() {
@@ -971,7 +973,7 @@ const ResourceMonitor = GObject.registerClass(
             let file = Gio.file_new_for_path('/proc/stat');
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result)[1];
-                let lines = String(contents).split('\n');
+                let lines = ByteArray.toString(contents).split('\n');
 
                 let entry = lines[0].trim().split(/\s+/);
                 let cpuTot = 0;
@@ -1001,7 +1003,7 @@ const ResourceMonitor = GObject.registerClass(
             let file = Gio.file_new_for_path('/proc/meminfo');
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result)[1];
-                let lines = String(contents).split('\n');
+                let lines = ByteArray.toString(contents).split('\n');
 
                 let total, available, used;
 
@@ -1032,7 +1034,7 @@ const ResourceMonitor = GObject.registerClass(
             let file = Gio.file_new_for_path('/proc/meminfo');
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result)[1];
-                let lines = String(contents).split('\n');
+                let lines = ByteArray.toString(contents).split('\n');
 
                 let total, available, used;
 
@@ -1063,7 +1065,7 @@ const ResourceMonitor = GObject.registerClass(
             let file = Gio.file_new_for_path('/proc/diskstats');
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result)[1];
-                let lines = String(contents).split('\n');
+                let lines = ByteArray.toString(contents).split('\n');
 
                 if (this.diskStatsMode === true) {
                     let field = this.diskStatsItems['All'];
@@ -1270,7 +1272,7 @@ const ResourceMonitor = GObject.registerClass(
             let file = Gio.file_new_for_path('/proc/net/dev');
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result)[1];
-                let lines = String(contents).split('\n');
+                let lines = ByteArray.toString(contents).split('\n');
 
                 for (let i = 2; i < lines.length - 1; i++) {
                     let line = lines[i];
@@ -1331,7 +1333,7 @@ const ResourceMonitor = GObject.registerClass(
             let file = Gio.file_new_for_path('/proc/net/dev');
             file.load_contents_async(null, (source, result) => {
                 let contents = source.load_contents_finish(result)[1];
-                let lines = String(contents).split('\n');
+                let lines = ByteArray.toString(contents).split('\n');
 
                 for (let i = 2; i < lines.length - 1; i++) {
                     let line = lines[i];
@@ -1391,7 +1393,7 @@ const ResourceMonitor = GObject.registerClass(
                 let file = Gio.file_new_for_path(cpuTemperatureFile);
                 file.load_contents_async(null, (source, result) => {
                     let contents = source.load_contents_finish(result)[1];
-                    let temperature = parseInt(String(contents)) / 1000;
+                    let temperature = parseInt(ByteArray.toString(contents)) / 1000;
 
                     if (this.cpuTemperatureFahrenheit) {
                         temperature = (temperature * 1.8) + 32;
@@ -1414,7 +1416,7 @@ const ResourceMonitor = GObject.registerClass(
                 let file = Gio.file_new_for_path(cpuFrequencyFile);
                 file.load_contents_async(null, (source, result) => {
                     let contents = source.load_contents_finish(result)[1];
-                    let frequencyMHz = (parseInt(String(contents)) / 1000).toFixed(0);
+                    let frequencyMHz = (parseInt(ByteArray.toString(contents)) / 1000).toFixed(0);
                     // display in GHz if over 999MHz
                     if (frequencyMHz > 999) {
                         this.cpuFrequency.text = `[${(frequencyMHz / 1000).toFixed(2)}`;

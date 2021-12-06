@@ -24,6 +24,8 @@
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
 
+const ByteArray = imports.byteArray;
+
 const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
 const _ = Gettex.gettext;
 
@@ -298,7 +300,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             let x = 0;
 
             let file = GLib.file_get_contents('/proc/mounts');
-            let lines = ('' + file[1]).split('\n');
+            let lines = ByteArray.toString(file[1]).split('\n');
 
             for (let j = 0; j < lines.length; j++) {
                 let line = lines[j];
