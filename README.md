@@ -2,17 +2,17 @@
 Resource_Monitor is a GNOME Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in GNOME shell top bar.
 
 # Screenshots
-![](https://github.com/0ry0n/Resource_Monitor/blob/gnome-40.0/main.png)
+![](/main.png)
 
 # GNOME Shell versions supported
-**40.0**
+**40, 41**
 
 # How-To Install
 ## Download
 You can get this extension:
 
 - From [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/).
-- Downloading the latest [Release](https://github.com/0ry0n/Resource_Monitor/releases/tag/15) released on GitHub.
+- Downloading the latest [Release](/releases/latest) released on GitHub.
 - Cloning the [gnome-40.0](https://github.com/0ry0n/Resource_Monitor/tree/gnome-40.0) branch.
 ## Install
 ### Using the latest release
@@ -47,9 +47,9 @@ gnome-extensions enable Resource_Monitor@Ory0n
 Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 
 # Preferences
-![](https://github.com/0ry0n/Resource_Monitor/blob/gnome-40.0/settings.png)
+![](/settings.png)
 
-![](https://github.com/0ry0n/Resource_Monitor/blob/gnome-40.0/system-monitor.png)
+![](/system-monitor.png)
 
 # Bug Reporting
 Use the GitHub [Issues](https://github.com/0ry0n/Resource_Monitor/issues) tracker to report issues or ask for features.
@@ -68,4 +68,4 @@ Use the GitHub [Issues](https://github.com/0ry0n/Resource_Monitor/issues) tracke
 - **Giuseppe Silvestro** - *Initial work* - [0ry0n](https://github.com/0ry0n)
 
 # License
-This project is licensed under the GNU GPL-3.0 License - see the [LICENSE.md](https://github.com/0ry0n/Resource_Monitor/blob/gnome-40.0/LICENSE) file for details.
+This project is licensed under the GNU GPL-3.0 License - see the [LICENSE.md](/LICENSE) file for details.
