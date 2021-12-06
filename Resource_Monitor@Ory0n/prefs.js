@@ -169,14 +169,28 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             let cpu = new SwitchRow('Display', this._settings, 'cpu');
             let width = new SpinButtonRow('Width', this._settings, 'widthcpu');
+            let frequency = new SwitchRow('Display', this._settings, 'cpufrequency');
+            let widthFrequency = new SpinButtonRow('Width', this._settings, 'widthcpufrequency');
 
             box.append(cpu);
             box.append(width);
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Frequency')),
+                use_markup: true,
+                halign: Gtk.Align.START
+            }));
+            box.append(frequency);
+            box.append(widthFrequency);
 
             cpu.button.connect('state-set', button => {
                 width.button.sensitive = button.active;
             });
             width.button.sensitive = cpu.button.active;
+
+            frequency.button.connect('state-set', button => {
+                widthFrequency.button.sensitive = button.active;
+            });
+            widthFrequency.button.sensitive = frequency.button.active;
 
             return box;
         }

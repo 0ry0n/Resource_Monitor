@@ -66,6 +66,11 @@
             <summary>Display Cpu Temperature</summary>
             <description></description>
         </key>
+        <key name="cpufrequency" type="b">
+            <default>false</default>
+            <summary>Display Cpu Frequency</summary>
+            <description></description>
+        </key>
         <key name="widthcpu" type="i">
             <default>35</default>
             <summary>Width Cpu</summary>
@@ -104,6 +109,11 @@
         <key name="widthcputemperature" type="i">
             <default>35</default>
             <summary>Width Cpu Temperature</summary>
+            <description></description>
+        </key>
+        <key name="widthcpufrequency" type="i">
+            <default>35</default>
+            <summary>Width Cpu Frequency</summary>
             <description></description>
         </key>
         <key name="autohide" type="b">

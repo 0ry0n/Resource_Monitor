@@ -50,6 +50,7 @@ const DISK_SPACE = 'diskspace';
 const ETH = 'eth';
 const WLAN = 'wlan';
 const CPUTEMPERATURE = 'cputemperature';
+const CPUFREQUENCY = 'cpufrequency';
 const DISKS_LIST = 'diskslist';
 const DISK_STATS_MODE = 'diskstatsmode';
 const DISK_SPACE_UNIT = 'diskspaceunit';
@@ -61,7 +62,8 @@ const WIDTH_DISK_STATS = 'widthdiskstats';
 const WIDTH_DISK_SPACE = 'widthdiskspace';
 const WIDTH_ETH = 'widtheth';
 const WIDTH_WLAN = 'widthwlan';
-const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
+const WIDTH_CPU_TEMPERATURE = 'widthcputemperature';
+const WIDTH_CPU_FREQUENCY = 'widthcpufrequency';
 const CPUTEMPERATUREUNIT = 'cputemperatureunit';
 const NETWORKUNIT = 'networkunit';
 
@@ -264,10 +266,16 @@ const ResourceMonitor = GObject.registerClass(
             this.wlan.width = this._settings.get_int(WIDTH_WLAN);
 
             // Cpu Temperature
-            this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPUTEMPERATURE}`, () => {
-                this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
+            this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPU_TEMPERATURE}`, () => {
+                this.cpuTemperature.width = this._settings.get_int(WIDTH_CPU_TEMPERATURE);
             });
-            this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
+            this.cpuTemperature.width = this._settings.get_int(WIDTH_CPU_TEMPERATURE);
+
+            // Cpu Frequency
+            this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPU_FREQUENCY}`, () => {
+                this.cpuFrequency.width = this._settings.get_int(WIDTH_CPU_FREQUENCY);
+            });
+            this.cpuFrequency.width = this._settings.get_int(WIDTH_CPU_FREQUENCY);
 
             // Init Connections State
             this._onActiveConnectionRemoved(this.client);
@@ -354,6 +362,12 @@ const ResourceMonitor = GObject.registerClass(
                 style_class: 'unit'
             });
 
+            this.cpuFrequencyUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: 'MHz',
+                style_class: 'unit'
+            });
+
             // Label
             this.cpu = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
@@ -399,6 +413,18 @@ const ResourceMonitor = GObject.registerClass(
                 text: ']',
                 style_class: 'label'
             });
+
+            this.cpuFrequency = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '[--',
+                style_class: 'label'
+            });
+
+            this.cpuFrequencyBrackets = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ']',
+                style_class: 'label'
+            });
         }
 
         _buildMainGui() {
@@ -410,6 +436,9 @@ const ResourceMonitor = GObject.registerClass(
                 this.box.add(this.cpuTemperature);
                 this.box.add(this.cpuTemperatureUnit);
                 this.box.add(this.temperatureBrackets);
+                this.box.add(this.cpuFrequency);
+                this.box.add(this.cpuFrequencyUnit);
+                this.box.add(this.cpuFrequencyBrackets);
 
                 this.box.add(this.ramIco);
                 this.box.add(this.ram);
@@ -439,6 +468,9 @@ const ResourceMonitor = GObject.registerClass(
                 this.box.add(this.cpuTemperature);
                 this.box.add(this.cpuTemperatureUnit);
                 this.box.add(this.temperatureBrackets);
+                this.box.add(this.cpuFrequency);
+                this.box.add(this.cpuFrequencyUnit);
+                this.box.add(this.cpuFrequencyBrackets);
                 this.box.add(this.cpuIco);
 
                 this.box.add(this.ram);
@@ -477,6 +509,7 @@ const ResourceMonitor = GObject.registerClass(
             this._getSettingsWlan();
             this._hideChange();
             this._cpuTemperatureChange();
+            this._cpuFrequencyChange();
             this._disksListChange();
         }
 
@@ -892,6 +925,23 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _cpuFrequencyChange() {
+            this.enCpuFrequency = this._settings.get_boolean(CPUFREQUENCY);
+            if (this.enCpuFrequency) {
+                if (this.displayIcons)
+                    this.cpuIco.show();
+                this.cpuFrequencyBrackets.show()
+                this.cpuFrequency.show();
+                this.cpuFrequencyUnit.show();
+            } else {
+                if (!this.enCpu)
+                    this.cpuIco.hide();
+                this.cpuFrequencyBrackets.hide();
+                this.cpuFrequency.hide();
+                this.cpuFrequencyUnit.hide();
+            }
+        }
+
         /*********************/
 
         _refresh() {
@@ -911,6 +961,8 @@ const ResourceMonitor = GObject.registerClass(
                 this._refreshWlan();
             if (this.enCpuTemperature)
                 this._refreshCpuTemperature();
+            if (this.enCpuFrequency)
+                this._refreshCpuFrequency();
 
             return GLib.SOURCE_CONTINUE;
         }
@@ -1353,6 +1405,27 @@ const ResourceMonitor = GObject.registerClass(
                 });
             } else {
                 this.cpuTemperature.text = '[Error';
+            }
+        }
+
+        _refreshCpuFrequency() {
+            let cpuFrequencyFile = '/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq';
+            if (GLib.file_test(cpuFrequencyFile, GLib.FileTest.EXISTS)) {
+                let file = Gio.file_new_for_path(cpuFrequencyFile);
+                file.load_contents_async(null, (source, result) => {
+                    let contents = source.load_contents_finish(result)[1];
+                    let frequencyMHz = (parseInt(String(contents)) / 1000).toFixed(0);
+                    // display in GHz if over 999MHz
+                    if (frequencyMHz > 999) {
+                        this.cpuFrequency.text = `[${(frequencyMHz / 1000).toFixed(2)}`;
+                        this.cpuFrequencyUnit.text = 'GHz';
+                    } else {
+                        this.cpuFrequency.text = `[${frequencyMHz}`;
+                        this.cpuFrequencyUnit.text = 'MHz';
+                    }
+                });
+            } else {
+                this.cpuFrequency.text = '[Error';
             }
         }
     });
