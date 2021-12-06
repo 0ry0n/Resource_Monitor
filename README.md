@@ -6,6 +6,7 @@ Resource_Monitor is a GNOME Shell extension that Monitor the use of system resou
 
 # GNOME Shell versions supported
 **40, 41**
+- For older GNOME versions see the [gnome-3.28-3.38](https://github.com/0ry0n/Resource_Monitor/tree/gnome-3.28-3.38) branch.
 
 # How-To Install
 ## Download
@@ -13,7 +14,7 @@ You can get this extension:
 
 - From [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/).
 - Downloading the latest [Release](/releases/latest) released on GitHub.
-- Cloning the [gnome-40.0](https://github.com/0ry0n/Resource_Monitor/tree/gnome-40.0) branch.
+- Cloning the [master](https://github.com/0ry0n/Resource_Monitor/tree/master) repository.
 ## Install
 ### Using the latest release
 1. Unzip the file `Resource_Monitor-x.zip`.
