@@ -465,6 +465,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             let thermal = new SwitchRow('Display', this._settings, 'cputemperature');
             let unit = new SwitchRow('Fahrenheit Unit', this._settings, 'cputemperatureunit');
             let width = new SpinButtonRow('Width', this._settings, 'widthcputemperature');
+            let devices = new ListRow('Devices');
 
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Cpu Temperature')),
@@ -474,6 +475,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             box.append(thermal);
             box.append(width);
             box.append(unit);
+            box.append(devices);
 
             thermal.button.connect('state-set', button => {
                 width.button.sensitive = button.active;
@@ -481,6 +483,75 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             });
             width.button.sensitive = thermal.button.active;
             unit.button.sensitive = thermal.button.active;
+
+            // Array format
+            // name status number
+            // Get current disks settings
+            let tempsArray = this._settings.get_strv('temperatureslist', Gio.SettingsBindFlags.DEFAULT);
+            let newTempsArray = [];
+            let x = 0;
+
+            for (let j = 0; j < 50; j++) { // TODO
+                let zone = '/sys/class/thermal/thermal_zone' + j;
+                if (GLib.file_test(zone, GLib.FileTest.EXISTS)) {
+                    let file = GLib.file_get_contents(zone + '/type');
+                    let type = ByteArray.toString(file[1]).trim();
+
+                    let temp = new TempListItemRow(type);
+
+                    // Init gui
+                    for (let i = 0; i < tempsArray.length; i++) {
+                        let element = tempsArray[i];
+                        let it = element.split(' ');
+
+                        if (type === it[0]) {
+                            let statusButton = (it[1] === 'true');
+
+                            temp.button.active = statusButton;
+
+                            break;
+                        }
+                    }
+
+                    temp.button.connect('toggled', button => {
+                        // Save new button state
+                        let found = false;
+    
+                        for (let i = 0; i < tempsArray.length; i++) {
+                            let element = tempsArray[i];
+                            let it = element.split(' ');
+    
+                            if (type === it[0]) {
+                                it[1] = button.active;
+                                tempsArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
+    
+                                found = true;
+                                break;
+                            }
+                        }
+    
+                        // Add new device
+                        if (found === false) {
+                            tempsArray.push(type + ' ' + temp.button.active + ' ' + j);
+                            found = false;
+                        }
+    
+                        // Save all
+                        this._settings.set_strv('temperatureslist', tempsArray);
+                    });
+
+                    // Add device to newTempsArray
+                    newTempsArray[x] = type + ' ' + temp.button.active + ' ' + j;
+
+                    devices.list.insert(temp, x++);
+                } else {
+                    break;
+                }
+            }
+
+            // Save newTempsArray with the list of new devices (to remove old devices)
+            tempsArray = newTempsArray;
+            this._settings.set_strv('temperatureslist', tempsArray);
 
             return box;
         }
@@ -651,6 +722,34 @@ const ListItemRow = GObject.registerClass(
             this.attach(this.diskPath, 1, 0, 1, 1);
             this.attach(this.stats, 2, 0, 1, 1);
             this.attach(this.space, 3, 0, 1, 1);
+        }
+    });
+
+const TempListItemRow = GObject.registerClass(
+    class TempListItemRow extends Gtk.Grid {
+        _init(name) {
+            super._init({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+                orientation: Gtk.Orientation.HORIZONTAL,
+            });
+
+            this.deviceName = new Gtk.Label({
+                label: '%s'.format(_(name)),
+                halign: Gtk.Align.START,
+                margin_end: 10,
+                hexpand: true,
+            });
+
+            this.button = new Gtk.CheckButton({
+                label: '%s'.format(_("Monitor")),
+                active: false,
+            });
+
+            this.attach(this.deviceName, 0, 0, 1, 1);
+            this.attach(this.button, 1, 0, 1, 1);
         }
     });
 

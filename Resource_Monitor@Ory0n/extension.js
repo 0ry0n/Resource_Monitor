@@ -54,6 +54,7 @@ const WLAN = 'wlan';
 const CPUTEMPERATURE = 'cputemperature';
 const CPUFREQUENCY = 'cpufrequency';
 const DISKS_LIST = 'diskslist';
+const TEMPS_LIST = 'temperatureslist';
 const DISK_STATS_MODE = 'diskstatsmode';
 const DISK_SPACE_UNIT = 'diskspaceunit';
 const AUTO_HIDE = 'autohide';
@@ -98,6 +99,9 @@ const ResourceMonitor = GObject.registerClass(
 
             this.idleWlanOld = 0;
             this.duTotWlanOld = [0, 0];
+
+            this.temperatures = 0;
+            this.temperaturesReads = 0;
 
             // Create UI
             this._createMainGui();
@@ -210,6 +214,11 @@ const ResourceMonitor = GObject.registerClass(
             this.diskSpaceItems = [];
             this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISKS_LIST}`, this._disksListChange.bind(this));
             this.disksList = this._settings.get_strv(DISKS_LIST);
+
+            // Temperatures List
+            this.tempsList;
+            this.sigId[this.numSigId++] = this._settings.connect(`changed::${TEMPS_LIST}`, this._tempsListChange.bind(this));
+            this.tempsList = this._settings.get_strv(TEMPS_LIST);
 
             // Disk Stats Mode
             this.diskStatsMode;
@@ -518,6 +527,7 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuTemperatureChange();
             this._cpuFrequencyChange();
             this._disksListChange();
+            this._tempsListChange();
         }
 
         destroy() {
@@ -906,6 +916,12 @@ const ResourceMonitor = GObject.registerClass(
 
             this._diskStatsUpdate();
             this._diskSpaceUpdate();
+        }
+
+        _tempsListChange() {
+            this.tempsList = this._settings.get_strv(TEMPS_LIST);
+
+            this._refreshCpuTemperature();
         }
 
         _diskStatsModeChange() {
@@ -1392,8 +1408,105 @@ const ResourceMonitor = GObject.registerClass(
             });
         }
 
+        _loadContents(file, cancellable = null) {
+            // We use an explicit Promise instead of an async function, because we need
+            // resolve() & reject() to break out of the GAsyncReadyCallback...
+            return new Promise((resolve, reject) => {
+                file.load_contents_async(cancellable, (source_object, res) => {
+                    // ...and a try-catch to propagate errors through the Promise chain
+                    try {
+                        res = source_object.load_contents_finish(res);
+                        
+                        // GAsyncReadyCallbacks return an 'ok' boolean, but we ignore
+                        // them since an error will be thrown anyways if it's %false
+                        let [ok, contents, etag_out] = res;
+                        
+                        // Some functions have returns like GVariants you could unpack
+                        // to native values before resolving
+                        resolve(contents);
+                    } catch (e) {
+                    
+                        // This will throw an error in an async function, or you can use
+                        // catch() on the Promise object
+                        reject(e);
+                    }
+                });
+            });
+        }
+        
+        // We'll `await` loadContents() in an async function, but you could also `await`
+        // the Promise directly and include it in this function
+        async _loadFile(path, cancellable = null) {
+            try {
+                let file = Gio.File.new_for_path(path);
+                let contents = await this._loadContents(file, cancellable);
+                    
+                return contents;
+            } catch (e) {
+                logError(e);
+            }
+        }
+
         _refreshCpuTemperature() {
-            let cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone0/temp';
+            // We can use a Gio.Cancellable object to allow the operation to be cancelled,
+            // like with a 'Cancel' button in a dialog, or just leave it %null.
+            /*let cancellable = new Gio.Cancellable();ù
+
+            this._loadFile(cpuTemperatureFile, cancellable).then(contents => {
+                // Add temperature
+                temperatures += parseInt(ByteArray.toString(contents)) / 1000;
+                read++;
+            });*/
+            
+            // To cancel the operation we invoke cancel() on the cancellable object, which
+            // will throw "Gio.IOErrorEnum: Operation was cancelled" in loadContents()
+            //cancellable.cancel();
+
+
+            for (let i = 0; i < this.tempsList.length; i++) {
+                let element = this.tempsList[i];
+                let it = element.split(' ');
+
+                // disabled
+                if (it[1] === 'false') {
+                    continue;
+                }
+
+                // read temp
+                let cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone' + it[2] + '/temp';
+                if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
+                    let file = Gio.file_new_for_path(cpuTemperatureFile);
+                    file.load_contents_async(null, (source, result) => {
+                        let contents = source.load_contents_finish(result)[1];
+                        // Add temperature
+
+                        this.temperatures += parseInt(ByteArray.toString(contents)) / 1000;
+                        this.temperaturesReads++;
+                    });
+                }
+            }
+
+            if (this.temperaturesReads > 0) {
+                // average
+                this.temperatures /= this.temperaturesReads;
+    
+                if (this.cpuTemperatureFahrenheit) {
+                    this.temperatures = (this.temperatures * 1.8) + 32;
+                }
+    
+                if (this.displayDecimals) {
+                    this.cpuTemperature.text = `[${this.temperatures.toFixed(1)}`;
+                } else {
+                    this.cpuTemperature.text = `[${this.temperatures.toFixed(0)}`;
+                }
+            } else {
+                this.cpuTemperature.text = '[--';
+            }
+
+            this.temperatures = 0;
+            this.temperaturesReads = 0;
+
+            /*let cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone0/temp';
             if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
                 let file = Gio.file_new_for_path(cpuTemperatureFile);
                 file.load_contents_async(null, (source, result) => {
@@ -1412,7 +1525,7 @@ const ResourceMonitor = GObject.registerClass(
                 });
             } else {
                 this.cpuTemperature.text = '[Error';
-            }
+            }*/
         }
 
         _refreshCpuFrequency() {

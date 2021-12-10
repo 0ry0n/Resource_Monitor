@@ -146,5 +146,10 @@
             <summary>Disks List</summary>
             <description></description>
         </key>
+        <key name="temperatureslist" type="as">
+            <default>[]</default>
+            <summary>Temperature Devices List</summary>
+            <description></description>
+        </key>
     </schema>
 </schemalist>
