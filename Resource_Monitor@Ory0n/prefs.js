@@ -485,69 +485,91 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             unit.button.sensitive = thermal.button.active;
 
             // Array format
-            // name status number
+            // name-status-path
             // Get current disks settings
             let tempsArray = this._settings.get_strv('temperatureslist', Gio.SettingsBindFlags.DEFAULT);
             let newTempsArray = [];
             let x = 0;
 
-            for (let j = 0; j < 50; j++) { // TODO
-                let zone = '/sys/class/thermal/thermal_zone' + j;
-                if (GLib.file_test(zone, GLib.FileTest.EXISTS)) {
-                    let file = GLib.file_get_contents(zone + '/type');
-                    let type = ByteArray.toString(file[1]).trim();
+            // Detect sensors
+            //let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
 
-                    let temp = new TempListItemRow(type);
+            let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; done';
 
-                    // Init gui
-                    for (let i = 0; i < tempsArray.length; i++) {
-                        let element = tempsArray[i];
-                        let it = element.split(' ');
+            let proc = Gio.Subprocess.new(['bash', '-c', command], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
 
-                        if (type === it[0]) {
-                            let statusButton = (it[1] === 'true');
+            proc.communicate_utf8_async(null, null, (proc, res) => {
+                try {
+                    let [, stdout, stderr] = proc.communicate_utf8_finish(res);
 
-                            temp.button.active = statusButton;
+                    if (proc.get_successful()) {
+                        let lines = stdout.split('\n');
 
-                            break;
-                        }
-                    }
-
-                    temp.button.connect('toggled', button => {
-                        // Save new button state
-                        let found = false;
-    
-                        for (let i = 0; i < tempsArray.length; i++) {
-                            let element = tempsArray[i];
-                            let it = element.split(' ');
-    
-                            if (type === it[0]) {
-                                it[1] = button.active;
-                                tempsArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
-    
-                                found = true;
-                                break;
+                        for (let j = 0; j < lines.length; j++) {
+                            let line = lines[j];
+                            if (line === '') {
+                                continue; // TODO
                             }
-                        }
-    
-                        // Add new device
-                        if (found === false) {
-                            tempsArray.push(type + ' ' + temp.button.active + ' ' + j);
-                            found = false;
-                        }
-    
-                        // Save all
-                        this._settings.set_strv('temperatureslist', tempsArray);
-                    });
+                            let entry = line.trim().split(/-/);
 
-                    // Add device to newTempsArray
-                    newTempsArray[x] = type + ' ' + temp.button.active + ' ' + j;
+                            let device = entry[0];
+                            let path = entry[1];
 
-                    devices.list.insert(temp, x++);
-                } else {
-                    break;
+                            let temp = new TempListItemRow(device);
+
+                            // Init gui
+                            for (let i = 0; i < tempsArray.length; i++) {
+                                let element = tempsArray[i];
+                                let it = element.split('-');
+
+                                if (device === it[0]) {
+                                    let statusButton = (it[1] === 'true');
+
+                                    temp.button.active = statusButton;
+
+                                    break;
+                                }
+                            }
+
+                            temp.button.connect('toggled', button => {
+                                // Save new button state
+                                let found = false;
+            
+                                for (let i = 0; i < tempsArray.length; i++) {
+                                    let element = tempsArray[i];
+                                    let it = element.split('-');
+            
+                                    if (device === it[0]) {
+                                        it[1] = button.active;
+                                        tempsArray[i] = it[0] + '-' + it[1] + '-' + it[2];
+            
+                                        found = true;
+                                        break;
+                                    }
+                                }
+            
+                                // Add new device
+                                if (found === false) {
+                                    tempsArray.push(device + '-' + temp.button.active + '-' + path);
+                                    found = false;
+                                }
+            
+                                // Save all
+                                this._settings.set_strv('temperatureslist', tempsArray);
+                            });
+
+                            // Add device to newTempsArray
+                            newTempsArray[x] = device + '-' + temp.button.active + '-' + path;
+
+                            devices.list.insert(temp, x++);
+                        }
+                    } else {
+                        throw new Error(stderr);
+                    }
+                } catch (e) {
+                    throw new Error(e);
                 }
-            }
+            });
 
             // Save newTempsArray with the list of new devices (to remove old devices)
             tempsArray = newTempsArray;

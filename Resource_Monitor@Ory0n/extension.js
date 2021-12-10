@@ -1465,15 +1465,16 @@ const ResourceMonitor = GObject.registerClass(
 
             for (let i = 0; i < this.tempsList.length; i++) {
                 let element = this.tempsList[i];
-                let it = element.split(' ');
+                let it = element.split('-');
 
                 // disabled
-                if (it[1] === 'false') {
+                // TODO
+                if (it[2] === 'undefined' || it[1] === 'false') {
                     continue;
                 }
 
                 // read temp
-                let cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone' + it[2] + '/temp';
+                let cpuTemperatureFile = it[2];//'/sys/devices/virtual/thermal/thermal_zone' + it[2] + '/temp';
                 if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
                     let file = Gio.file_new_for_path(cpuTemperatureFile);
                     file.load_contents_async(null, (source, result) => {
