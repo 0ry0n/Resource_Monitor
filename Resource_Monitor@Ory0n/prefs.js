@@ -2,7 +2,7 @@
 /* exported init, buildPrefsWidget */
 
 /*
- * Resource_Monitor is Copyright © 2018-2021 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2022 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
@@ -22,17 +22,60 @@
 
 'use strict';
 
+const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
+
 const { Gio, GObject, Gtk, GLib } = imports.gi;
 
-const ByteArray = imports.byteArray;
-
-const Gettex = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
-const _ = Gettex.gettext;
+const Gettext = imports.gettext.domain(GETTEXT_DOMAIN);
+const _ = Gettext.gettext;
 
 const ExtensionUtils = imports.misc.extensionUtils;
+const ByteArray = imports.byteArray;
+
+// Settings
+const REFRESH_TIME = 'refreshtime';
+const EXTENSION_POSITION = 'extensionposition';
+const DECIMALS_STATUS = 'decimalsstatus';
+const SYSTEM_MONITOR_STATUS = 'systemmonitorstatus';
+const PREFS_STATUS = 'prefsstatus';
+
+const ICONS_STATUS = 'iconsstatus';
+const ICONS_POSITION = 'iconsposition';
+
+const CPU_STATUS = 'cpustatus';
+const CPU_WIDTH = 'cpuwidth';
+const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
+const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+
+const RAM_STATUS = 'ramstatus';
+const RAM_WIDTH = 'ramwidth';
+
+const SWAP_STATUS = 'swapstatus';
+const SWAP_WIDTH = 'swapwidth';
+
+const DISK_STATS_STATUS = 'diskstatsstatus';
+const DISK_STATS_WIDTH = 'diskstatswidth';
+const DISK_STATS_MODE = 'diskstatsmode';
+const DISK_SPACE_STATUS = 'diskspacestatus';
+const DISK_SPACE_WIDTH = 'diskspacewidth';
+const DISK_SPACE_UNIT = 'diskspaceunit';
+const DISK_SPACE_MONITOR = 'diskspacemonitor';
+const DISK_DEVICES_LIST = 'diskdeviceslist';
+
+const NET_AUTO_HIDE_STATUS = 'netautohidestatus';
+const NET_UNIT = 'netunit';
+const NET_ETH_STATUS = 'netethstatus';
+const NET_ETH_WIDTH = 'netethwidth';
+const NET_WLAN_STATUS = 'netwlanstatus';
+const NET_WLAN_WIDTH = 'netwlanwidth';
+
+const THERMAL_CPU_TEMPERATURE_STATUS = 'thermalcputemperaturestatus';
+const THERMAL_CPU_TEMPERATURE_WIDTH = 'thermalcputemperaturewidth';
+const THERMAL_CPU_TEMPERATURE_UNIT = 'thermalcputemperatureunit';
+const THERMAL_CPU_TEMPERATURE_DEVICES_LIST = 'thermalcputemperaturedeviceslist';
 
 function init() {
-    ExtensionUtils.initTranslations();
+    ExtensionUtils.initTranslations(GETTEXT_DOMAIN);
 }
 
 const ResourceMonitorPrefsWidget = GObject.registerClass(
@@ -118,11 +161,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let refresh = new SpinButtonRow('Seconds', this._settings, 'interval');
-            let icons = new SwitchRow('Display', this._settings, 'icons');
-            let position = new ComboBoxRow('Position', this._settings, 'iconsposition', ['LEFT', 'RIGHT']);
-            let decimals = new SwitchRow('Display', this._settings, 'decimals');
-            let systemMonitor = new SwitchRow('Show System Monitor when clicking on extension', this._settings, 'showsystemmonitor');
+            let refresh = new SpinButtonRow(_('Seconds'), this._settings, REFRESH_TIME, 1, 30);
+            let ePosition = new ComboBoxRow(_('Position'), this._settings, EXTENSION_POSITION, [_('Left'), _('Center'), _('Right')], ['left', 'center', 'right']);
+            let decimals = new SwitchRow(_('Display'), this._settings, DECIMALS_STATUS);
+            let systemMonitor = new SwitchRow(_('Show System Monitor when clicking on extension'), this._settings, SYSTEM_MONITOR_STATUS);
+            let prefs = new SwitchRow(_('Display'), this._settings, PREFS_STATUS);
+            let icons = new SwitchRow(_('Display'), this._settings, ICONS_STATUS);
+            let iPosition = new ComboBoxRow(_('Position'), this._settings, ICONS_POSITION, [_('Left'), _('Right')], ['left', 'right']);
 
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Refresh Time')),
@@ -131,12 +176,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }));
             box.append(refresh);
             box.append(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Icons')),
+                label: '<b>%s</b>'.format(_('Extension')),
                 use_markup: true,
                 halign: Gtk.Align.START,
             }));
-            box.append(icons);
-            box.append(position);
+            box.append(ePosition);
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Decimals')),
                 use_markup: true,
@@ -149,13 +193,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 halign: Gtk.Align.START,
             }));
             box.append(systemMonitor);
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Prefs Button')),
+                use_markup: true,
+                halign: Gtk.Align.START,
+            }));
+            box.append(prefs);
+            box.append(new Gtk.Label({
+                label: '<b>%s</b>'.format(_('Icons')),
+                use_markup: true,
+                halign: Gtk.Align.START,
+            }));
+            box.append(icons);
+            box.append(iPosition);
 
             refresh.button.set_range(1, 30);
 
             icons.button.connect('state-set', button => {
-                position.combobox.sensitive = button.active;
+                iPosition.combobox.sensitive = button.active;
             });
-            position.combobox.sensitive = icons.button.active;
+            iPosition.combobox.sensitive = icons.button.active;
 
             return box;
         }
@@ -169,10 +226,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let cpu = new SwitchRow('Display', this._settings, 'cpu');
-            let width = new SpinButtonRow('Width', this._settings, 'widthcpu');
-            let frequency = new SwitchRow('Display', this._settings, 'cpufrequency');
-            let widthFrequency = new SpinButtonRow('Width', this._settings, 'widthcpufrequency');
+            let cpu = new SwitchRow(_('Display'), this._settings, CPU_STATUS);
+            let width = new SpinButtonRow(_('Width'), this._settings, CPU_WIDTH);
+            let frequency = new SwitchRow(_('Display'), this._settings, CPU_FREQUENCY_STATUS);
+            let widthFrequency = new SpinButtonRow(_('Width'), this._settings, CPU_FREQUENCY_WIDTH);
 
             box.append(cpu);
             box.append(width);
@@ -206,8 +263,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let ram = new SwitchRow('Display', this._settings, 'ram');
-            let width = new SpinButtonRow('Width', this._settings, 'widthram');
+            let ram = new SwitchRow(_('Display'), this._settings, RAM_STATUS);
+            let width = new SpinButtonRow(_('Width'), this._settings, RAM_WIDTH);
 
             box.append(ram);
             box.append(width);
@@ -229,8 +286,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let swap = new SwitchRow('Display', this._settings, 'swap');
-            let width = new SpinButtonRow('Width', this._settings, 'widthswap');
+            let swap = new SwitchRow(_('Display'), this._settings, SWAP_STATUS);
+            let width = new SpinButtonRow(_('Width'), this._settings, SWAP_WIDTH);
 
             box.append(swap);
             box.append(width);
@@ -252,13 +309,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let stats = new SwitchRow('Display', this._settings, 'diskstats');
-            let widthStats = new SpinButtonRow('Width', this._settings, 'widthdiskstats');
-            let mode = new SwitchRow('Display All In One', this._settings, 'diskstatsmode');
-            let space = new SwitchRow('Display', this._settings, 'diskspace');
-            let widthSpace = new SpinButtonRow('Width', this._settings, 'widthdiskspace');
-            let unit = new SwitchRow('Percentage Unit', this._settings, 'diskspaceunit');
-            let devices = new ListRow('Devices');
+            let stats = new SwitchRow(_('Display'), this._settings, DISK_STATS_STATUS);
+            let widthStats = new SpinButtonRow(_('Width'), this._settings, DISK_STATS_WIDTH);
+            let mode = new ComboBoxRow(_('Display'), this._settings, DISK_STATS_MODE, [_('Single Mode'), _('Multiple Mode')], ['single', 'multiple']);
+            let space = new SwitchRow(_('Display'), this._settings, DISK_SPACE_STATUS);
+            let widthSpace = new SpinButtonRow(_('Width'), this._settings, DISK_SPACE_WIDTH);
+            let unit = new ComboBoxRow(_('Unit'), this._settings, DISK_SPACE_UNIT, [_('Numeric'), _('%')], ['numeric', 'perc']);
+            let monitor = new ComboBoxRow(_('Monitor'), this._settings, DISK_SPACE_MONITOR, [_('Used Space'), _('Free Space')], ['used', 'free']);
+            let devices = new ListRow(_('Devices'));
 
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Stats')),
@@ -276,123 +334,130 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             box.append(space);
             box.append(widthSpace);
             box.append(unit);
+            box.append(monitor);
             box.append(devices);
 
             stats.button.connect('state-set', button => {
                 widthStats.button.sensitive = button.active;
-                mode.button.sensitive = button.active;
+                mode.combobox.sensitive = button.active;
             });
             widthStats.button.sensitive = stats.button.active;
-            mode.button.sensitive = stats.button.active;
+            mode.combobox.sensitive = stats.button.active;
 
             space.button.connect('state-set', button => {
                 widthSpace.button.sensitive = button.active;
-                unit.button.sensitive = button.active;
+                unit.combobox.sensitive = button.active;
             });
             widthSpace.button.sensitive = space.button.active;
-            unit.button.sensitive = space.button.active;
+            unit.combobox.sensitive = space.button.active;
+
+            space.button.connect('state-set', button => {
+                widthSpace.button.sensitive = button.active;
+                monitor.combobox.sensitive = button.active;
+            });
+            widthSpace.button.sensitive = space.button.active;
+            monitor.combobox.sensitive = space.button.active;
 
             // Array format
-            // name stats space
+            // filesystem mountPoint stats space
             // Get current disks settings
-            let disksArray = this._settings.get_strv('diskslist', Gio.SettingsBindFlags.DEFAULT);
+            let disksArray = this._settings.get_strv(DISK_DEVICES_LIST, Gio.SettingsBindFlags.DEFAULT);
             let newDisksArray = [];
             let x = 0;
 
-            let file = GLib.file_get_contents('/proc/mounts');
-            let lines = ByteArray.toString(file[1]).split('\n');
+            this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
+                let lines = output.split('\n');
+    
+                // Excludes the first line of output
+                for (let i = 1; i < lines.length - 1; i++) {
+                    let line = lines[i];
+                    let entry = line.trim().split(/\s+/);
+    
+                    let filesystem = entry[0];
+                    let mountedOn = entry[5];
 
-            for (let j = 0; j < lines.length; j++) {
-                let line = lines[j];
-                let entry = line.trim().split(/\s/);
+                    let disk = new ListItemRow(filesystem, mountedOn);
 
-                let name = entry[0];
-                let path = entry[1];
+                    // Init gui
+                    for (let i = 0; i < disksArray.length; i++) {
+                        let element = disksArray[i];
+                        let it = element.split(' ');
 
-                if (typeof (name) === 'undefined' || name === '' || name.match(/\/dev\/loop\d*/) || (name.match(/^[^\/]/) && !path.match(/\/media\//)))
-                    continue;
+                        if (filesystem === it[0]) {
+                            let dStButton = (it[2] === 'true');
+                            let dSpButton = (it[3] === 'true');
 
-                let disk = new ListItemRow(name, path);
+                            disk.stats.active = dStButton;
+                            disk.space.active = dSpButton;
 
-                // Init gui
-                for (let i = 0; i < disksArray.length; i++) {
-                    let element = disksArray[i];
-                    let it = element.split(' ');
-
-                    if (name === it[0]) {
-                        let dStButton = (it[1] === 'true');
-                        let dSpButton = (it[2] === 'true');
-
-                        disk.stats.active = dStButton;
-                        disk.space.active = dSpButton;
-
-                        break;
+                            break;
+                        }
                     }
+
+                    disk.stats.connect('toggled', button => {
+                        // Save new button state
+                        let found = false;
+
+                        for (let i = 0; i < disksArray.length; i++) {
+                            let element = disksArray[i];
+                            let it = element.split(' ');
+
+                            if (filesystem === it[0]) {
+                                it[2] = button.active;
+                                disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2] + ' ' + it[3];
+
+                                found = true;
+                                break;
+                            }
+                        }
+                        
+                        // Add new disks
+                        if (found === false) {
+                            disksArray.push(filesystem + ' ' + mountedOn + ' ' + disk.stats.active + ' ' + disk.space.active);
+                            found = false;
+                        }
+
+                        // Save all
+                        this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+                    });
+
+                    disk.space.connect('toggled', button => {
+                        // Save new button state
+                        let found = false;
+
+                        for (let i = 0; i < disksArray.length; i++) {
+                            let element = disksArray[i];
+                            let it = element.split(' ');
+
+                            if (filesystem === it[0]) {
+                                it[3] = button.active;
+                                disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2] + ' ' + it[3];
+
+                                found = true;
+                                break;
+                            }
+                        }
+
+                        // Add new disks
+                        if (found === false) {
+                            disksArray.push(filesystem + ' ' + mountedOn + ' ' + disk.stats.active + ' ' + disk.space.active);
+                            found = false;
+                        }
+
+                        // Save all
+                        this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+                    });
+
+                    // Add disk to newDisksArray
+                    newDisksArray[x] = filesystem + ' ' + mountedOn + ' ' + disk.stats.active + ' ' + disk.space.active;
+
+                    devices.list.insert(disk, x++);
                 }
-
-                disk.stats.connect('toggled', button => {
-                    // Save new button state
-                    let found = false;
-
-                    for (let i = 0; i < disksArray.length; i++) {
-                        let element = disksArray[i];
-                        let it = element.split(' ');
-
-                        if (name === it[0]) {
-                            it[1] = button.active;
-                            disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
-
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    // Add new disks
-                    if (found === false) {
-                        disksArray.push(name + ' ' + disk.stats.active + ' ' + disk.space.active);
-                        found = false;
-                    }
-
-                    // Save all
-                    this._settings.set_strv('diskslist', disksArray);
-                });
-
-                disk.space.connect('toggled', button => {
-                    // Save new button state
-                    let found = false;
-
-                    for (let i = 0; i < disksArray.length; i++) {
-                        let element = disksArray[i];
-                        let it = element.split(' ');
-
-                        if (name === it[0]) {
-                            it[2] = button.active;
-                            disksArray[i] = it[0] + ' ' + it[1] + ' ' + it[2];
-
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    // Add new disks
-                    if (found === false) {
-                        disksArray.push(name + ' ' + disk.stats.active + ' ' + disk.space.active);
-                        found = false;
-                    }
-
-                    // Save all
-                    this._settings.set_strv('diskslist', disksArray);
-                });
-
-                // Add disk to newDisksArray
-                newDisksArray[x] = name + ' ' + disk.stats.active + ' ' + disk.space.active;
-
-                devices.list.insert(disk, x++);
-            }
+            });
 
             // Save newDisksArray with the list of new disks (to remove old disks)
             disksArray = newDisksArray;
-            this._settings.set_strv('diskslist', disksArray);
+            this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
 
             return box;
         }
@@ -406,12 +471,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let auto = new SwitchRow('Enable', this._settings, 'autohide');
-            let wlan = new SwitchRow('Display', this._settings, 'wlan');
-            let eth = new SwitchRow('Display', this._settings, 'eth');
-            let widthWlan = new SpinButtonRow('Width', this._settings, 'widthwlan');
-            let widthEth = new SpinButtonRow('Width', this._settings, 'widtheth');
-            let unit = new SwitchRow('Show in bits per second', this._settings, 'networkunit');
+            let auto = new SwitchRow(_('Enable'), this._settings, NET_AUTO_HIDE_STATUS);
+            let unit = new ComboBoxRow(_('Unit'), this._settings, NET_UNIT, [_('Bps'), _('bps')], ['bytes', 'bits']);
+            let eth = new SwitchRow(_('Display'), this._settings, NET_ETH_STATUS);
+            let widthEth = new SpinButtonRow(_('Width'), this._settings, NET_ETH_WIDTH);
+            let wlan = new SwitchRow(_('Display'), this._settings, NET_WLAN_STATUS);
+            let widthWlan = new SpinButtonRow(_('Width'), this._settings, NET_WLAN_WIDTH);
 
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Auto Hide')),
@@ -462,10 +527,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 orientation: Gtk.Orientation.VERTICAL,
             });
 
-            let thermal = new SwitchRow('Display', this._settings, 'cputemperature');
-            let unit = new SwitchRow('Fahrenheit Unit', this._settings, 'cputemperatureunit');
-            let width = new SpinButtonRow('Width', this._settings, 'widthcputemperature');
-            let devices = new ListRow('Devices');
+            let thermal = new SwitchRow(_('Display'), this._settings, THERMAL_CPU_TEMPERATURE_STATUS);
+            let width = new SpinButtonRow(_('Width'), this._settings, THERMAL_CPU_TEMPERATURE_WIDTH);
+            let unit = new ComboBoxRow(_('Unit'), this._settings, THERMAL_CPU_TEMPERATURE_UNIT, [_('°C'), _('°F')], ['c', 'f']);
+            let devices = new ListRow(_('Devices'));
 
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Cpu Temperature')),
@@ -479,103 +544,121 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             thermal.button.connect('state-set', button => {
                 width.button.sensitive = button.active;
-                unit.button.sensitive = button.active;
+                unit.combobox.sensitive = button.active;
             });
             width.button.sensitive = thermal.button.active;
-            unit.button.sensitive = thermal.button.active;
+            unit.combobox.sensitive = thermal.button.active;
 
             // Array format
             // name-status-path
             // Get current disks settings
-            let tempsArray = this._settings.get_strv('temperatureslist', Gio.SettingsBindFlags.DEFAULT);
+            let tempsArray = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, Gio.SettingsBindFlags.DEFAULT);
             let newTempsArray = [];
             let x = 0;
 
             // Detect sensors
             //let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
 
-            let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; done';
-
-            let proc = Gio.Subprocess.new(['bash', '-c', command], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-
-            proc.communicate_utf8_async(null, null, (proc, res) => {
-                try {
-                    let [, stdout, stderr] = proc.communicate_utf8_finish(res);
-
-                    if (proc.get_successful()) {
-                        let lines = stdout.split('\n');
-
-                        for (let j = 0; j < lines.length; j++) {
-                            let line = lines[j];
-                            if (line === '') {
-                                continue; // TODO
-                            }
+            this._executeCommand(['bash', '-c', 'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi']).then(output => {
+                let result = output.split('\n')[0];
+                if (result === 'EXIST') {
+                    this._executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; done']).then(output => {
+                        let lines = output.split('\n');
+            
+                        // Excludes the first line of output
+                        for (let i = 1; i < lines.length - 1; i++) {
+                            let line = lines[i];
                             let entry = line.trim().split(/-/);
-
+        
                             let device = entry[0];
                             let path = entry[1];
-
+        
                             let temp = new TempListItemRow(device);
-
+        
                             // Init gui
                             for (let i = 0; i < tempsArray.length; i++) {
                                 let element = tempsArray[i];
                                 let it = element.split('-');
-
+                            
                                 if (device === it[0]) {
                                     let statusButton = (it[1] === 'true');
-
+                            
                                     temp.button.active = statusButton;
-
+                            
                                     break;
                                 }
                             }
-
+                            
                             temp.button.connect('toggled', button => {
                                 // Save new button state
                                 let found = false;
-            
+                                        
                                 for (let i = 0; i < tempsArray.length; i++) {
                                     let element = tempsArray[i];
                                     let it = element.split('-');
-            
+                                        
                                     if (device === it[0]) {
                                         it[1] = button.active;
                                         tempsArray[i] = it[0] + '-' + it[1] + '-' + it[2];
-            
+                                        
                                         found = true;
                                         break;
                                     }
                                 }
-            
+                                        
                                 // Add new device
                                 if (found === false) {
                                     tempsArray.push(device + '-' + temp.button.active + '-' + path);
                                     found = false;
                                 }
-            
+                                        
                                 // Save all
-                                this._settings.set_strv('temperatureslist', tempsArray);
+                                this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);
                             });
-
+                            
                             // Add device to newTempsArray
                             newTempsArray[x] = device + '-' + temp.button.active + '-' + path;
-
+                            
                             devices.list.insert(temp, x++);
                         }
-                    } else {
-                        throw new Error(stderr);
-                    }
-                } catch (e) {
-                    throw new Error(e);
+                    });
+        
+                    // Save newTempsArray with the list of new devices (to remove old devices)
+                    tempsArray = newTempsArray;
+                    this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);           
                 }
             });
 
-            // Save newTempsArray with the list of new devices (to remove old devices)
-            tempsArray = newTempsArray;
-            this._settings.set_strv('temperatureslist', tempsArray);
-
             return box;
+        }
+
+        _readOutput(proc, cancellable = null) {
+            return new Promise((resolve, reject) => {
+                proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
+                    try {
+                        let [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
+                        
+                        if (source_object.get_successful()) {
+                            resolve(stdout);
+                        } else {
+                            throw new Error(stderr);
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            });
+        }
+    
+        async _executeCommand(command, cancellable = null) {
+            try {
+                let proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+                let output = await this._readOutput(proc, cancellable);
+                    
+                return output;
+            } catch (e) {
+                logError(e);
+            }
         }
     });
 
@@ -591,7 +674,7 @@ const SwitchRow = GObject.registerClass(
 
             this.attach(
                 new Gtk.Label({
-                    label: '%s'.format(_(label)),
+                    label: '%s'.format(label),
                     halign: Gtk.Align.START,
                     hexpand: true,
                 }), 0, 0, 1, 1);
@@ -607,7 +690,7 @@ const SwitchRow = GObject.registerClass(
 
 const SpinButtonRow = GObject.registerClass(
     class SpinButtonRow extends Gtk.Grid {
-        _init(label, settings, settingsName) {
+        _init(label, settings, settingsName, lower=0, upper=500) {
             super._init({
                 margin_start: 12,
                 margin_end: 12,
@@ -617,15 +700,15 @@ const SpinButtonRow = GObject.registerClass(
 
             this.attach(
                 new Gtk.Label({
-                    label: '%s'.format(_(label)),
+                    label: '%s'.format(label),
                     halign: Gtk.Align.START,
                     hexpand: true,
                 }), 0, 0, 1, 1);
 
             this.button = new Gtk.SpinButton({
                 adjustment: new Gtk.Adjustment({
-                    lower: 1,
-                    upper: 500,
+                    lower: lower,
+                    upper: upper,
                     step_increment: 1,
                 }),
                 halign: Gtk.Align.END,
@@ -639,7 +722,7 @@ const SpinButtonRow = GObject.registerClass(
 
 const ComboBoxRow = GObject.registerClass(
     class ComboBoxRow extends Gtk.Grid {
-        _init(label, settings, settingsName, initValue) {
+        _init(label, settings, settingsName, initValueLabel, initValue) {
             super._init({
                 margin_start: 12,
                 margin_end: 12,
@@ -649,7 +732,7 @@ const ComboBoxRow = GObject.registerClass(
 
             this.attach(
                 new Gtk.Label({
-                    label: '%s'.format(_(label)),
+                    label: '%s'.format(label),
                     halign: Gtk.Align.START,
                     hexpand: true,
                 }), 0, 0, 1, 1);
@@ -658,13 +741,13 @@ const ComboBoxRow = GObject.registerClass(
                 halign: Gtk.Align.END,
             });
 
-            if (initValue !== null) {
+            if (initValue !== null && initValue.length === initValueLabel.length) {
                 for (let i = 0; i < initValue.length; i++) {
-                    this.combobox.insert_text(i, initValue[i]);
+                    this.combobox.insert(i, initValue[i], initValueLabel[i]);
                 }
             }
 
-            settings.bind(settingsName, this.combobox, 'active', Gio.SettingsBindFlags.DEFAULT);
+            settings.bind(settingsName, this.combobox, 'active-id', Gio.SettingsBindFlags.DEFAULT);
             this.attach(this.combobox, 1, 0, 1, 1);
         }
     });
@@ -681,7 +764,7 @@ const ListRow = GObject.registerClass(
 
             this.attach(
                 new Gtk.Label({
-                    label: '<b>%s</b>'.format(_(label)),
+                    label: '<b>%s</b>'.format(label),
                     halign: Gtk.Align.START,
                     use_markup: true,
                     hexpand: true,
@@ -717,14 +800,14 @@ const ListItemRow = GObject.registerClass(
             });
 
             this.diskName = new Gtk.Label({
-                label: '%s'.format(_(name)),
+                label: '%s'.format(name),
                 halign: Gtk.Align.START,
                 margin_end: 10,
                 hexpand: true,
             });
 
             this.diskPath = new Gtk.Label({
-                label: '%s'.format(_(path)),
+                label: '%s'.format(path),
                 halign: Gtk.Align.START,
                 margin_end: 10,
                 hexpand: true,
@@ -759,7 +842,7 @@ const TempListItemRow = GObject.registerClass(
             });
 
             this.deviceName = new Gtk.Label({
-                label: '%s'.format(_(name)),
+                label: '%s'.format(name),
                 halign: Gtk.Align.START,
                 margin_end: 10,
                 hexpand: true,
@@ -778,3 +861,4 @@ const TempListItemRow = GObject.registerClass(
 function buildPrefsWidget() {
     return new ResourceMonitorPrefsWidget();
 }
+
