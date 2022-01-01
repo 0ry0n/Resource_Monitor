@@ -367,12 +367,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 let lines = output.split('\n');
-    
+
                 // Excludes the first line of output
                 for (let i = 1; i < lines.length - 1; i++) {
                     let line = lines[i];
                     let entry = line.trim().split(/\s+/);
-    
+
                     let filesystem = entry[0];
                     let mountedOn = entry[5];
 
@@ -381,6 +381,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     // Init gui
                     for (let i = 0; i < disksArray.length; i++) {
                         let element = disksArray[i];
+
                         let it = element.split(' ');
 
                         if (filesystem === it[0]) {
@@ -410,7 +411,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                                 break;
                             }
                         }
-                        
+
                         // Add new disks
                         if (found === false) {
                             disksArray.push(filesystem + ' ' + mountedOn + ' ' + disk.stats.active + ' ' + disk.space.active);
@@ -453,11 +454,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
                     devices.list.insert(disk, x++);
                 }
-            });
 
-            // Save newDisksArray with the list of new disks (to remove old disks)
-            disksArray = newDisksArray;
-            this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+                // Save newDisksArray with the list of new disks (to remove old disks)
+                disksArray = newDisksArray;
+                this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+            });
 
             return box;
         }
@@ -564,68 +565,68 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 if (result === 'EXIST') {
                     this._executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; done']).then(output => {
                         let lines = output.split('\n');
-            
+
                         // Excludes the first line of output
                         for (let i = 1; i < lines.length - 1; i++) {
                             let line = lines[i];
                             let entry = line.trim().split(/-/);
-        
+
                             let device = entry[0];
                             let path = entry[1];
-        
+
                             let temp = new TempListItemRow(device);
-        
+
                             // Init gui
                             for (let i = 0; i < tempsArray.length; i++) {
                                 let element = tempsArray[i];
                                 let it = element.split('-');
-                            
+
                                 if (device === it[0]) {
                                     let statusButton = (it[1] === 'true');
-                            
+
                                     temp.button.active = statusButton;
-                            
+
                                     break;
                                 }
                             }
-                            
+
                             temp.button.connect('toggled', button => {
                                 // Save new button state
                                 let found = false;
-                                        
+
                                 for (let i = 0; i < tempsArray.length; i++) {
                                     let element = tempsArray[i];
                                     let it = element.split('-');
-                                        
+
                                     if (device === it[0]) {
                                         it[1] = button.active;
                                         tempsArray[i] = it[0] + '-' + it[1] + '-' + it[2];
-                                        
+
                                         found = true;
                                         break;
                                     }
                                 }
-                                        
+
                                 // Add new device
                                 if (found === false) {
                                     tempsArray.push(device + '-' + temp.button.active + '-' + path);
                                     found = false;
                                 }
-                                        
+
                                 // Save all
                                 this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);
                             });
-                            
+
                             // Add device to newTempsArray
                             newTempsArray[x] = device + '-' + temp.button.active + '-' + path;
-                            
+
                             devices.list.insert(temp, x++);
                         }
+
+                        // Save newTempsArray with the list of new devices (to remove old devices)
+                        tempsArray = newTempsArray;
+                        this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);
                     });
-        
-                    // Save newTempsArray with the list of new devices (to remove old devices)
-                    tempsArray = newTempsArray;
-                    this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);           
                 }
             });
 
@@ -637,7 +638,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
                     try {
                         let [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
-                        
+
                         if (source_object.get_successful()) {
                             resolve(stdout);
                         } else {
@@ -649,12 +650,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 });
             });
         }
-    
+
         async _executeCommand(command, cancellable = null) {
             try {
                 let proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
                 let output = await this._readOutput(proc, cancellable);
-                    
+
                 return output;
             } catch (e) {
                 logError(e);
@@ -690,7 +691,7 @@ const SwitchRow = GObject.registerClass(
 
 const SpinButtonRow = GObject.registerClass(
     class SpinButtonRow extends Gtk.Grid {
-        _init(label, settings, settingsName, lower=0, upper=500) {
+        _init(label, settings, settingsName, lower = 0, upper = 500) {
             super._init({
                 margin_start: 12,
                 margin_end: 12,
