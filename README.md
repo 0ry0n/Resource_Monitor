@@ -6,7 +6,7 @@ Resource_Monitor is a GNOME Shell extension that Monitor the use of system resou
 
 # GNOME Shell versions supported
 **40, 41**
-- For older GNOME versions see the [gnome-3.28-3.38](https://github.com/0ry0n/Resource_Monitor/tree/gnome-3.28-3.38) branch.
+- For older GNOME versions see the [gnome-3.28-3.38](/tree/gnome-3.28-3.38) branch.
 
 # How-To Install
 ## Download
@@ -14,38 +14,34 @@ You can get this extension:
 
 - From [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/).
 - Downloading the latest [Release](/releases/latest) released on GitHub.
-- Cloning the [master](https://github.com/0ry0n/Resource_Monitor/tree/master) repository.
+- Cloning the [master](/tree/master) repository.
 ## Install
 ### Using the latest release
-1. Unzip the file `Resource_Monitor-x.zip`.
-2. Open `Resource_Monitor-x` folder.
-3. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-4. Activate the extensions with Gnome Extensions.
+1. Unzip the file `Resource_Monitor@Ory0n.zip`.
+2. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
+3. Activate the extensions with Gnome Extensions.
 
 For example...
 ```
-unzip Resource_Monitor-x.zip
-cd Resource_Monitor-x
-mv Resource_Monitor@Ory0n ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
+unzip Resource_Monitor@Ory0n.zip -d ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
 
 gnome-extensions enable Resource_Monitor@Ory0n
 ```
 
-### Cloning the branch
-1. Clone the gnome-40.0 branch.
+### Cloning the master branch
+1. Clone the master branch.
 2. Open `Resource_Monitor` folder.
 3. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
 4. Activate the extensions with Gnome Extensions.
 
 For example...
 ```
-git clone -b gnome-40.0 https://github.com/0ry0n/Resource_Monitor
+git clone https://github.com/0ry0n/Resource_Monitor
 cd Resource_Monitor
 mv Resource_Monitor@Ory0n ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
 
 gnome-extensions enable Resource_Monitor@Ory0n
 ```
-Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 
 # Preferences
 ![](/settings.png)
@@ -53,15 +49,22 @@ Might require a Gnome restart. Press `ALT+F2` and type `r` and hit enter.
 ![](/system-monitor.png)
 
 # Bug Reporting
-Use the GitHub [Issues](https://github.com/0ry0n/Resource_Monitor/issues) tracker to report issues or ask for features.
+Use the GitHub [Issues](/issues) tracker to report issues or ask for features.
 
 # Change Log
-**version 16 (Apr 26, 2021)**
+**version 16 (Jan 1, 2022)**
 - Added bps network unit.
+- Added extension position.
+- Added show or not Prefs when clicking on extension (right click).
+- Added new better icons.
+- Added cpu frequency: thanks to @.
+- Added automatic width when setting width to 0.
+- Added the ability to choose to monitor used space or free space.
+- Added the ability to monitor the temperatures of the selected devices. 
 - Bug fixed.
 
 **version 15 (Apr 15, 2021)**
-- Added support for gnome 40.0.
+- Added support for gnome 40.
 - New preferences window.
 - Deprecated GTK elements removed from pref.js.
 
