@@ -1,37 +1,77 @@
-<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16.01 16.01">
-  <defs>
-    <style>
-      .cls-1 {
-        fill: #fff;
-      }
-
-      .cls-2 {
-        fill: none;
-        stroke: #fff;
-        stroke-miterlimit: 10;
-        stroke-width: 0.01px;
-      }
-    </style>
-  </defs>
-  <title>eth-symbolic</title>
-  <path class="cls-1" d="M1.5,8.75h13a.75.75,0,0,0,0-1.5H1.5a.75.75,0,0,0,0,1.5h13a.75.75,0,0,0,0-1.5H1.5A.75.75,0,0,0,1.5,8.75Z" transform="translate(0.01 0.01)" />
-  <line class="cls-2" x1="0.01" y1="0.01" x2="0.01" y2="16.01" />
-  <line class="cls-2" x1="16.01" y1="0.01" x2="16.01" y2="16.01" />
-  <line class="cls-2" x1="0.01" y1="0.01" x2="16.01" y2="0.01" />
-  <line class="cls-2" x1="0.01" y1="16.01" x2="16.01" y2="16.01" />
-  <path class="cls-1" d="M8.75,7.5v-3a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M3.75,11.5v-3a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M13.75,11.5v-3a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M7.25,4V1a.75.75,0,0,0-1.5,0V4a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M10.25,4V1a.75.75,0,0,0-1.5,0V4a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M6.5,4.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M6.5,1.75h3A.76.76,0,0,0,10.25,1,.76.76,0,0,0,9.5.25h-3A.76.76,0,0,0,5.75,1a.76.76,0,0,0,.75.75Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M2.25,15V12a.76.76,0,0,0-.75-.75A.76.76,0,0,0,.75,12v3a.76.76,0,0,0,.75.75A.76.76,0,0,0,2.25,15Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M5.25,15V12a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M1.5,15.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M1.5,12.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M12.25,15V12a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M15.25,15V12a.75.75,0,0,0-1.5,0v3a.75.75,0,0,0,1.5,0Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M11.5,15.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
-  <path class="cls-1" d="M11.5,12.75h3a.75.75,0,0,0,0-1.5h-3a.75.75,0,0,0,0,1.5Z" transform="translate(0.01 0.01)" />
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="16px"
+   height="16px"
+   viewBox="0 0 16 16"
+   version="1.1"
+   id="svg13"
+   sodipodi:docname="eth-symbolic.svg"
+   inkscape:version="1.1.1 (3bf5ae0d25, 2021-09-20)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs17" />
+  <sodipodi:namedview
+     id="namedview15"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     showgrid="false"
+     inkscape:zoom="34.559844"
+     inkscape:cx="2.4160989"
+     inkscape:cy="10.026087"
+     inkscape:window-width="1852"
+     inkscape:window-height="1016"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g850" />
+  <g
+     id="g850"
+     transform="translate(-13.422588,-2.2504002)">
+    <path
+       d="m 15.121588,12.2504 c -1.203125,0 -1.699,0.499781 -1.699,1.699 v 2.602 c 0,1.199219 0.495875,1.699 1.699,1.699 h 2.606 c 1.203124,0 1.695,-0.499781 1.695,-1.699 v -2.602 c 0,-1.199219 -0.491876,-1.699 -1.695,-1.699 z"
+       fill="#2e3436"
+       id="path147-3"
+       sodipodi:nodetypes="sssssssss" />
+    <path
+       d="m 27.422588,11.2504 h -12 V 9.2504002 h 12 z"
+       fill="#2e3436"
+       id="path145-7-5"
+       sodipodi:nodetypes="ccccc"
+       style="stroke-width:2.92768" />
+    <path
+       d="M 17.422588,10.250317 V 12.3504 h -2 v -2.100083 z"
+       fill="#2e3436"
+       id="path145-7-5-3"
+       sodipodi:nodetypes="ccccc"
+       style="stroke-width:1.22476" />
+    <path
+       d="M 27.422588,10.250317 V 12.3504 h -2 v -2.100083 z"
+       fill="#2e3436"
+       id="path145-7-5-3-5"
+       sodipodi:nodetypes="ccccc"
+       style="stroke-width:1.22476" />
+    <path
+       d="M 20.422588,10.250484 V 8.1504002 h 2 v 2.1000838 z"
+       fill="#2e3436"
+       id="path145-7-5-3-5-6"
+       sodipodi:nodetypes="ccccc"
+       style="stroke-width:1.22476" />
+    <path
+       d="m 25.121588,12.2504 c -1.203125,0 -1.699,0.499781 -1.699,1.699 v 2.602 c 0,1.199219 0.495875,1.699 1.699,1.699 h 2.606 c 1.203124,0 1.695,-0.499781 1.695,-1.699 v -2.602 c 0,-1.199219 -0.491876,-1.699 -1.695,-1.699 z"
+       fill="#2e3436"
+       id="path147-3-2"
+       sodipodi:nodetypes="sssssssss" />
+    <path
+       d="m 20.121588,2.2504002 c -1.203125,0 -1.699,0.499781 -1.699,1.699 v 2.602 c 0,1.199219 0.495875,1.699 1.699,1.699 h 2.606 c 1.203124,0 1.695,-0.499781 1.695,-1.699 v -2.602 c 0,-1.199219 -0.491876,-1.699 -1.695,-1.699 z"
+       fill="#2e3436"
+       id="path147-3-9"
+       sodipodi:nodetypes="sssssssss" />
+  </g>
 </svg>
