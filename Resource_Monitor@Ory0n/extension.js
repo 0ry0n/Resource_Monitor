@@ -1318,7 +1318,7 @@ const ResourceMonitor = GObject.registerClass(
         _refreshCpuFrequencyValue() {
             if (GLib.file_test('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq', GLib.FileTest.EXISTS)) {
                 this._loadFile('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq').then(contents => {
-                    const value = parseInt(ByteArray.toString(contents));
+                    let value = parseInt(ByteArray.toString(contents));
 
                     if (value > 999999) {
                         this._cpuFrequencyUnit.text = 'GHz';
@@ -1330,21 +1330,18 @@ const ResourceMonitor = GObject.registerClass(
                     }
 
                     if (this._decimalsStatus) {
-                        this._cpuFrequencyValue.text = `[${value.toFixed(2)}}`;
+                        this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
                     } else {
-                        this._cpuFrequencyValue.text = `[${value.toFixed(0)}}`;
+                        this._cpuFrequencyValue.text = `[${value.toFixed(0)}`;
                     }
                 });
             } else {
-                this._cpuFrequencyValue.text = '[Frequency Error';
+                this._cpuFrequencyValue.text = _('[Frequency Error');
                 this._cpuFrequencyUnit.text = '';
             }
         }
 
         _refreshCpuTemperatureValue() {
-            this._cpuTemperatures = 0;
-            this._cpuTemperaturesReads = 0;
-
             for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
                 const element = this._thermalCpuTemperatureDevicesList[i];
                 const it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
@@ -1388,8 +1385,11 @@ const ResourceMonitor = GObject.registerClass(
                 } else {
                     this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}}`;
                 }
+
+                this._cpuTemperatures = 0;
+                this._cpuTemperaturesReads = 0;
             } else {
-                this._cpuTemperatureValue.text = '[Temperature Error';
+                this._cpuTemperatureValue.text = _('[Temperature Error');
                 this._cpuTemperatureUnit.text = '';
             }
         }
