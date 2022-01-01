@@ -164,8 +164,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             let refresh = new SpinButtonRow(_('Seconds'), this._settings, REFRESH_TIME, 1, 30);
             let ePosition = new ComboBoxRow(_('Position'), this._settings, EXTENSION_POSITION, [_('Left'), _('Center'), _('Right')], ['left', 'center', 'right']);
             let decimals = new SwitchRow(_('Display'), this._settings, DECIMALS_STATUS);
-            let systemMonitor = new SwitchRow(_('Show System Monitor when clicking on extension'), this._settings, SYSTEM_MONITOR_STATUS);
-            let prefs = new SwitchRow(_('Display'), this._settings, PREFS_STATUS);
+            let systemMonitor = new SwitchRow(_('Show System Monitor when clicking on extension (left click)'), this._settings, SYSTEM_MONITOR_STATUS);
+            let prefs = new SwitchRow(_('Show Prefs when clicking on extension (right click)'), this._settings, PREFS_STATUS);
             let icons = new SwitchRow(_('Display'), this._settings, ICONS_STATUS);
             let iPosition = new ComboBoxRow(_('Position'), this._settings, ICONS_POSITION, [_('Left'), _('Right')], ['left', 'right']);
 
@@ -194,7 +194,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }));
             box.append(systemMonitor);
             box.append(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Prefs Button')),
+                label: '<b>%s</b>'.format(_('Prefs')),
                 use_markup: true,
                 halign: Gtk.Align.START,
             }));
