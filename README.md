@@ -57,7 +57,7 @@ Use the GitHub [Issues](/issues) tracker to report issues or ask for features.
 - Added extension position.
 - Added show or not Prefs when clicking on extension (right click).
 - Added new better icons.
-- Added cpu frequency: thanks to @.
+- Added cpu frequency: thanks to @xtenduke.
 - Added automatic width when setting width to 0.
 - Added the ability to choose to monitor used space or free space.
 - Added the ability to monitor the temperatures of the selected devices. 
