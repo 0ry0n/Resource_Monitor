@@ -53,6 +53,7 @@ Use the GitHub [Issues](../../issues) tracker to report issues or ask for featur
 
 # Change Log
 **version 16 (Jan 1, 2022)**
+- Added support to GNOME 41.
 - Added bps network unit.
 - Added extension position.
 - Added show or not Prefs when clicking on extension (right click).
@@ -64,7 +65,7 @@ Use the GitHub [Issues](../../issues) tracker to report issues or ask for featur
 - Bug fixed.
 
 **version 15 (Apr 15, 2021)**
-- Added support for gnome 40.
+- Added support for GNOME 40.
 - New preferences window.
 - Deprecated GTK elements removed from pref.js.
 
