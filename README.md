@@ -49,7 +49,7 @@ gnome-extensions enable Resource_Monitor@Ory0n
 ![](/system-monitor.png)
 
 # Bug Reporting
-Use the GitHub [Issues](/issues) tracker to report issues or ask for features.
+Use the GitHub [Issues](../../issues) tracker to report issues or ask for features.
 
 # Change Log
 **version 16 (Jan 1, 2022)**
