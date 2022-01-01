@@ -1370,20 +1370,22 @@ const ResourceMonitor = GObject.registerClass(
                 switch (this._thermalCpuTemperatureUnit) {
                     case 'f':
                         this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
+                        this._cpuTemperatureUnit.text = '°F';
 
                         break;
 
                     case 'c':
 
                     default:
+                        this._cpuTemperatureUnit.text = '°C';
 
                         break;
                 }
 
                 if (this._decimalsStatus) {
-                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}}`;
+                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}`;
                 } else {
-                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}}`;
+                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}`;
                 }
 
                 this._cpuTemperatures = 0;

@@ -566,8 +566,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     this._executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; done']).then(output => {
                         let lines = output.split('\n');
 
-                        // Excludes the first line of output
-                        for (let i = 1; i < lines.length - 1; i++) {
+                        for (let i = 0; i < lines.length - 1; i++) {
                             let line = lines[i];
                             let entry = line.trim().split(/-/);
 
