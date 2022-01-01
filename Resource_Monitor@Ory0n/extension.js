@@ -1,8 +1,8 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
-/* exported init, enable, disable */
+/* exported init */
 
 /*
- * Resource_Monitor is Copyright © 2018-2021 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2022 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
@@ -22,1347 +22,1701 @@
 
 'use strict';
 
-const { St, GObject, NM, GLib, Shell, Gio, Clutter } = imports.gi;
+const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
 
-const Main = imports.ui.main;
-const PanelMenu = imports.ui.panelMenu;
+const { GObject, St, Gio, Clutter, NM, GLib, Shell } = imports.gi;
 
-const Util = imports.misc.util;
-const Config = imports.misc.config;
-const ExtensionUtils = imports.misc.extensionUtils;
-
-const Gettext = imports.gettext.domain('com-github-Ory0n-Resource_Monitor');
+const Gettext = imports.gettext.domain(GETTEXT_DOMAIN);
 const _ = Gettext.gettext;
 
+const ExtensionUtils = imports.misc.extensionUtils;
+const Util = imports.misc.util;
+const Main = imports.ui.main;
+const PanelMenu = imports.ui.panelMenu;
+const ByteArray = imports.byteArray;
+
 const Me = ExtensionUtils.getCurrentExtension();
+const IndicatorName = Me.metadata.name;
 
-const Convenience = Me.imports.extensionUtils;
-const IndicatorName = Me.metadata['name'];
+// Settings
+const REFRESH_TIME = 'refreshtime';
+const EXTENSION_POSITION = 'extensionposition';
+const DECIMALS_STATUS = 'decimalsstatus';
+const SYSTEM_MONITOR_STATUS = 'systemmonitorstatus';
+const PREFS_STATUS = 'prefsstatus';
 
-const SHELL_MINOR = parseInt(Config.PACKAGE_VERSION.split('.')[1]);
-const INTERVAL = 'interval';
-const ICONS = 'icons';
-const ICONSPOSITION = 'iconsposition';
-const DECIMALS = 'decimals';
-const SYSTEMMONITOR = 'showsystemmonitor';
-const CPU = 'cpu';
-const RAM = 'ram';
-const SWAP = 'swap';
-const DISK_STATS = 'diskstats';
-const DISK_SPACE = 'diskspace';
-const ETH = 'eth';
-const WLAN = 'wlan';
-const CPUTEMPERATURE = 'cputemperature';
-const DISKS_LIST = 'diskslist';
+const ICONS_STATUS = 'iconsstatus';
+const ICONS_POSITION = 'iconsposition';
+
+const CPU_STATUS = 'cpustatus';
+const CPU_WIDTH = 'cpuwidth';
+const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
+const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+
+const RAM_STATUS = 'ramstatus';
+const RAM_WIDTH = 'ramwidth';
+
+const SWAP_STATUS = 'swapstatus';
+const SWAP_WIDTH = 'swapwidth';
+
+const DISK_STATS_STATUS = 'diskstatsstatus';
+const DISK_STATS_WIDTH = 'diskstatswidth';
 const DISK_STATS_MODE = 'diskstatsmode';
+const DISK_SPACE_STATUS = 'diskspacestatus';
+const DISK_SPACE_WIDTH = 'diskspacewidth';
 const DISK_SPACE_UNIT = 'diskspaceunit';
-const AUTO_HIDE = 'autohide';
-const WIDTH_CPU = 'widthcpu';
-const WIDTH_RAM = 'widthram';
-const WIDTH_SWAP = 'widthswap';
-const WIDTH_DISK_STATS = 'widthdiskstats';
-const WIDTH_DISK_SPACE = 'widthdiskspace';
-const WIDTH_ETH = 'widtheth';
-const WIDTH_WLAN = 'widthwlan';
-const WIDTH_CPUTEMPERATURE = 'widthcputemperature';
-const CPUTEMPERATUREUNIT = 'cputemperatureunit';
+const DISK_SPACE_MONITOR = 'diskspacemonitor';
+const DISK_DEVICES_LIST = 'diskdeviceslist';
+const DISK_DEVICES_LIST_SEPARATOR = ' ';
 
-var ResourceMonitorIndicator = null;
+const NET_AUTO_HIDE_STATUS = 'netautohidestatus';
+const NET_UNIT = 'netunit';
+const NET_ETH_STATUS = 'netethstatus';
+const NET_ETH_WIDTH = 'netethwidth';
+const NET_WLAN_STATUS = 'netwlanstatus';
+const NET_WLAN_WIDTH = 'netwlanwidth';
 
-var ResourceMonitor = class ResourceMonitor extends PanelMenu.Button {
-    _init(params) {
-        super._init(params, IndicatorName);
-        this.actor.connect('button-press-event', this._openSystemMonitor.bind(this));
+const THERMAL_CPU_TEMPERATURE_STATUS = 'thermalcputemperaturestatus';
+const THERMAL_CPU_TEMPERATURE_WIDTH = 'thermalcputemperaturewidth';
+const THERMAL_CPU_TEMPERATURE_UNIT = 'thermalcputemperatureunit';
+const THERMAL_CPU_TEMPERATURE_DEVICES_LIST = 'thermalcputemperaturedeviceslist';
+const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = '-';
 
-        this._settings = Convenience.getSettings();
+const ResourceMonitor = GObject.registerClass(
+    class ResourceMonitor extends PanelMenu.Button {
+        _init(settings) {
+            super._init(0.0, _(IndicatorName));
 
-        this.client = NM.Client.new(null);
-        this.onEth = false;
-        this.onWlan = false;
-        this.client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
-        this.client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
+            this._settings = settings;
 
-        /** ### **/
+            // Variables
+            this._handlerIds = [];
+            this._handlerIdsCount = 0;
 
-        this.idleOld = 0;
-        this.cpuTotOld = 0;
+            this._nmEthStatus = false;
+            this._nmWlanStatus = false;
 
-        this.idleDiskOld = [];
-        this.rwTotOld = [];
+            this._cpuTotOld = 0;
+            this._cpuIdleOld = 0;
 
-        this.idleEthOld = 0;
-        this.duTotEthOld = [0, 0];
+            this._duTotEthOld = [0, 0];
+            this._ethIdleOld = 0;
 
-        this.idleWlanOld = 0;
-        this.duTotWlanOld = [0, 0];
+            this._duTotWlanOld = [0, 0];
+            this._wlanIdleOld = 0;
 
-        // Create UI
-        this._createMainGui();
+            this._cpuTemperatures = 0;
+            this._cpuTemperaturesReads = 0;
 
-        /** ### Signals ### **/
-        this.numSigId = 0;
-        this.sigId = [];
+            this._createMainGui();
 
-        // Interval
-        this.interval = this._settings.get_int(INTERVAL);
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${INTERVAL}`, () => {
-            this.interval = this._settings.get_int(INTERVAL);
+            this._initSettings();
 
-            if (this.timer) {
-                GLib.source_remove(this.timer);
-                this.timer = null;
+            this._buildMainGui();
+
+            this._connectSettingsSignals();
+
+            this.connect('button-press-event', this._openSystemMonitor.bind(this));
+
+            NM.Client.new_async(null, (client) => {
+                client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
+                client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
+
+                this._onActiveConnectionRemoved(client);
+            });
+
+            this._mainTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._refreshTime, this._refreshHandler.bind(this));
+            this._refreshHandler();
+        }
+
+        destroy() {
+            if (this._mainTimer) {
+                GLib.source_remove(this._mainTimer);
+                this._mainTimer = null;
             }
 
-            this.timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this.interval, this._refresh.bind(this));
-        });
-
-        // Icons
-        this.displayIcons;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${ICONS}`, this._iconsChange.bind(this));
-        this.displayIcons = this._settings.get_boolean(ICONS);
-
-        // Icons Position
-        this.iconsPosition;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${ICONSPOSITION}`, this._iconsPositionChange.bind(this));
-        this.iconsPosition = this._settings.get_int(ICONSPOSITION);
-
-        // Decimals
-        this.displayDecimals;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${DECIMALS}`, this._decimalsChange.bind(this));
-        this.displayDecimals = this._settings.get_boolean(DECIMALS);
-
-        // Show System Monitor
-        this.displaySystemMonitor;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${SYSTEMMONITOR}`, this._systemMonitorChange.bind(this));
-        this.displaySystemMonitor = this._settings.get_boolean(SYSTEMMONITOR);
-
-        // Cpu
-        this.enCpu;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPU}`, this._cpuChange.bind(this));
-        this.enCpu = this._settings.get_boolean(CPU);
-
-        // Ram
-        this.enRam;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${RAM}`, this._ramChange.bind(this));
-        this.enRam = this._settings.get_boolean(RAM);
-
-        // Swap
-        this.enSwap;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${SWAP}`, this._swapChange.bind(this));
-        this.enSwap = this._settings.get_boolean(SWAP);
-
-        // Disk Stats
-        this.enDiskStats;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_STATS}`, this._diskStatsChange.bind(this));
-        this.enDiskStats = this._settings.get_boolean(DISK_STATS);
-
-        // Disk Space
-        this.enDiskSpace;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_SPACE}`, this._diskSpaceChange.bind(this));
-        this.enDiskSpace = this._settings.get_boolean(DISK_SPACE);
-
-        // Eth
-        this.enEth;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${ETH}`, this._getSettingsEth.bind(this));
-        this.enEth = this._settings.get_boolean(ETH);
-
-        // Wlan
-        this.enWlan;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WLAN}`, this._getSettingsWlan.bind(this));
-        this.enWlan = this._settings.get_boolean(WLAN);
-
-        // Auto Hide
-        this.enHide;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${AUTO_HIDE}`, this._hideChange.bind(this));
-        this.enHide = this._settings.get_boolean(AUTO_HIDE);
-
-        // Cpu Temperature
-        this.enCpuTemperature;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATURE}`, this._cpuTemperatureChange.bind(this));
-        this.enCpuTemperature = this._settings.get_boolean(CPUTEMPERATURE);
-
-        // Cpu Temperature Unit
-        this.cpuTemperatureFahrenheit;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${CPUTEMPERATUREUNIT}`, () => {
-            this.cpuTemperatureFahrenheit = this._settings.get_boolean(CPUTEMPERATUREUNIT);
-
-            this.cpuTemperatureUnit.text = this.cpuTemperatureFahrenheit ? '°F' : '°C';
-        });
-        this.cpuTemperatureFahrenheit = this._settings.get_boolean(CPUTEMPERATUREUNIT);
-        this.cpuTemperatureUnit.text = this.cpuTemperatureFahrenheit ? '°F' : '°C'
-
-        // Disks List
-        this.disksList;
-        this.diskStatsItems = [];
-        this.diskSpaceItems = [];
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISKS_LIST}`, this._disksListChange.bind(this));
-        this.disksList = this._settings.get_strv(DISKS_LIST);
-
-        // Disk Stats Mode
-        this.diskStatsMode;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_STATS_MODE}`, this._diskStatsModeChange.bind(this));
-        this.diskStatsMode = this._settings.get_boolean(DISK_STATS_MODE);
-
-        // Disks Space Unit
-        this.disksSpaceUnit;
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${DISK_SPACE_UNIT}`, () => {
-            this.disksSpaceUnit = this._settings.get_boolean(DISK_SPACE_UNIT);
-
-            this._refreshDiskSpace();
-        });
-        this.disksSpaceUnit = this._settings.get_boolean(DISK_SPACE_UNIT);
-
-        this._buildMainGui();
-        this._initMainGui();
-
-        /** ## WIDTH ## **/
-
-        // Cpu
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPU}`, () => {
-            this.cpu.width = this._settings.get_int(WIDTH_CPU);
-        });
-        this.cpu.width = this._settings.get_int(WIDTH_CPU);
-
-        // Ram
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_RAM}`, () => {
-            this.ram.width = this._settings.get_int(WIDTH_RAM);
-        });
-        this.ram.width = this._settings.get_int(WIDTH_RAM);
-
-        // Swap
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_SWAP}`, () => {
-            this.swap.width = this._settings.get_int(WIDTH_SWAP);
-        });
-        this.swap.width = this._settings.get_int(WIDTH_SWAP);
-
-        // Disk Stats
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK_STATS}`, () => {
-            this._diskStatsWidthUpdate();
-        });
-        this._diskStatsWidthUpdate();
-
-        // Disk Space
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_DISK_SPACE}`, () => {
-            this._diskSpaceWidthUpdate();
-        });
-        this._diskSpaceWidthUpdate();
-
-        // Eth
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_ETH}`, () => {
-            this.eth.width = this._settings.get_int(WIDTH_ETH);
-        });
-        this.eth.width = this._settings.get_int(WIDTH_ETH);
-
-        // Wlan
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_WLAN}`, () => {
-            this.wlan.width = this._settings.get_int(WIDTH_WLAN);
-        });
-        this.wlan.width = this._settings.get_int(WIDTH_WLAN);
-
-        // Cpu Temperature
-        this.sigId[this.numSigId++] = this._settings.connect(`changed::${WIDTH_CPUTEMPERATURE}`, () => {
-            this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
-        });
-        this.cpuTemperature.width = this._settings.get_int(WIDTH_CPUTEMPERATURE);
-
-        // Init Connections State
-        this._onActiveConnectionRemoved(this.client);
-
-        /** ### Setup Refresh Timer ### **/
-        this.timer;
-        this.timer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this.interval, this._refresh.bind(this));
-        this._refresh();
-    }
-
-    _createMainGui() {
-        this.box = new St.BoxLayout();
-
-        // Icon
-        this.cpuIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        this.ramIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/ram-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        this.swapIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/swap-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        this.diskStatsIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-stats-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        this.diskSpaceIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-space-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        this.ethIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/eth-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        this.wlanIco = new St.Icon({
-            gicon: Gio.icon_new_for_string(Me.path + '/icons/wlan-symbolic.svg'),
-            style_class: 'system-status-icon'
-        });
-
-        // Unit
-        this.cpuUnit = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '%',
-            style_class: 'unit'
-        });
-
-        this.ramUnit = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '%',
-            style_class: 'unit'
-        });
-
-        this.swapUnit = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '%',
-            style_class: 'unit'
-        });
-
-        this.ethUnit = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: 'K',
-            style_class: 'unit'
-        });
-
-        this.wlanUnit = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: 'K',
-            style_class: 'unit'
-        });
-
-        this.cpuTemperatureUnit = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '°C',
-            style_class: 'unit'
-        });
-
-        // Label
-        this.cpu = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '--',
-            style_class: 'label'
-        });
-
-        this.ram = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '--',
-            style_class: 'label'
-        });
-
-        this.swap = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '--',
-            style_class: 'label'
-        });
-
-        this.diskStats = new St.BoxLayout();
-        this.diskSpace = new St.BoxLayout();
-
-        this.eth = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '--|--',
-            style_class: 'label'
-        });
-
-        this.wlan = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '--|--',
-            style_class: 'label'
-        });
-
-        this.cpuTemperature = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: '[--',
-            style_class: 'label'
-        });
-
-        this.temperatureBrackets = new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: ']',
-            style_class: 'label'
-        });
-    }
-
-    _buildMainGui() {
-        if (this.iconsPosition === 0) { // LEFT
-            this.box.add(this.cpuIco);
-            this.box.add(this.cpu);
-            this.box.add(this.cpuUnit);
-
-            this.box.add(this.cpuTemperature);
-            this.box.add(this.cpuTemperatureUnit);
-            this.box.add(this.temperatureBrackets);
-
-            this.box.add(this.ramIco);
-            this.box.add(this.ram);
-            this.box.add(this.ramUnit);
-
-            this.box.add(this.swapIco);
-            this.box.add(this.swap);
-            this.box.add(this.swapUnit);
-
-            this.box.add(this.diskStatsIco);
-            this.box.add(this.diskStats);
-
-            this.box.add(this.diskSpaceIco);
-            this.box.add(this.diskSpace);
-
-            this.box.add(this.ethIco);
-            this.box.add(this.eth);
-            this.box.add(this.ethUnit);
-
-            this.box.add(this.wlanIco);
-            this.box.add(this.wlan);
-            this.box.add(this.wlanUnit);
-        } else { // RIGHT
-            this.box.add(this.cpu);
-            this.box.add(this.cpuUnit);
-
-            this.box.add(this.cpuTemperature);
-            this.box.add(this.cpuTemperatureUnit);
-            this.box.add(this.temperatureBrackets);
-            this.box.add(this.cpuIco);
-
-            this.box.add(this.ram);
-            this.box.add(this.ramUnit);
-            this.box.add(this.ramIco);
-
-            this.box.add(this.swap);
-            this.box.add(this.swapUnit);
-            this.box.add(this.swapIco);
-
-            this.box.add(this.diskStats);
-            this.box.add(this.diskStatsIco);
-            this.box.add(this.diskSpace);
-            this.box.add(this.diskSpaceIco);
-
-            this.box.add(this.eth);
-            this.box.add(this.ethUnit);
-            this.box.add(this.ethIco);
-
-            this.box.add(this.wlan);
-            this.box.add(this.wlanUnit);
-            this.box.add(this.wlanIco);
+            for (let i = 0; i < this._handlerIdsCount; i++) {
+                this._settings.disconnect(this._handlerIds[i]);
+                this._handlerIds[i] = 0;
+            }
+
+            super.destroy();
         }
 
-        this.actor.add_actor(this.box);
-    }
+        // GUI
+        _createMainGui() {
+            this._box = new St.BoxLayout();
 
-    _initMainGui() {
-        this._iconsChange();
-        this._cpuChange();
-        this._ramChange();
-        this._swapChange();
-        this._diskStatsChange();
-        this._diskSpaceChange();
-        this._getSettingsEth();
-        this._getSettingsWlan();
-        this._hideChange();
-        this._cpuTemperatureChange();
-        this._disksListChange();
-    }
+            // Icon
+            this._cpuIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
 
-    destroy() {
-        if (this.timer) {
-            GLib.source_remove(this.timer);
-            this.timer = null;
+            this._ramIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/ram-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
+            this._swapIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/swap-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
+            this._diskStatsIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-stats-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
+            this._diskSpaceIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-space-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
+            this._ethIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/eth-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
+            this._wlanIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/wlan-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
+            // Unit
+            this._cpuTemperatureUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '°C'
+            });
+            this._cpuTemperatureUnit.set_style('padding-left: 0.125em;');
+
+            this._cpuFrequencyUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: 'MHz'
+            });
+            this._cpuFrequencyUnit.set_style('padding-left: 0.125em;');
+
+            this._cpuUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '%'
+            });
+            this._cpuUnit.set_style('padding-left: 0.125em;');
+
+            this._ramUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '%'
+            });
+            this._ramUnit.set_style('padding-left: 0.125em;');
+
+            this._swapUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '%'
+            });
+            this._swapUnit.set_style('padding-left: 0.125em;');
+
+            this._ethUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: 'K'
+            });
+            this._ethUnit.set_style('padding-left: 0.125em;');
+
+            this._wlanUnit = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: 'K'
+            });
+            this._wlanUnit.set_style('padding-left: 0.125em;');
+
+            // Value
+            this._cpuValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--'
+            });
+            this._cpuValue.set_style('text-align: right;');
+
+            this._ramValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--'
+            });
+            this._ramValue.set_style('text-align: right;');
+
+            this._swapValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--'
+            });
+            this._swapValue.set_style('text-align: right;');
+
+            this._diskStatsBox = new DiskContainerStats();
+            this._diskSpaceBox = new DiskContainerSpace();
+
+            this._ethValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--|--'
+            });
+            this._ethValue.set_style('text-align: right;');
+
+            this._wlanValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--|--'
+            });
+            this._wlanValue.set_style('text-align: right;');
+
+            this._cpuTemperatureValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '[--'
+            });
+            this._cpuTemperatureValueBracket = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ']'
+            });
+            this._cpuTemperatureValue.set_style('text-align: right;');
+
+            this._cpuFrequencyValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '[--'
+            });
+            this._cpuFrequencyValueBracket = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ']'
+            });
+            this._cpuFrequencyValue.set_style('text-align: right;');
         }
 
-        /** ## Signals Disconnection ## **/
-        for (let i = 0; i < this.numSigId; i++) {
-            this._settings.disconnect(this.sigId[i]);
-            this.sigId[i] = 0;
-        }
+        _buildMainGui() {
+            // Apply prefs settings
+            this._refreshGui();
 
-        super.destroy();
-    }
+            switch (this._iconsPosition) {
+                case 'left':
+                    this._box.add(this._cpuIcon);
+                    this._box.add(this._cpuValue);
+                    this._box.add(this._cpuUnit);
 
-    _openSystemMonitor() {
-        if (this.displaySystemMonitor) {
-            let app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
+                    this._box.add(this._cpuTemperatureValue);
+                    this._box.add(this._cpuTemperatureUnit);
+                    this._box.add(this._cpuTemperatureValueBracket);
+                    this._box.add(this._cpuFrequencyValue);
+                    this._box.add(this._cpuFrequencyUnit);
+                    this._box.add(this._cpuFrequencyValueBracket);
 
-            if (app != null)
-                app.activate();
-            else
-                Util.spawn(['gnome-system-monitor']);
-        }
-    }
+                    this._box.add(this._ramIcon);
+                    this._box.add(this._ramValue);
+                    this._box.add(this._ramUnit);
 
-    /** Signals Handler **/
-    _onActiveConnectionAdded(client, activeConnection) {
-        activeConnection.get_devices().forEach(device => {
-            switch (device.get_device_type()) {
+                    this._box.add(this._swapIcon);
+                    this._box.add(this._swapValue);
+                    this._box.add(this._swapUnit);
 
-                case NM.DeviceType.ETHERNET: {
-                    this.onEth = true;
-                } break;
+                    this._box.add(this._diskStatsIcon);
+                    this._box.add(this._diskStatsBox);
 
-                case NM.DeviceType.WIFI: {
-                    this.onWlan = true;
-                } break;
+                    this._box.add(this._diskSpaceIcon);
+                    this._box.add(this._diskSpaceBox);
+
+                    this._box.add(this._ethIcon);
+                    this._box.add(this._ethValue);
+                    this._box.add(this._ethUnit);
+
+                    this._box.add(this._wlanIcon);
+                    this._box.add(this._wlanValue);
+                    this._box.add(this._wlanUnit);
+
+                    break;
+
+                case 'right':
 
                 default:
+                    this._box.add(this._cpuValue);
+                    this._box.add(this._cpuUnit);
 
+                    this._box.add(this._cpuTemperatureValue);
+                    this._box.add(this._cpuTemperatureUnit);
+                    this._box.add(this._cpuTemperatureValueBracket);
+                    this._box.add(this._cpuFrequencyValue);
+                    this._box.add(this._cpuFrequencyUnit);
+                    this._box.add(this._cpuFrequencyValueBracket);
+                    this._box.add(this._cpuIcon);
+
+                    this._box.add(this._ramValue);
+                    this._box.add(this._ramUnit);
+                    this._box.add(this._ramIcon);
+
+                    this._box.add(this._swapValue);
+                    this._box.add(this._swapUnit);
+                    this._box.add(this._swapIcon);
+
+                    this._box.add(this._diskStatsBox);
+                    this._box.add(this._diskStatsIcon);
+                    this._box.add(this._diskSpaceBox);
+                    this._box.add(this._diskSpaceIcon);
+
+                    this._box.add(this._ethValue);
+                    this._box.add(this._ethUnit);
+                    this._box.add(this._ethIcon);
+
+                    this._box.add(this._wlanValue);
+                    this._box.add(this._wlanUnit);
+                    this._box.add(this._wlanIcon);
+
+                    break;
             }
-        });
 
-        this._ethChange();
-        this._wlanChange();
-    }
+            this.add_child(this._box);
+        }
 
-    _onActiveConnectionRemoved(client) {
-        this.onEth = false;
-        this.onWlan = false;
+        // SETTINGS
+        _initSettings() {
+            this._refreshTime = this._settings.get_int(REFRESH_TIME);
+            this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
+            this._systemMonitorStatus = this._settings.get_boolean(SYSTEM_MONITOR_STATUS);
+            this._prefsStatus = this._settings.get_boolean(PREFS_STATUS);
 
-        client.get_active_connections().forEach(activeConnection => {
+            this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
+            this._iconsPosition = this._settings.get_string(ICONS_POSITION);
+
+            this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
+            this._cpuWidth = this._settings.get_int(CPU_WIDTH);
+            this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
+            this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+
+            this._ramStatus = this._settings.get_boolean(RAM_STATUS);
+            this._ramWidth = this._settings.get_int(RAM_WIDTH);
+
+            this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
+            this._swapWidth = this._settings.get_int(SWAP_WIDTH);
+
+            this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
+            this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
+            this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
+            this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
+            this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
+            this._diskSpaceUnit = this._settings.get_string(DISK_SPACE_UNIT);
+            this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
+            this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
+
+            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
+            this._netUnit = this._settings.get_string(NET_UNIT);
+            this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
+            this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
+            this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
+            this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
+
+            this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
+            this._thermalCpuTemperatureWidth = this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH);
+            this._thermalCpuTemperatureUnit = this._settings.get_string(THERMAL_CPU_TEMPERATURE_UNIT);
+            this._thermalCpuTemperatureDevicesList = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
+        }
+
+        _connectSettingsSignals() {
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${REFRESH_TIME}`, this._refreshTimeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DECIMALS_STATUS}`, this._decimalsStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SYSTEM_MONITOR_STATUS}`, this._systemMonitorStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${PREFS_STATUS}`, this._prefsStatusChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_STATUS}`, this._iconsStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_POSITION}`, this._iconsPositionChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_STATUS}`, this._cpuStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_WIDTH}`, this._cpuWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_STATUS}`, this._cpuFrequencyStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_WIDTH}`, this._cpuFrequencyWidthChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_STATUS}`, this._ramStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_WIDTH}`, this._ramWidthChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_STATUS}`, this._swapStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_WIDTH}`, this._swapWidthChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_STATUS}`, this._diskStatsStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_WIDTH}`, this._diskStatsWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_MODE}`, this._diskStatsModeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_STATUS}`, this._diskSpaceStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_WIDTH}`, this._diskSpaceWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_UNIT}`, this._diskSpaceUnitChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_MONITOR}`, this._diskSpaceMonitorChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_DEVICES_LIST}`, this._diskDevicesListChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_AUTO_HIDE_STATUS}`, this._netAutoHideStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_UNIT}`, this._netUnitChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_ETH_STATUS}`, this._netEthStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_ETH_WIDTH}`, this._netEthWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_WLAN_STATUS}`, this._netWlanStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_WLAN_WIDTH}`, this._netWlanWidthChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_STATUS}`, this._thermalCpuTemperatureStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_WIDTH}`, this._thermalCpuTemperatureWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_UNIT}`, this._thermalCpuTemperatureUnitChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_DEVICES_LIST}`, this._thermalCpuTemperatureDevicesListChanged.bind(this));
+        }
+
+        // HANDLERS
+        _openSystemMonitor(actor, event) {
+            switch (event.get_button()) {
+                case 3: // Right Click
+                    if (this._prefsStatus) {
+                        ExtensionUtils.openPrefs();
+                    }
+
+                    break;
+
+                case 1: // Left Click
+
+                default:
+                    if (this._systemMonitorStatus) {
+                        let app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
+
+                        if (app != null)
+                            app.activate();
+                        else
+                            Util.spawn(['gnome-system-monitor']);
+                    }
+
+                    break;
+            }
+        }
+
+        _onActiveConnectionAdded(client, activeConnection) {
             activeConnection.get_devices().forEach(device => {
                 switch (device.get_device_type()) {
+                    case NM.DeviceType.ETHERNET:
+                        this._nmEthStatus = true;
 
-                    case NM.DeviceType.ETHERNET: {
-                        this.onEth = true;
-                    } break;
+                        break;
 
-                    case NM.DeviceType.WIFI: {
-                        this.onWlan = true;
-                    } break;
+                    case NM.DeviceType.WIFI:
+                        this._nmWlanStatus = true;
+
+                        break;
 
                     default:
 
+                        break;
                 }
             });
-        });
 
-        this._ethChange();
-        this._wlanChange();
-    }
-
-    _iconsChange() {
-        this.displayIcons = this._settings.get_boolean(ICONS);
-        if (this.displayIcons) {
-            if (this.enCpu)
-                this.cpuIco.show();
-            if (this.enRam)
-                this.ramIco.show();
-            if (this.enSwap)
-                this.swapIco.show();
-            if (this.enDiskStats)
-                this.diskStatsIco.show();
-            if (this.enDiskSpace)
-                this.diskSpaceIco.show();
-            if ((this.enEth && this.onEth) || (this.enEth && !this.enHide))
-                this.ethIco.show();
-            if ((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide))
-                this.wlanIco.show();
-        } else {
-            this.cpuIco.hide();
-            this.ramIco.hide();
-            this.swapIco.hide();
-            this.diskStatsIco.hide();
-            this.diskSpaceIco.hide();
-            this.ethIco.hide();
-            this.wlanIco.hide();
-        }
-    }
-
-    _iconsPositionChange() {
-        this.iconsPosition = this._settings.get_int(ICONSPOSITION);
-
-        // Cleanup gui
-        this.box.remove_all_children();
-
-        this._buildMainGui();
-
-        this._initMainGui();
-    }
-
-    _decimalsChange() {
-        this.displayDecimals = this._settings.get_boolean(DECIMALS);
-    }
-
-    _systemMonitorChange() {
-        this.displaySystemMonitor = this._settings.get_boolean(SYSTEMMONITOR);
-    }
-
-    _cpuChange() {
-        this.enCpu = this._settings.get_boolean(CPU);
-        if (this.enCpu) {
-            if (this.displayIcons)
-                this.cpuIco.show();
-            this.cpu.show();
-            this.cpuUnit.show();
-        } else {
-            if (!this.enCpuTemperature)
-                this.cpuIco.hide();
-            this.cpu.hide();
-            this.cpuUnit.hide();
-        }
-    }
-
-    _ramChange() {
-        this.enRam = this._settings.get_boolean(RAM);
-        if (this.enRam) {
-            if (this.displayIcons)
-                this.ramIco.show();
-            this.ram.show();
-            this.ramUnit.show();
-        } else {
-            this.ramIco.hide();
-            this.ram.hide();
-            this.ramUnit.hide();
-        }
-    }
-
-    _swapChange() {
-        this.enSwap = this._settings.get_boolean(SWAP);
-        if (this.enSwap) {
-            if (this.displayIcons)
-                this.swapIco.show();
-            this.swap.show();
-            this.swapUnit.show();
-        } else {
-            this.swapIco.hide();
-            this.swap.hide();
-            this.swapUnit.hide();
-        }
-    }
-
-    _diskStatsChange() {
-        this.enDiskStats = this._settings.get_boolean(DISK_STATS);
-        if (this.enDiskStats) {
-            if (this.displayIcons)
-                this.diskStatsIco.show();
-            this.diskStats.show();
-        } else {
-            this.diskStatsIco.hide();
-            this.diskStats.hide();
-        }
-    }
-
-    _diskSpaceChange() {
-        this.enDiskSpace = this._settings.get_boolean(DISK_SPACE);
-        if (this.enDiskSpace) {
-            if (this.displayIcons)
-                this.diskSpaceIco.show();
-            this.diskSpace.show();
-        } else {
-            this.diskSpaceIco.hide();
-            this.diskSpace.hide();
-        }
-    }
-
-    _getSettingsEth() {
-        this.enEth = this._settings.get_boolean(ETH);
-
-        this._ethChange();
-    }
-
-    _ethChange() {
-        if ((this.enEth && this.onEth) || (this.enEth && !this.enHide)) {
-            if (this.displayIcons)
-                this.ethIco.show();
-            this.eth.show();
-            this.ethUnit.show();
-        } else {
-            this.ethIco.hide();
-            this.eth.hide();
-            this.ethUnit.hide();
-        }
-    }
-
-    _getSettingsWlan() {
-        this.enWlan = this._settings.get_boolean(WLAN);
-
-        this._wlanChange();
-    }
-
-    _wlanChange() {
-        if ((this.enWlan && this.onWlan) || (this.enWlan && !this.enHide)) {
-            if (this.displayIcons)
-                this.wlanIco.show();
-            this.wlan.show();
-            this.wlanUnit.show();
-        } else {
-            this.wlanIco.hide();
-            this.wlan.hide();
-            this.wlanUnit.hide();
-        }
-    }
-
-    _hideChange() {
-        this.enHide = this._settings.get_boolean(AUTO_HIDE);
-
-        this._ethChange();
-        this._wlanChange();
-    }
-
-    _diskStatsWidthUpdate() {
-        for (let i = 0; i < this.disksList.length; i++) {
-            let element = this.disksList[i];
-            let it = element.split(' ');
-            let field = this.diskStatsItems[it[0]];
-
-            if (typeof (field) !== 'undefined') {
-                field[0].width = this._settings.get_int(WIDTH_DISK_STATS);
-            }
+            this._basicItemStatus((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus), true, this._ethIcon, this._ethValue, this._ethUnit);
+            this._basicItemStatus((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus), true, this._wlanIcon, this._wlanValue, this._wlanUnit);
         }
 
-        let field = this.diskStatsItems['All'];
-        if (typeof (field) !== 'undefined') {
-            field[0].width = this._settings.get_int(WIDTH_DISK_STATS);
-        }
-    }
+        _onActiveConnectionRemoved(client, activeConnection) {
+            this._nmEthStatus = false;
+            this._nmWlanStatus = false;
 
-    _diskSpaceWidthUpdate() {
-        for (let i = 0; i < this.disksList.length; i++) {
-            let element = this.disksList[i];
-            let it = element.split(' ');
-            let field = this.diskSpaceItems[it[0]];
+            client.get_active_connections().forEach(activeConnection => {
+                activeConnection.get_devices().forEach(device => {
+                    switch (device.get_device_type()) {
+                        case NM.DeviceType.ETHERNET:
+                            this._nmEthStatus = true;
 
-            if (typeof (field) !== 'undefined') {
-                field[0].width = this._settings.get_int(WIDTH_DISK_SPACE);
-            }
-        }
-    }
+                            break;
 
-    _diskStatsUpdate() {
-        // Cleanup gui
-        this.diskStats.remove_all_children();
+                        case NM.DeviceType.WIFI:
+                            this._nmWlanStatus = true;
 
-        this.diskStatsItems = [];
-        let width = this._settings.get_int(WIDTH_DISK_STATS);
+                            break;
 
-        this.idleDiskOld = [];
-        this.rwTotOld = [];
+                        default:
 
-        // Stats
-        if (this.diskStatsMode === true) {
-            // All In One
-            let field = new St.Label({
-                y_align: Clutter.ActorAlign.CENTER,
-                text: '--|--',
-                width: width,
-                style_class: 'label'
+                            break;
+                    }
+                });
             });
 
-            let unit = new St.Label({
-                y_align: Clutter.ActorAlign.CENTER,
-                text: 'K',
-                style_class: 'unit'
+            this._basicItemStatus((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus), true, this._ethIcon, this._ethValue, this._ethUnit);
+            this._basicItemStatus((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus), true, this._wlanIcon, this._wlanValue, this._wlanUnit);
+        }
+
+        _refreshTimeChanged() {
+            this._refreshTime = this._settings.get_int(REFRESH_TIME);
+
+            if (this._mainTimer) {
+                GLib.source_remove(this._mainTimer);
+                this._mainTimer = null;
+            }
+
+            this._mainTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._refreshTime, this._refreshHandler.bind(this));
+        }
+
+        _decimalsStatusChanged() {
+            this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
+
+            this._refreshHandler();
+        }
+
+        _systemMonitorStatusChanged() {
+            this._systemMonitorStatus = this._settings.get_boolean(SYSTEM_MONITOR_STATUS);
+        }
+
+        _prefsStatusChanged() {
+            this._prefsStatus = this._settings.get_boolean(PREFS_STATUS);
+        }
+
+        _iconsStatusChanged() {
+            this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
+
+            if (this._iconsStatus) {
+                if (this._cpuStatus) {
+                    this._cpuIcon.show();
+                }
+                if (this._ramStatus) {
+                    this._ramIcon.show();
+                }
+                if (this._swapStatus) {
+                    this._swapIcon.show();
+                }
+                if (this._diskStatsStatus) {
+                    this._diskStatsIcon.show();
+                }
+                if (this._diskSpaceStatus) {
+                    this._diskSpaceIcon.show();
+                }
+                if ((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus)) {
+                    this._ethIcon.show();
+                }
+                if ((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus)) {
+                    this._wlanIcon.show();
+                }
+            } else {
+                this._cpuIcon.hide();
+                this._ramIcon.hide();
+                this._swapIcon.hide();
+                this._diskStatsIcon.hide();
+                this._diskSpaceIcon.hide();
+                this._ethIcon.hide();
+                this._wlanIcon.hide();
+            }
+        }
+
+        _iconsPositionChanged() {
+            this._iconsPosition = this._settings.get_string(ICONS_POSITION);
+
+            this._box.remove_all_children();
+
+            this._buildMainGui();
+        }
+
+        _cpuStatusChanged() {
+            this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
+
+            this._basicItemStatus(this._cpuStatus, (!this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuValue, this._cpuUnit);
+        }
+
+        _cpuWidthChanged() {
+            this._cpuWidth = this._settings.get_int(CPU_WIDTH);
+
+            this._basicItemWidth(this._cpuWidth, this._cpuValue);
+        }
+
+        _cpuFrequencyStatusChanged() {
+            this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
+
+            this._basicItemStatus(this._cpuFrequencyStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus), this._cpuIcon, this._cpuFrequencyValue, this._cpuFrequencyUnit, this._cpuFrequencyValueBracket);
+        }
+
+        _cpuFrequencyWidthChanged() {
+            this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+
+            this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+        }
+
+        _ramStatusChanged() {
+            this._ramStatus = this._settings.get_boolean(RAM_STATUS);
+
+            this._basicItemStatus(this._ramStatus, true, this._ramIcon, this._ramValue, this._ramUnit);
+        }
+
+        _ramWidthChanged() {
+            this._ramWidth = this._settings.get_int(RAM_WIDTH);
+
+            this._basicItemWidth(this._ramWidth, this._ramValue);
+        }
+
+        _swapStatusChanged() {
+            this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
+
+            this._basicItemStatus(this._swapStatus, true, this._swapIcon, this._swapValue, this._swapUnit);
+        }
+
+        _swapWidthChanged() {
+            this._swapWidth = this._settings.get_int(SWAP_WIDTH);
+
+            this._basicItemWidth(this._swapWidth, this._swapValue);
+        }
+
+        _diskStatsStatusChanged() {
+            this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
+
+            this._basicItemStatus(this._diskStatsStatus, true, this._diskStatsIcon, this._diskStatsBox);
+        }
+
+        _diskStatsWidthChanged() {
+            this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
+
+            this._diskStatsBox.set_element_width(this._diskStatsWidth);
+        }
+
+        _diskStatsModeChanged() {
+            this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
+
+            this._diskStatsBox.update_mode(this._diskStatsMode);
+        }
+
+        _diskSpaceStatusChanged() {
+            this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
+
+            this._basicItemStatus(this._diskSpaceStatus, true, this._diskSpaceIcon, this._diskSpaceBox);
+        }
+
+        _diskSpaceWidthChanged() {
+            this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
+
+            this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
+        }
+
+        _diskSpaceUnitChanged() {
+            this._diskSpaceUnit = this._settings.get_string(DISK_SPACE_UNIT);
+
+            if (this._diskSpaceStatus) {
+                this._refreshDiskSpaceValue();
+            }
+        }
+
+        _diskSpaceMonitorChanged() {
+            this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
+
+            if (this._diskSpaceStatus) {
+                this._refreshDiskSpaceValue();
+            }
+        }
+
+        _diskDevicesListChanged() {
+            this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
+
+            this._diskStatsBox.cleanup_elements();
+            this._diskSpaceBox.cleanup_elements();
+
+            this._diskDeviceslist.forEach(element => {
+                const it = element.split(DISK_DEVICES_LIST_SEPARATOR);
+
+                const filesystem = it[0];
+                const mountPoint = it[1];
+                const stats = (it[2] === 'true');
+                const space = (it[3] === 'true');
+
+                let label = '';
+
+                if (filesystem.match(/(\/\w+)+/)) {
+                    label = filesystem.split('/').pop();
+                } else {
+                    label = filesystem;
+                }
+
+                if (stats) {
+                    this._diskStatsBox.add_element(filesystem, label);
+                }
+
+                if (space) {
+                    this._diskSpaceBox.add_element(filesystem, label);
+                }
             });
 
-            this.diskStats.add(field);
-            this.diskStats.add(unit);
+            this._diskStatsBox.add_single();
+            this._diskStatsBox.update_mode(this._diskStatsMode);
 
-            this.diskStatsItems['All'] = [field, unit];
+            this._diskStatsBox.set_element_width(this._diskStatsWidth);
+            this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
+        }
 
-            this.idleDiskOld['All'] = 0;
-            this.rwTotOld['All'] = [0, 0];
-        } else {
-            for (let i = 0; i < this.disksList.length; i++) {
-                let element = this.disksList[i];
-                let it = element.split(' ');
+        _netAutoHideStatusChanged() {
+            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
 
-                let dStButton = (it[1] === 'true');
-                if (dStButton) {
-                    let name = new St.Label({
-                        y_align: Clutter.ActorAlign.CENTER,
-                        text: it[0] + ':',
-                        style_class: 'label'
-                    });
+            this._basicItemStatus((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus), true, this._ethIcon, this._ethValue, this._ethUnit);
+            this._basicItemStatus((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus), true, this._wlanIcon, this._wlanValue, this._wlanUnit);
+        }
 
-                    let field = new St.Label({
-                        y_align: Clutter.ActorAlign.CENTER,
-                        text: '--|--',
-                        width: width,
-                        style_class: 'label'
-                    });
+        _netUnitChanged() {
+            this._netUnit = this._settings.get_string(NET_UNIT);
 
-                    let unit = new St.Label({
-                        y_align: Clutter.ActorAlign.CENTER,
-                        text: 'K',
-                        style_class: 'unit'
-                    });
-
-                    this.diskStats.add(name);
-                    this.diskStats.add(field);
-                    this.diskStats.add(unit);
-
-                    this.diskStatsItems[it[0]] = [field, unit];
-
-                    this.idleDiskOld[it[0]] = 0;
-                    this.rwTotOld[it[0]] = [0, 0];
-                }
+            if (this._netEthStatus) {
+                this._refreshEthValue();
+            }
+            if (this._netWlanStatus) {
+                this._refreshWlanValue();
             }
         }
-    }
 
-    _diskSpaceUpdate() {
-        // Cleanup gui
-        this.diskSpace.remove_all_children();
+        _netEthStatusChanged() {
+            this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
 
-        this.diskSpaceItems = [];
-        let width = this._settings.get_int(WIDTH_DISK_SPACE);
+            this._basicItemStatus((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus), true, this._ethIcon, this._ethValue, this._ethUnit);
+        }
 
-        // Space
-        for (let i = 0; i < this.disksList.length; i++) {
-            let element = this.disksList[i];
-            let it = element.split(' ');
+        _netEthWidthChanged() {
+            this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
 
-            let dSpButton = (it[2] === 'true');
+            this._basicItemWidth(this._netEthWidth, this._ethValue);
+        }
 
-            if (dSpButton) {
-                let name = new St.Label({
-                    y_align: Clutter.ActorAlign.CENTER,
-                    text: it[0] + ':',
-                    style_class: 'label'
-                });
+        _netWlanStatusChanged() {
+            this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
 
-                let field = new St.Label({
-                    y_align: Clutter.ActorAlign.CENTER,
-                    text: '--',
-                    width: width,
-                    style_class: 'label'
-                });
+            this._basicItemStatus((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus), true, this._wlanIcon, this._wlanValue, this._wlanUnit);
+        }
 
-                let unit = new St.Label({
-                    y_align: Clutter.ActorAlign.CENTER,
-                    text: this.disksSpaceUnit ? '%' : 'K',
-                    style_class: 'unit'
-                });
+        _netWlanWidthChanged() {
+            this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
 
-                this.diskSpace.add(name);
-                this.diskSpace.add(field);
-                this.diskSpace.add(unit);
+            this._basicItemWidth(this._netWlanWidth, this._wlanValue);
+        }
 
-                this.diskSpaceItems[it[0]] = [field, unit];
+        _thermalCpuTemperatureStatusChanged() {
+            this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
+
+            this._basicItemStatus(this._thermalCpuTemperatureStatus, (!this._cpuStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuTemperatureValue, this._cpuTemperatureUnit, this._cpuTemperatureValueBracket);
+        }
+
+        _thermalCpuTemperatureWidthChanged() {
+            this._thermalCpuTemperatureWidth = this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH);
+
+            this._basicItemWidth(this._thermalCpuTemperatureWidth, this._cpuTemperatureValue);
+        }
+
+        _thermalCpuTemperatureUnitChanged() {
+            this._thermalCpuTemperatureUnit = this._settings.get_string(THERMAL_CPU_TEMPERATURE_UNIT);
+
+            if (this._thermalCpuTemperatureStatus) {
+                this._refreshCpuTemperatureValue();
             }
         }
-    }
 
-    _disksListChange() {
-        this.disksList = this._settings.get_strv(DISKS_LIST);
+        _thermalCpuTemperatureDevicesListChanged() {
+            this._thermalCpuTemperatureDevicesList = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
 
-        this._diskStatsUpdate();
-        this._diskSpaceUpdate();
-    }
-
-    _diskStatsModeChange() {
-        this.diskStatsMode = this._settings.get_boolean(DISK_STATS_MODE);
-
-        this._diskStatsUpdate();
-        this._refreshDiskStats();
-    }
-
-    _cpuTemperatureChange() {
-        this.enCpuTemperature = this._settings.get_boolean(CPUTEMPERATURE);
-        if (this.enCpuTemperature) {
-            if (this.displayIcons)
-                this.cpuIco.show();
-            this.temperatureBrackets.show()
-            this.cpuTemperature.show();
-            this.cpuTemperatureUnit.show();
-        } else {
-            if (!this.enCpu)
-                this.cpuIco.hide();
-            this.temperatureBrackets.hide();
-            this.cpuTemperature.hide();
-            this.cpuTemperatureUnit.hide();
+            if (this._thermalCpuTemperatureStatus) {
+                this._refreshCpuTemperatureValue();
+            }
         }
-    }
 
-    /*********************/
-
-    _refresh() {
-        if (this.enCpu)
-            this._refreshCpu();
-        if (this.enRam)
-            this._refreshRam();
-        if (this.enSwap)
-            this._refreshSwap();
-        if (this.enDiskStats)
-            this._refreshDiskStats();
-        if (this.enDiskSpace)
-            this._refreshDiskSpace();
-        if (this.enEth)
-            this._refreshEth();
-        if (this.enWlan)
-            this._refreshWlan();
-        if (this.enCpuTemperature)
-            this._refreshCpuTemperature();
-
-        return GLib.SOURCE_CONTINUE;
-    }
-
-    _refreshCpu() {
-        let file = Gio.file_new_for_path('/proc/stat');
-        file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result)[1];
-            let lines = String(contents).split('\n');
-
-            let entry = lines[0].trim().split(/\s+/);
-            let cpuTot = 0;
-            let idle = parseInt(entry[4]);
-
-            // user sys nice idle iowait
-            for (let i = 1; i < 5; i++)
-                cpuTot += parseInt(entry[i]);
-
-            let delta = cpuTot - this.cpuTotOld;
-            let deltaIdle = idle - this.idleOld;
-
-            let cpuCurr = 100 * (delta - deltaIdle) / delta;
-
-            this.cpuTotOld = cpuTot;
-            this.idleOld = idle;
-
-            if (this.displayDecimals) {
-                this.cpu.text = `${cpuCurr.toFixed(1)}`;
-            } else {
-                this.cpu.text = `${cpuCurr.toFixed(0)}`;
+        _refreshHandler() {
+            if (this._cpuStatus) {
+                this._refreshCpuValue();
             }
-        });
-    }
+            if (this._ramStatus) {
+                this._refreshRamValue();
+            }
+            if (this._swapStatus) {
+                this._refreshSwapValue();
+            }
+            if (this._diskStatsStatus) {
+                this._refreshDiskStatsValue();
+            }
+            if (this._diskSpaceStatus) {
+                this._refreshDiskSpaceValue();
+            }
+            if (this._netEthStatus) {
+                this._refreshEthValue();
+            }
+            if (this._netWlanStatus) {
+                this._refreshWlanValue();
+            }
+            if (this._cpuFrequencyStatus) {
+                this._refreshCpuFrequencyValue();
+            }
+            if (this._thermalCpuTemperatureStatus) {
+                this._refreshCpuTemperatureValue();
+            }
 
-    _refreshRam() {
-        let file = Gio.file_new_for_path('/proc/meminfo');
-        file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result)[1];
-            let lines = String(contents).split('\n');
+            return GLib.SOURCE_CONTINUE;
+        }
 
-            let total, available, used;
+        _refreshGui() {
+            //this._onActiveConnectionAdded(client, activeConnection);
 
-            for (let i = 0; i < 3; i++) {
-                let values;
-                let line = lines[i];
+            //this._onActiveConnectionRemoved(client, activeConnection);
 
-                if (line.match(/^MemTotal/)) {
-                    values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
-                    total = parseInt(values[1]);
-                } else if (line.match(/^MemAvailable/)) {
-                    values = line.match(/^MemAvailable:\s*([^ ]*)\s*([^ ]*)$/);
-                    available = parseInt(values[1]);
+            //this._refreshTimeChanged();
+
+            //this._decimalsStatusChanged();
+
+            //this._systemMonitorStatusChanged();
+
+            this._prefsStatusChanged();
+
+            this._iconsStatusChanged();
+
+            //this._iconsPositionChanged();
+
+            this._cpuStatusChanged();
+
+            this._cpuWidthChanged();
+
+            this._cpuFrequencyStatusChanged();
+
+            this._cpuFrequencyWidthChanged();
+
+            this._ramStatusChanged();
+
+            this._ramWidthChanged();
+
+            this._swapStatusChanged();
+
+            this._swapWidthChanged();
+
+            this._diskStatsStatusChanged();
+
+            this._diskStatsWidthChanged();
+
+            this._diskStatsModeChanged();
+
+            this._diskSpaceStatusChanged();
+
+            this._diskSpaceWidthChanged();
+
+            //this._diskSpaceUnitChanged();
+
+            //this._diskSpaceMonitorChanged();
+
+            this._diskDevicesListChanged();
+
+            //this._netAutoHideStatusChanged();
+
+            //this._netUnitChanged();
+
+            this._netEthStatusChanged();
+
+            this._netEthWidthChanged();
+
+            this._netWlanStatusChanged();
+
+            this._netWlanWidthChanged();
+
+            this._thermalCpuTemperatureStatusChanged();
+
+            this._thermalCpuTemperatureWidthChanged();
+
+            //this._thermalCpuTemperatureUnitChanged();
+
+            //this._thermalCpuTemperatureDevicesListChanged();
+        }
+
+        _refreshCpuValue() {
+            this._loadFile('/proc/stat').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                const entry = lines[0].trim().split(/\s+/);
+                let cpuTot = 0;
+                const idle = parseInt(entry[4]);
+
+                // user sys nice idle iowait
+                for (let i = 1; i < 5; i++)
+                    cpuTot += parseInt(entry[i]);
+
+                const delta = cpuTot - this._cpuTotOld;
+                const deltaIdle = idle - this._cpuIdleOld;
+
+                const cpuCurr = 100 * (delta - deltaIdle) / delta;
+
+                this._cpuTotOld = cpuTot;
+                this._cpuIdleOld = idle;
+
+                if (this._decimalsStatus) {
+                    this._cpuValue.text = `${cpuCurr.toFixed(1)}`;
+                } else {
+                    this._cpuValue.text = `${cpuCurr.toFixed(0)}`;
                 }
-            }
+            });
+        }
 
-            used = total - available;
+        _refreshRamValue() {
+            this._loadFile('/proc/meminfo').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
 
-            if (this.displayDecimals) {
-                this.ram.text = `${(100 * used / total).toFixed(1)}`;
-            } else {
-                this.ram.text = `${(100 * used / total).toFixed(0)}`;
-            }
-        });
-    }
+                let total, available, used;
 
-    _refreshSwap() {
-        let file = Gio.file_new_for_path('/proc/meminfo');
-        file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result)[1];
-            let lines = String(contents).split('\n');
+                for (let i = 0; i < 3; i++) {
+                    const line = lines[i];
+                    let values;
 
-            let total, available, used;
-
-            for (let i = 0; i < 16; i++) {
-                let values;
-                let line = lines[i];
-
-                if (line.match(/^SwapTotal/)) {
-                    values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
-                    total = parseInt(values[1]);
-                } else if (line.match(/^SwapFree/)) {
-                    values = line.match(/^SwapFree:\s*([^ ]*)\s*([^ ]*)$/);
-                    available = parseInt(values[1]);
+                    if (line.match(/^MemTotal/)) {
+                        values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
+                        total = parseInt(values[1]);
+                    } else if (line.match(/^MemAvailable/)) {
+                        values = line.match(/^MemAvailable:\s*([^ ]*)\s*([^ ]*)$/);
+                        available = parseInt(values[1]);
+                    }
                 }
-            }
 
-            used = total - available;
+                used = total - available;
 
-            if (this.displayDecimals) {
-                this.swap.text = `${(100 * used / total).toFixed(1)}`;
-            } else {
-                this.swap.text = `${(100 * used / total).toFixed(0)}`;
-            }
-        });
-    }
+                if (this._decimalsStatus) {
+                    this._ramValue.text = `${(100 * used / total).toFixed(1)}`;
+                } else {
+                    this._ramValue.text = `${(100 * used / total).toFixed(0)}`;
+                }
+            });
+        }
 
-    _refreshDiskStats() {
-        let file = Gio.file_new_for_path('/proc/diskstats');
-        file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result)[1];
-            let lines = String(contents).split('\n');
+        _refreshSwapValue() {
+            this._loadFile('/proc/meminfo').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
 
-            if (this.diskStatsMode === true) {
-                let field = this.diskStatsItems['All'];
+                let total, available, used;
 
-                let rwTot = [0, 0];
-                let rw = [0, 0];
+                for (let i = 0; i < 16; i++) {
+                    const line = lines[i];
+                    let values;
 
-                for (let i = 0; i < this.disksList.length; i++) {
-                    let element = this.disksList[i];
-                    let it = element.split(' ');
+                    if (line.match(/^SwapTotal/)) {
+                        values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
+                        total = parseInt(values[1]);
+                    } else if (line.match(/^SwapFree/)) {
+                        values = line.match(/^SwapFree:\s*([^ ]*)\s*([^ ]*)$/);
+                        available = parseInt(values[1]);
+                    }
+                }
 
-                    // if disk stats enabled
-                    if (it[1] === 'true') {
-                        for (let j = 0; j < lines.length; j++) {
-                            let line = lines[j];
-                            let entry = line.trim().split(/\s+/); // TODO search by name
-                            if (typeof (entry[1]) === 'undefined')
-                                break;
+                used = total - available;
 
-                            // All
-                            // Same Name
-                            if (it[0].endsWith(entry[2])) {
+                if (this._decimalsStatus) {
+                    this._swapValue.text = `${(100 * used / total).toFixed(1)}`;
+                } else {
+                    this._swapValue.text = `${(100 * used / total).toFixed(0)}`;
+                }
+            });
+        }
+
+        _refreshDiskStatsValue() {
+            this._loadFile('/proc/diskstats').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                switch (this._diskStatsMode) {
+                    case 'single':
+                        let rwTot = [0, 0];
+                        let rw = [0, 0];
+
+                        const filesystem = 'single';
+
+                        for (let i = 0; i < lines.length - 1; i++) {
+                            const line = lines[i];
+                            const entry = line.trim().split(/\s+/);
+
+                            if (entry[2].match(/loop*/)) {
+                                continue;
+                            }
+
+                            // Found
+                            if (this._diskStatsBox.get_filesystem(entry[2])) {
                                 rwTot[0] += parseInt(entry[5]);
                                 rwTot[1] += parseInt(entry[9]);
                             }
                         }
-                    }
-                }
 
-                let idle = GLib.get_monotonic_time() / 1000;
-                let delta = (idle - this.idleDiskOld['All']) / 1000;
+                        const idle = GLib.get_monotonic_time() / 1000;
+                        const delta = (idle - this._diskStatsBox.get_idle(filesystem)) / 1000;
+                        this._diskStatsBox.set_idle(filesystem, idle);
 
-                if (delta > 0) {
-                    for (let i = 0; i < 2; i++) {
-                        rw[i] = (rwTot[i] - this.rwTotOld['All'][i]) / delta;
-                        this.rwTotOld['All'][i] = rwTot[i];
-                    }
-
-                    if (rw[0] > 1024 || rw[1] > 1024) {
-                        field[1].text = 'M';
-                        rw[0] /= 1024;
-                        rw[1] /= 1024;
-                        if (rw[0] > 1024 || rw[1] > 1024) {
-                            field[1].text = 'G';
-                            rw[0] /= 1024;
-                            rw[1] /= 1024;
-                        }
-                    } else {
-                        field[1].text = 'K';
-                    }
-                }
-
-                this.idleDiskOld['All'] = idle;
-
-                if (this.displayDecimals) {
-                    field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
-                } else {
-                    field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
-                }
-            } else {
-                for (let i = 0; i < this.disksList.length; i++) {
-                    let element = this.disksList[i];
-                    let it = element.split(' ');
-                    let field = this.diskStatsItems[it[0]];
-
-                    // undefined if stats disabled
-                    if (typeof (field) === 'undefined') {
-                        continue;
-                    }
-
-                    let rwTot = [0, 0];
-                    let rw = [0, 0];
-
-                    let found = false; // found in /proc/diskstats
-
-                    for (let j = 0; j < lines.length; j++) {
-                        let line = lines[j];
-
-                        let entry = line.trim().split(/\s+/); // TODO search by name
-                        if (typeof (entry[1]) === 'undefined')
-                            break;
-
-                        // Same Name
-                        if (it[0].endsWith(entry[2])) {
-                            rwTot[0] += parseInt(entry[5]);
-                            rwTot[1] += parseInt(entry[9]);
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    if (found) {
-                        let idle = GLib.get_monotonic_time() / 1000;
-                        let delta = (idle - this.idleDiskOld[it[0]]) / 1000;
+                        let unit = '';
 
                         if (delta > 0) {
+                            const rwTotOld = this._diskStatsBox.get_rw_tot(filesystem);
                             for (let i = 0; i < 2; i++) {
-                                rw[i] = (rwTot[i] - this.rwTotOld[it[0]][i]) / delta;
-                                this.rwTotOld[it[0]][i] = rwTot[i];
+                                rw[i] = (rwTot[i] - rwTotOld[i]) / delta;
                             }
+                            this._diskStatsBox.set_rw_tot(filesystem, rwTot);
 
                             if (rw[0] > 1024 || rw[1] > 1024) {
-                                field[1].text = 'M';
+                                unit = 'M';
                                 rw[0] /= 1024;
                                 rw[1] /= 1024;
                                 if (rw[0] > 1024 || rw[1] > 1024) {
-                                    field[1].text = 'G';
+                                    unit = 'G';
                                     rw[0] /= 1024;
                                     rw[1] /= 1024;
                                 }
                             } else {
-                                field[1].text = 'K';
+                                unit = 'K';
                             }
                         }
 
-                        this.idleDiskOld[it[0]] = idle;
-
-                        if (this.displayDecimals) {
-                            field[0].text = `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`;
+                        if (this._decimalsStatus) {
+                            this._diskStatsBox.update_element_value(filesystem, `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`, unit);
                         } else {
-                            field[0].text = `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`;
-                        }
-                    } else { // Not found
-                        field[0].text = '--|--';
-                    }
-                }
-            }
-        });
-    }
-
-    _refreshDiskSpace() {
-        let proc = Gio.Subprocess.new(['df'], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-
-        proc.communicate_utf8_async(null, null, (proc, res) => {
-            try {
-                let [, stdout, stderr] = proc.communicate_utf8_finish(res);
-
-                if (proc.get_successful()) {
-                    let lines = stdout.split('\n');
-
-                    for (let i = 0; i < this.disksList.length; i++) {
-                        let element = this.disksList[i];
-                        let it = element.split(' ');
-                        let field = this.diskSpaceItems[it[0]];
-
-                        // undefined if space disabled
-                        if (typeof (field) === 'undefined') {
-                            continue;
+                            this._diskStatsBox.update_element_value(filesystem, `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`, unit);
                         }
 
-                        for (let j = 0; j < lines.length; j++) {
-                            let line = lines[j];
-                            let entry = line.trim().split(/\s+/);
-                            if (typeof (entry[1]) === 'undefined')
-                                break;
+                        break;
 
-                            // Same Name
-                            if (it[0] === entry[0]) {
-                                if (this.disksSpaceUnit === true) {
-                                    // Used %
-                                    field[1].text = '%';
-                                    field[0].text = `${entry[4].slice(0, -1)}`;
-                                } else {
-                                    // Used
-                                    let used = entry[2]
+                    case 'multiple':
 
-                                    if (used > 1024) {
-                                        field[1].text = 'M';
-                                        used /= 1024;
-                                        if (used > 1024) {
-                                            field[1].text = 'G';
-                                            used /= 1024;
-                                            if (used > 1024) {
-                                                field[1].text = 'T';
-                                                used /= 1024;
-                                            }
+                    default:
+                        for (let i = 0; i < lines.length - 1; i++) {
+                            const line = lines[i];
+                            const entry = line.trim().split(/\s+/);
+
+                            if (entry[2].match(/loop*/)) {
+                                continue;
+                            }
+
+                            const filesystem = this._diskStatsBox.get_filesystem(entry[2]);
+                            // Found
+                            if (filesystem) {
+                                let rwTot = [0, 0];
+                                let rw = [0, 0];
+
+                                rwTot[0] += parseInt(entry[5]);
+                                rwTot[1] += parseInt(entry[9]);
+
+                                const idle = GLib.get_monotonic_time() / 1000;
+                                const delta = (idle - this._diskStatsBox.get_idle(filesystem)) / 1000;
+                                this._diskStatsBox.set_idle(filesystem, idle);
+
+                                let unit = '';
+
+                                if (delta > 0) {
+                                    const rwTotOld = this._diskStatsBox.get_rw_tot(filesystem);
+                                    for (let i = 0; i < 2; i++) {
+                                        rw[i] = (rwTot[i] - rwTotOld[i]) / delta;
+                                    }
+                                    this._diskStatsBox.set_rw_tot(filesystem, rwTot);
+
+                                    if (rw[0] > 1024 || rw[1] > 1024) {
+                                        unit = 'M';
+                                        rw[0] /= 1024;
+                                        rw[1] /= 1024;
+                                        if (rw[0] > 1024 || rw[1] > 1024) {
+                                            unit = 'G';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
                                         }
                                     } else {
-                                        field[1].text = 'K';
-                                    }
-
-                                    if (this.displayDecimals) {
-                                        field[0].text = `${used.toFixed(1)}`;
-                                    } else {
-                                        field[0].text = `${used.toFixed(0)}`;
+                                        unit = 'K';
                                     }
                                 }
+
+                                if (this._decimalsStatus) {
+                                    this._diskStatsBox.update_element_value(filesystem, `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`, unit);
+                                } else {
+                                    this._diskStatsBox.update_element_value(filesystem, `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`, unit);
+                                }
+                            } else { // Not found
+                                this._diskStatsBox.update_element_value(filesystem, '--|--', '');
                             }
                         }
-                    }
-                } else {
-                    throw new Error(stderr);
-                }
-            } catch (e) {
-                throw new Error(e);
-            }
-        });
-    }
 
-    _refreshEth() {
-        let duTot = [0, 0];
-        let du = [0, 0];
-
-        let file = Gio.file_new_for_path('/proc/net/dev');
-        file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result)[1];
-            let lines = String(contents).split('\n');
-
-            for (let i = 2; i < lines.length - 1; i++) {
-                let line = lines[i];
-                let entry = line.trim().split(':');
-                if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
-                    let values = entry[1].trim().split(/\s+/);
-
-                    duTot[0] += parseInt(values[0]);
-                    duTot[1] += parseInt(values[8]);
-                }
-            }
-
-            let idle = GLib.get_monotonic_time() / 1000;
-            let delta = (idle - this.idleEthOld) / 1000;
-
-            if (delta > 0) {
-                for (let i = 0; i < 2; i++) {
-                    du[i] = (duTot[i] - this.duTotEthOld[i]) / delta;
-                    this.duTotEthOld[i] = duTot[i];
-                }
-
-                if (du[0] > 1024 || du[1] > 1024) {
-                    this.ethUnit.text = 'K';
-                    du[0] /= 1024;
-                    du[1] /= 1024;
-                    if (du[0] > 1024 || du[1] > 1024) {
-                        this.ethUnit.text = 'M';
-                        du[0] /= 1024;
-                        du[1] /= 1024;
-                        if (du[0] > 1024 || du[1] > 1024) {
-                            this.ethUnit.text = 'G';
-                            du[0] /= 1024;
-                            du[1] /= 1024;
-                        }
-                    }
-                } else {
-                    this.ethUnit.text = 'B';
-                }
-            }
-
-            this.idleEthOld = idle;
-
-            if (this.displayDecimals) {
-                this.eth.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
-            } else {
-                this.eth.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
-            }
-        });
-    }
-
-    _refreshWlan() {
-        let duTot = [0, 0];
-        let du = [0, 0];
-
-        let file = Gio.file_new_for_path('/proc/net/dev');
-        file.load_contents_async(null, (source, result) => {
-            let contents = source.load_contents_finish(result)[1];
-            let lines = String(contents).split('\n');
-
-            for (let i = 2; i < lines.length - 1; i++) {
-                let line = lines[i];
-                let entry = line.trim().split(':');
-                if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
-                    let values = entry[1].trim().split(/\s+/);
-
-                    duTot[0] += parseInt(values[0]);
-                    duTot[1] += parseInt(values[8]);
-                }
-            }
-
-            let idle = GLib.get_monotonic_time() / 1000;
-            let delta = (idle - this.idleWlanOld) / 1000;
-
-            if (delta > 0) {
-                for (let i = 0; i < 2; i++) {
-                    du[i] = (duTot[i] - this.duTotWlanOld[i]) / delta;
-                    this.duTotWlanOld[i] = duTot[i];
-                }
-
-                if (du[0] > 1024 || du[1] > 1024) {
-                    this.wlanUnit.text = 'K';
-                    du[0] /= 1024;
-                    du[1] /= 1024;
-                    if (du[0] > 1024 || du[1] > 1024) {
-                        this.wlanUnit.text = 'M';
-                        du[0] /= 1024;
-                        du[1] /= 1024;
-                        if (du[0] > 1024 || du[1] > 1024) {
-                            this.wlanUnit.text = 'G';
-                            du[0] /= 1024;
-                            du[1] /= 1024;
-                        }
-                    }
-                } else {
-                    this.wlanUnit.text = 'B';
-                }
-            }
-
-            this.idleWlanOld = idle;
-
-            if (this.displayDecimals) {
-                this.wlan.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
-            } else {
-                this.wlan.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
-            }
-        });
-    }
-
-    _refreshCpuTemperature() {
-        let cpuTemperatureFile = '/sys/devices/virtual/thermal/thermal_zone0/temp';
-        if (GLib.file_test(cpuTemperatureFile, GLib.FileTest.EXISTS)) {
-            let file = Gio.file_new_for_path(cpuTemperatureFile);
-            file.load_contents_async(null, (source, result) => {
-                let contents = source.load_contents_finish(result)[1];
-                let temperature = parseInt(String(contents)) / 1000;
-
-                if (this.cpuTemperatureFahrenheit) {
-                    temperature = (temperature * 1.8) + 32;
-                }
-
-                if (this.displayDecimals) {
-                    this.cpuTemperature.text = `[${temperature.toFixed(1)}`;
-                } else {
-                    this.cpuTemperature.text = `[${temperature.toFixed(0)}`;
+                        break;
                 }
             });
-        } else {
-            this.cpuTemperature.text = '[Error';
         }
+
+        _refreshDiskSpaceValue() {
+            this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
+                const lines = output.split('\n');
+
+                // Excludes the first line of output
+                for (let i = 1; i < lines.length - 1; i++) {
+                    const line = lines[i];
+                    const entry = line.trim().split(/\s+/);
+
+                    const filesystem = entry[0];
+
+                    let value = '';
+                    switch (this._diskSpaceUnit) {
+                        case 'perc':
+                            const used = `${entry[4].slice(0, -1)}`;
+
+                            switch (this._diskSpaceMonitor) {
+                                case 'free':
+                                    value = (100 - parseInt(used)).toString();
+
+                                    break;
+
+                                case 'used':
+
+                                default:
+                                    value = used;
+
+                                    break;
+                            }
+
+                            this._diskSpaceBox.update_element_value(filesystem, value, '%');
+
+                            break;
+
+                        case 'numeric':
+
+                        default:
+                            switch (this._diskSpaceMonitor) {
+                                case 'free':
+                                    value = parseInt(entry[3]);
+
+                                    break;
+
+                                case 'used':
+
+                                default:
+                                    value = parseInt(entry[2]);
+
+                                    break;
+                            }
+
+                            let unit = 'KB';
+
+                            if (value > 1024) {
+                                unit = 'MB';
+                                value /= 1024;
+                                if (value > 1024) {
+                                    unit = 'GB';
+                                    value /= 1024;
+                                    if (value > 1024) {
+                                        unit = 'TB';
+                                        value /= 1024;
+                                    }
+                                }
+                            } else {
+                                unit = 'KB';
+                            }
+
+                            if (this._decimalsStatus) {
+                                this._diskSpaceBox.update_element_value(filesystem, `${value.toFixed(1)}`, unit);
+                            } else {
+                                this._diskSpaceBox.update_element_value(filesystem, `${value.toFixed(0)}`, unit);
+                            }
+
+                            break;
+                    }
+                }
+            });
+        }
+
+        _refreshEthValue() {
+            this._loadFile('/proc/net/dev').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                let duTot = [0, 0];
+                let du = [0, 0];
+
+                // Excludes the first two lines of output
+                for (let i = 2; i < lines.length - 1; i++) {
+                    const line = lines[i];
+                    const entry = line.trim().split(':');
+                    if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
+                        const values = entry[1].trim().split(/\s+/);
+
+                        duTot[0] += parseInt(values[0]);
+                        duTot[1] += parseInt(values[8]);
+                    }
+                }
+
+                const idle = GLib.get_monotonic_time() / 1000;
+                const delta = (idle - this._ethIdleOld) / 1000;
+
+                // True bits
+                // False Bytes
+                const boolUnit = this._netUnit === 'bits';
+
+                const unit = boolUnit ? 1000 : 1024;
+                const factor = boolUnit ? 8 : 1;
+
+                if (delta > 0) {
+                    for (let i = 0; i < 2; i++) {
+                        du[i] = ((duTot[i] - this._duTotEthOld[i]) * factor) / delta;
+                        this._duTotEthOld[i] = duTot[i];
+                    }
+
+                    if (du[0] > unit || du[1] > unit) {
+                        this._ethUnit.text = boolUnit ? 'k' : 'K';
+                        du[0] /= unit;
+                        du[1] /= unit;
+                        if (du[0] > unit || du[1] > unit) {
+                            this._ethUnit.text = boolUnit ? 'm' : 'M';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            if (du[0] > unit || du[1] > unit) {
+                                this._ethUnit.text = boolUnit ? 'g' : 'G';
+                                du[0] /= unit;
+                                du[1] /= unit;
+                            }
+                        }
+                    } else {
+                        this._ethUnit.text = boolUnit ? 'b' : 'B';
+                    }
+                }
+
+                this._ethIdleOld = idle;
+
+                if (this._decimalsStatus) {
+                    this._ethValue.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+                } else {
+                    this._ethValue.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
+                }
+            });
+        }
+
+        _refreshWlanValue() {
+            this._loadFile('/proc/net/dev').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                let duTot = [0, 0];
+                let du = [0, 0];
+
+                // Excludes the first two lines of output
+                for (let i = 2; i < lines.length - 1; i++) {
+                    const line = lines[i];
+                    const entry = line.trim().split(':');
+                    if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
+                        const values = entry[1].trim().split(/\s+/);
+
+                        duTot[0] += parseInt(values[0]);
+                        duTot[1] += parseInt(values[8]);
+                    }
+                }
+
+                const idle = GLib.get_monotonic_time() / 1000;
+                const delta = (idle - this._wlanIdleOld) / 1000;
+
+                // True bits
+                // False Bytes
+                const boolUnit = this._netUnit === 'bits';
+
+                const unit = boolUnit ? 1000 : 1024;
+                const factor = boolUnit ? 8 : 1;
+
+                if (delta > 0) {
+                    for (let i = 0; i < 2; i++) {
+                        du[i] = ((duTot[i] - this._duTotWlanOld[i]) * factor) / delta;
+                        this._duTotWlanOld[i] = duTot[i];
+                    }
+
+                    if (du[0] > unit || du[1] > unit) {
+                        this._wlanUnit.text = boolUnit ? 'k' : 'K';
+                        du[0] /= unit;
+                        du[1] /= unit;
+                        if (du[0] > unit || du[1] > unit) {
+                            this._wlanUnit.text = boolUnit ? 'm' : 'M';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            if (du[0] > unit || du[1] > unit) {
+                                this._wlanUnit.text = boolUnit ? 'g' : 'G';
+                                du[0] /= unit;
+                                du[1] /= unit;
+                            }
+                        }
+                    } else {
+                        this._wlanUnit.text = boolUnit ? 'b' : 'B';
+                    }
+                }
+
+                this._wlanIdleOld = idle;
+
+                if (this._decimalsStatus) {
+                    this._wlanValue.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
+                } else {
+                    this._wlanValue.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
+                }
+            });
+        }
+
+        _refreshCpuFrequencyValue() {
+            if (GLib.file_test('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq', GLib.FileTest.EXISTS)) {
+                this._loadFile('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq').then(contents => {
+                    let value = parseInt(ByteArray.toString(contents));
+
+                    if (value > 999999) {
+                        this._cpuFrequencyUnit.text = 'GHz';
+                        value /= 1000;
+                        value /= 1000;
+                    } else {
+                        this._cpuFrequencyUnit.text = 'MHz';
+                        value /= 1000;
+                    }
+
+                    if (this._decimalsStatus) {
+                        this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
+                    } else {
+                        this._cpuFrequencyValue.text = `[${value.toFixed(0)}`;
+                    }
+                });
+            } else {
+                this._cpuFrequencyValue.text = _('[Frequency Error');
+                this._cpuFrequencyUnit.text = '';
+            }
+        }
+
+        _refreshCpuTemperatureValue() {
+            for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
+                const element = this._thermalCpuTemperatureDevicesList[i];
+                const it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
+
+                const status = it[1];
+                const path = it[2];
+
+                if (status === 'false') {
+                    continue;
+                }
+
+                if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
+                    this._loadFile(path).then(contents => {
+                        const value = parseInt(ByteArray.toString(contents));
+
+                        this._cpuTemperatures += value / 1000;
+                        this._cpuTemperaturesReads++;
+                    });
+                }
+            }
+
+            if (this._cpuTemperaturesReads > 0) {
+                // Temperatures Average
+                this._cpuTemperatures /= this._cpuTemperaturesReads;
+
+                switch (this._thermalCpuTemperatureUnit) {
+                    case 'f':
+                        this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
+                        this._cpuTemperatureUnit.text = '°F';
+
+                        break;
+
+                    case 'c':
+
+                    default:
+                        this._cpuTemperatureUnit.text = '°C';
+
+                        break;
+                }
+
+                if (this._decimalsStatus) {
+                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}`;
+                } else {
+                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}`;
+                }
+
+                this._cpuTemperatures = 0;
+                this._cpuTemperaturesReads = 0;
+            } else {
+                this._cpuTemperatureValue.text = _('[Temperature Error');
+                this._cpuTemperatureUnit.text = '';
+            }
+        }
+
+        // Common Function
+        _basicItemStatus(status, iconCondition, icon, ...elements) {
+            if (status) {
+                if (this._iconsStatus) {
+                    icon.show();
+                }
+                elements.forEach(element => {
+                    element.show();
+                });
+            } else {
+                if (iconCondition) {
+                    icon.hide();
+                }
+                elements.forEach(element => {
+                    element.hide();
+                });
+            }
+        }
+
+        _basicItemWidth(width, element) {
+            if (width === 0) {
+                element.min_width = 0;
+                element.natural_width = 0;
+                element.min_width_set = false;
+                element.natural_width_set = false;
+            } else {
+                element.width = width;
+            }
+        }
+
+        _loadContents(file, cancellable = null) {
+            return new Promise((resolve, reject) => {
+                file.load_contents_async(cancellable, (source_object, res) => {
+                    try {
+                        const [ok, contents, etag_out] = source_object.load_contents_finish(res);
+
+                        resolve(contents);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            });
+        }
+
+        async _loadFile(path, cancellable = null) {
+            try {
+                const file = Gio.File.new_for_path(path);
+                const contents = await this._loadContents(file, cancellable);
+
+                return contents;
+            } catch (e) {
+                logError(e);
+            }
+        }
+
+        _readOutput(proc, cancellable = null) {
+            return new Promise((resolve, reject) => {
+                proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
+                    try {
+                        const [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
+
+                        if (source_object.get_successful()) {
+                            resolve(stdout);
+                        } else {
+                            throw new Error(stderr);
+                        }
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            });
+        }
+
+        async _executeCommand(command, cancellable = null) {
+            try {
+                const proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+                const output = await this._readOutput(proc, cancellable);
+
+                return output;
+            } catch (e) {
+                logError(e);
+            }
+        }
+    });
+
+const DiskContainer = GObject.registerClass(
+    class DiskContainer extends St.BoxLayout {
+        _init() {
+            super._init();
+
+            this._elementsPath = [];
+            this._elementsName = [];
+            this._elementsLabel = [];
+            this._elementsValue = [];
+            this._elementsUnit = [];
+        }
+
+        set_element_width(width) {
+            if (width === 0) {
+                this._elementsPath.forEach(element => {
+                    this._elementsValue[element].min_width = 0;
+                    this._elementsValue[element].natural_width = 0;
+                    this._elementsValue[element].min_width_set = false;
+                    this._elementsValue[element].natural_width_set = false;
+                });
+            } else {
+                this._elementsPath.forEach(element => {
+                    this._elementsValue[element].width = width;
+                });
+            }
+        }
+
+        cleanup_elements() {
+            this._elementsPath = [];
+            this._elementsName = [];
+            this._elementsLabel = [];
+            this._elementsValue = [];
+            this._elementsUnit = [];
+
+            this.remove_all_children();
+        }
+    });
+
+const DiskContainerStats = GObject.registerClass(
+    class DiskContainerStats extends DiskContainer {
+        _init() {
+            super._init();
+
+            this.idleOld = [];
+            this.rwTotOld = [];
+
+            this.add_single();
+        }
+
+        add_single() {
+            this._elementsPath.push('single');
+
+            this._elementsValue['single'] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--|--'
+            });
+            this._elementsValue['single'].set_style('text-align: right;');
+
+            this._elementsUnit['single'] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: 'K'
+            });
+            this._elementsUnit['single'].set_style('padding-left: 0.125em;');
+
+            this.add(this._elementsValue['single']);
+            this.add(this._elementsUnit['single']);
+
+            this.idleOld['single'] = 0;
+            this.rwTotOld['single'] = [0, 0];
+        }
+
+        add_element(filesystem, label) {
+            this._elementsPath.push(filesystem);
+
+            this._elementsName[filesystem] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ` ${label}: `
+            });
+
+            this._elementsValue[filesystem] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--|--'
+            });
+            this._elementsValue[filesystem].set_style('text-align: right;');
+
+            this._elementsUnit[filesystem] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: 'K'
+            });
+            this._elementsUnit[filesystem].set_style('padding-left: 0.125em;');
+
+            this.add(this._elementsName[filesystem]);
+            this.add(this._elementsValue[filesystem]);
+            this.add(this._elementsUnit[filesystem]);
+
+            this.idleOld[filesystem] = 0;
+            this.rwTotOld[filesystem] = [0, 0];
+        }
+
+        update_mode(mode) {
+            switch (mode) {
+                case 'single':
+                    this._elementsPath.forEach(element => {
+                        if (element !== 'single') {
+                            this._elementsName[element].hide();
+                            this._elementsValue[element].hide();
+                            this._elementsUnit[element].hide();
+                        } else {
+                            this._elementsValue[element].show();
+                            this._elementsUnit[element].show();
+                        }
+                    });
+
+                    break;
+
+                case 'multiple':
+
+                default:
+                    this._elementsPath.forEach(element => {
+                        if (element !== 'single') {
+                            this._elementsName[element].show();
+                            this._elementsValue[element].show();
+                            this._elementsUnit[element].show();
+                        } else {
+                            this._elementsValue[element].hide();
+                            this._elementsUnit[element].hide();
+                        }
+                    });
+
+                    break;
+            }
+        }
+
+        get_filesystem(name) {
+            return this._elementsPath.filter(item => item.endsWith(name)).shift();
+        }
+
+        get_idle(filesystem) {
+            return this.idleOld[filesystem];
+        }
+
+        get_rw_tot(filesystem) {
+            return this.rwTotOld[filesystem];
+        }
+
+        set_idle(filesystem, idle) {
+            this.idleOld[filesystem] = idle;
+        }
+
+        set_rw_tot(filesystem, rwTot) {
+            this.rwTotOld[filesystem] = rwTot;
+        }
+
+        update_element_value(filesystem, value, unit) {
+            if (this._elementsValue[filesystem]) {
+                this._elementsValue[filesystem].text = value;
+                this._elementsUnit[filesystem].text = unit;
+            }
+        }
+    });
+
+const DiskContainerSpace = GObject.registerClass(
+    class DiskContainerSpace extends DiskContainer {
+        add_element(filesystem, label) {
+            this._elementsPath.push(filesystem);
+
+            this._elementsName[filesystem] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ` ${label}: `
+            });
+
+            this._elementsValue[filesystem] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '--'
+            });
+            this._elementsValue[filesystem].set_style('text-align: right;');
+
+            this._elementsUnit[filesystem] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: this._diskSpaceUnit ? '%' : 'KB'
+            });
+            this._elementsUnit[filesystem].set_style('padding-left: 0.125em;');
+
+            this.add(this._elementsName[filesystem]);
+            this.add(this._elementsValue[filesystem]);
+            this.add(this._elementsUnit[filesystem]);
+        }
+
+        update_element_value(filesystem, value, unit) {
+            if (this._elementsValue[filesystem]) {
+                this._elementsValue[filesystem].text = value;
+                this._elementsUnit[filesystem].text = unit;
+            }
+        }
+    });
+
+class Extension {
+    constructor(uuid) {
+        this._uuid = uuid;
+
+        ExtensionUtils.initTranslations(GETTEXT_DOMAIN);
+    }
+
+    enable() {
+        this._settings = ExtensionUtils.getSettings();
+        this._indicator = new ResourceMonitor(this._settings);
+
+        const index = {
+            left: -1,
+            center: 0,
+            right: 0,
+        };
+
+        this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
+        this._handlerId = this._settings.connect(`changed::${EXTENSION_POSITION}`, () => {
+            this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
+
+            this._indicator.destroy();
+            this._indicator = null;
+            this._indicator = new ResourceMonitor(this._settings);
+
+            Main.panel.addToStatusArea(this._uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
+        });
+
+        Main.panel.addToStatusArea(this._uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
+    }
+
+    disable() {
+        // Disconnect Signal
+        this._settings.disconnect(this._handlerId);
+
+        this._indicator.destroy();
+        this._indicator = null;
     }
 }
 
-// Compatibility with gnome-shell >= 3.32
-if (SHELL_MINOR > 30) {
-    ResourceMonitor = GObject.registerClass(
-        { GTypeName: 'ResourceMonitor' },
-        ResourceMonitor
-    );
-}
-
-function init() {
-    Convenience.initTranslations();
-}
-
-function enable() {
-    ResourceMonitorIndicator = new ResourceMonitor();
-    Main.panel.addToStatusArea(IndicatorName, ResourceMonitorIndicator);
-}
-
-function disable() {
-    if (ResourceMonitorIndicator !== null) {
-        ResourceMonitorIndicator.destroy();
-        ResourceMonitorIndicator = null;
-    }
+function init(meta) {
+    return new Extension(meta.uuid);
 }
