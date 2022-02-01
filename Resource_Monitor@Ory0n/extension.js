@@ -462,12 +462,12 @@ const ResourceMonitor = GObject.registerClass(
 
                 default:
                     if (this._systemMonitorStatus) {
-                        let app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
-
-                        if (app != null)
-                            app.activate();
-                        else
+                        if(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop')){
                             Util.spawn(['gnome-system-monitor']);
+                        }
+                        else{
+                            Util.spawn(['gnome-usage']);
+                        }    
                     }
 
                     break;
@@ -1720,3 +1720,4 @@ class Extension {
 function init(meta) {
     return new Extension(meta.uuid);
 }
+
