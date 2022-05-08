@@ -5,7 +5,7 @@ Resource_Monitor is a GNOME Shell extension that Monitor the use of system resou
 ![](/main.png)
 
 # GNOME Shell versions supported
-**40, 41**
+**40, 41, 42**
 - For older GNOME versions see the [gnome-3.28-3.38](/tree/gnome-3.28-3.38) branch.
 
 # How-To Install
@@ -52,7 +52,14 @@ gnome-extensions enable Resource_Monitor@Ory0n
 Use the GitHub [Issues](/issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 17 (May 8, 2022)**
+- Added support for gnome 42.
+- Added the ability to choose to monitor the used or free ram and swap and whether to use the percentage or the size.
+- Added the ability to choose the application to start when left click.
+- Bug fixed.
+
 **version 16 (Jan 1, 2022)**
+- Added support for gnome 41.
 - Added bps network unit.
 - Added extension position.
 - Added show or not Prefs when clicking on extension (right click).
