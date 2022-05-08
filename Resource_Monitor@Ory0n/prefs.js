@@ -36,8 +36,8 @@ const ByteArray = imports.byteArray;
 const REFRESH_TIME = 'refreshtime';
 const EXTENSION_POSITION = 'extensionposition';
 const DECIMALS_STATUS = 'decimalsstatus';
-const SYSTEM_MONITOR_STATUS = 'systemmonitorstatus';
-const PREFS_STATUS = 'prefsstatus';
+const LEFT_CLICK_STATUS = 'leftclickstatus';
+const RIGHT_CLICK_STATUS = 'rightclickstatus';
 
 const ICONS_STATUS = 'iconsstatus';
 const ICONS_POSITION = 'iconsposition';
@@ -49,9 +49,13 @@ const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
 
 const RAM_STATUS = 'ramstatus';
 const RAM_WIDTH = 'ramwidth';
+const RAM_UNIT = 'ramunit';
+const RAM_MONITOR = 'rammonitor';
 
 const SWAP_STATUS = 'swapstatus';
 const SWAP_WIDTH = 'swapwidth';
+const SWAP_UNIT = 'swapunit';
+const SWAP_MONITOR = 'swapmonitor';
 
 const DISK_STATS_STATUS = 'diskstatsstatus';
 const DISK_STATS_WIDTH = 'diskstatswidth';
@@ -79,28 +83,21 @@ function init() {
 }
 
 const ResourceMonitorPrefsWidget = GObject.registerClass(
-    class ResourceMonitorPrefsWidget extends Gtk.ScrolledWindow {
+    class ResourceMonitorPrefsWidget extends Gtk.Box {
         _init() {
             super._init({
-                hscrollbar_policy: Gtk.PolicyType.NEVER,
+                orientation: Gtk.Orientation.VERTICAL,
+                margin_top: 10,
+                margin_bottom: 10,
+                margin_start: 10,
+                margin_end: 10
             });
 
             // Settings
             this._settings = ExtensionUtils.getSettings();
 
-            const box = new Gtk.Box();
-            this.child = box;
-
-            this._notebook = new Gtk.Notebook({
-                halign: Gtk.Align.CENTER,
-                valign: Gtk.Align.START,
-                hexpand: true,
-                margin_start: 60,
-                margin_end: 60,
-                margin_top: 60,
-                margin_bottom: 60,
-            });
-            box.append(this._notebook);
+            this._notebook = new Gtk.Notebook();
+            this.append(this._notebook);
 
             // GLOBAL FRAME
             this._notebook.append_page(this._buildGlobal(), new Gtk.Label({
@@ -164,8 +161,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             let refresh = new SpinButtonRow(_('Seconds'), this._settings, REFRESH_TIME, 1, 30);
             let ePosition = new ComboBoxRow(_('Position'), this._settings, EXTENSION_POSITION, [_('Left'), _('Center'), _('Right')], ['left', 'center', 'right']);
             let decimals = new SwitchRow(_('Display'), this._settings, DECIMALS_STATUS);
-            let systemMonitor = new SwitchRow(_('Show System Monitor when clicking on extension (left click)'), this._settings, SYSTEM_MONITOR_STATUS);
-            let prefs = new SwitchRow(_('Show Prefs when clicking on extension (right click)'), this._settings, PREFS_STATUS);
+            let leftClick = new RadioButtonRow(this._settings, LEFT_CLICK_STATUS, [_('Launch GNOME System Monitor'), _('Launch GNOME Usage')], ['gnome-system-monitor', 'gnome-usage']);
+            let rightClick = new SwitchRow(_('Show Prefs when clicking on extension'), this._settings, RIGHT_CLICK_STATUS);
             let icons = new SwitchRow(_('Display'), this._settings, ICONS_STATUS);
             let iPosition = new ComboBoxRow(_('Position'), this._settings, ICONS_POSITION, [_('Left'), _('Right')], ['left', 'right']);
 
@@ -188,17 +185,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }));
             box.append(decimals);
             box.append(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('System Monitor')),
+                label: '<b>%s</b>'.format(_('Left-click on the extension')),
                 use_markup: true,
                 halign: Gtk.Align.START,
             }));
-            box.append(systemMonitor);
+            box.append(leftClick);
             box.append(new Gtk.Label({
-                label: '<b>%s</b>'.format(_('Prefs')),
+                label: '<b>%s</b>'.format(_('Right-click on the extension')),
                 use_markup: true,
                 halign: Gtk.Align.START,
             }));
-            box.append(prefs);
+            box.append(rightClick);
             box.append(new Gtk.Label({
                 label: '<b>%s</b>'.format(_('Icons')),
                 use_markup: true,
@@ -265,14 +262,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             let ram = new SwitchRow(_('Display'), this._settings, RAM_STATUS);
             let width = new SpinButtonRow(_('Width'), this._settings, RAM_WIDTH);
+            let unit = new ComboBoxRow(_('Unit'), this._settings, RAM_UNIT, [_('Numeric'), _('%')], ['numeric', 'perc']);
+            let monitor = new ComboBoxRow(_('Monitor'), this._settings, RAM_MONITOR, [_('Used Memory'), _('Free Memory')], ['used', 'free']);
 
             box.append(ram);
             box.append(width);
+            box.append(unit);
+            box.append(monitor);
 
             ram.button.connect('state-set', button => {
                 width.button.sensitive = button.active;
+                unit.combobox.sensitive = button.active;
+                monitor.combobox.sensitive = button.active;
             });
             width.button.sensitive = ram.button.active;
+            unit.combobox.sensitive = ram.button.active;
+            monitor.combobox.sensitive = ram.button.active;
 
             return box;
         }
@@ -288,14 +293,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             let swap = new SwitchRow(_('Display'), this._settings, SWAP_STATUS);
             let width = new SpinButtonRow(_('Width'), this._settings, SWAP_WIDTH);
+            let unit = new ComboBoxRow(_('Unit'), this._settings, SWAP_UNIT, [_('Numeric'), _('%')], ['numeric', 'perc']);
+            let monitor = new ComboBoxRow(_('Monitor'), this._settings, SWAP_MONITOR, [_('Used Memory'), _('Free Memory')], ['used', 'free']);
 
             box.append(swap);
             box.append(width);
+            box.append(unit);
+            box.append(monitor);
 
             swap.button.connect('state-set', button => {
                 width.button.sensitive = button.active;
+                unit.combobox.sensitive = button.active;
+                monitor.combobox.sensitive = button.active;
             });
             width.button.sensitive = swap.button.active;
+            unit.combobox.sensitive = swap.button.active;
+            monitor.combobox.sensitive = swap.button.active;
 
             return box;
         }
@@ -450,9 +463,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     });
 
                     // Add disk to newDisksArray
-                    newDisksArray[x] = filesystem + ' ' + mountedOn + ' ' + disk.stats.active + ' ' + disk.space.active;
+                    newDisksArray[x++] = filesystem + ' ' + mountedOn + ' ' + disk.stats.active + ' ' + disk.space.active;
 
-                    devices.list.insert(disk, x++);
+                    devices.list.append(disk);
+                    devices.list.show();
                 }
 
                 // Save newDisksArray with the list of new disks (to remove old disks)
@@ -617,9 +631,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                             });
 
                             // Add device to newTempsArray
-                            newTempsArray[x] = device + '-' + temp.button.active + '-' + path;
+                            newTempsArray[x++] = device + '-' + temp.button.active + '-' + path;
 
-                            devices.list.insert(temp, x++);
+                            devices.list.append(temp);
+                            devices.list.show();
                         }
 
                         // Save newTempsArray with the list of new devices (to remove old devices)
@@ -720,6 +735,47 @@ const SpinButtonRow = GObject.registerClass(
         }
     });
 
+const RadioButtonRow = GObject.registerClass(
+    class RadioButtonRow extends Gtk.Grid {
+        _init(settings, settingsName, initValueLabel, initValue) {
+            super._init({
+                margin_start: 12,
+                margin_end: 12,
+                margin_top: 12,
+                margin_bottom: 12,
+            });
+
+            this.radioButtonGroup = [];
+            let active = settings.get_string(settingsName, Gio.SettingsBindFlags.DEFAULT);
+
+            if (initValue !== null && initValue.length === initValueLabel.length) {
+                for (let i = 0; i < initValue.length; i++) {
+                    let radioButton = new Gtk.CheckButton({
+                        label: '%s'.format(initValueLabel[i]),
+                        halign: Gtk.Align.START,
+                        hexpand: true,
+                    });
+
+                    radioButton.connect('toggled', button => {
+                        if (button.active) {
+                            settings.set_string(settingsName, initValue[i]);
+                        }
+                    });
+
+                    radioButton.active = (initValue[i] === active);
+
+                    this.radioButtonGroup[i] = radioButton;
+
+                    if (i > 0) {
+                        radioButton.set_group(this.radioButtonGroup[i - 1]);
+                    }
+
+                    this.attach(radioButton, 0, i, 1, 1);
+                }
+            }
+        }
+    });
+
 const ComboBoxRow = GObject.registerClass(
     class ComboBoxRow extends Gtk.Grid {
         _init(label, settings, settingsName, initValueLabel, initValue) {
@@ -771,18 +827,13 @@ const ListRow = GObject.registerClass(
                 }), 0, 0, 1, 1);
 
             let view = new Gtk.ScrolledWindow({
-                height_request: 120,
+                height_request: 152,
             });
 
-            let box = new Gtk.Box({
+            this.list = new Gtk.Box({
                 orientation: Gtk.Orientation.VERTICAL,
             });
-            view.child = box;
-
-            this.list = new Gtk.ListBox({
-                selection_mode: Gtk.SelectionMode.NONE,
-            });
-            box.append(this.list);
+            view.child = this.list;
 
             this.attach(view, 0, 1, 2, 2);
         }

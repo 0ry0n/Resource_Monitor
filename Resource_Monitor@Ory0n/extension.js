@@ -42,8 +42,8 @@ const IndicatorName = Me.metadata.name;
 const REFRESH_TIME = 'refreshtime';
 const EXTENSION_POSITION = 'extensionposition';
 const DECIMALS_STATUS = 'decimalsstatus';
-const SYSTEM_MONITOR_STATUS = 'systemmonitorstatus';
-const PREFS_STATUS = 'prefsstatus';
+const LEFT_CLICK_STATUS = 'leftclickstatus';
+const RIGHT_CLICK_STATUS = 'rightclickstatus';
 
 const ICONS_STATUS = 'iconsstatus';
 const ICONS_POSITION = 'iconsposition';
@@ -55,9 +55,13 @@ const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
 
 const RAM_STATUS = 'ramstatus';
 const RAM_WIDTH = 'ramwidth';
+const RAM_UNIT = 'ramunit';
+const RAM_MONITOR = 'rammonitor';
 
 const SWAP_STATUS = 'swapstatus';
 const SWAP_WIDTH = 'swapwidth';
+const SWAP_UNIT = 'swapunit';
+const SWAP_MONITOR = 'swapmonitor';
 
 const DISK_STATS_STATUS = 'diskstatsstatus';
 const DISK_STATS_WIDTH = 'diskstatswidth';
@@ -116,7 +120,7 @@ const ResourceMonitor = GObject.registerClass(
 
             this._connectSettingsSignals();
 
-            this.connect('button-press-event', this._openSystemMonitor.bind(this));
+            this.connect('button-press-event', this._clickManager.bind(this));
 
             NM.Client.new_async(null, (client) => {
                 client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
@@ -204,13 +208,13 @@ const ResourceMonitor = GObject.registerClass(
 
             this._ramUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: '%'
+                text: this._ramUnitType ? '%' : 'MB'
             });
             this._ramUnit.set_style('padding-left: 0.125em;');
 
             this._swapUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: '%'
+                text: this._swapUnitType ? '%' : 'MB'
             });
             this._swapUnit.set_style('padding-left: 0.125em;');
 
@@ -367,8 +371,8 @@ const ResourceMonitor = GObject.registerClass(
         _initSettings() {
             this._refreshTime = this._settings.get_int(REFRESH_TIME);
             this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
-            this._systemMonitorStatus = this._settings.get_boolean(SYSTEM_MONITOR_STATUS);
-            this._prefsStatus = this._settings.get_boolean(PREFS_STATUS);
+            this._leftClickStatus = this._settings.get_string(LEFT_CLICK_STATUS);
+            this._rightClickStatus = this._settings.get_boolean(RIGHT_CLICK_STATUS);
 
             this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
             this._iconsPosition = this._settings.get_string(ICONS_POSITION);
@@ -380,16 +384,20 @@ const ResourceMonitor = GObject.registerClass(
 
             this._ramStatus = this._settings.get_boolean(RAM_STATUS);
             this._ramWidth = this._settings.get_int(RAM_WIDTH);
+            this._ramUnitType = this._settings.get_string(RAM_UNIT);
+            this._ramMonitor = this._settings.get_string(RAM_MONITOR);
 
             this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
             this._swapWidth = this._settings.get_int(SWAP_WIDTH);
+            this._swapUnitType = this._settings.get_string(SWAP_UNIT);
+            this._swapMonitor = this._settings.get_string(SWAP_MONITOR);
 
             this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
             this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
             this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
             this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
             this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
-            this._diskSpaceUnit = this._settings.get_string(DISK_SPACE_UNIT);
+            this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
             this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
             this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
 
@@ -409,8 +417,8 @@ const ResourceMonitor = GObject.registerClass(
         _connectSettingsSignals() {
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${REFRESH_TIME}`, this._refreshTimeChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DECIMALS_STATUS}`, this._decimalsStatusChanged.bind(this));
-            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SYSTEM_MONITOR_STATUS}`, this._systemMonitorStatusChanged.bind(this));
-            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${PREFS_STATUS}`, this._prefsStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${LEFT_CLICK_STATUS}`, this._leftClickStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RIGHT_CLICK_STATUS}`, this._rightClickStatusChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_STATUS}`, this._iconsStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_POSITION}`, this._iconsPositionChanged.bind(this));
@@ -422,16 +430,20 @@ const ResourceMonitor = GObject.registerClass(
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_STATUS}`, this._ramStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_WIDTH}`, this._ramWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_UNIT}`, this._ramUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_MONITOR}`, this._ramMonitorChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_STATUS}`, this._swapStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_WIDTH}`, this._swapWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_UNIT}`, this._swapUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_MONITOR}`, this._swapMonitorChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_STATUS}`, this._diskStatsStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_WIDTH}`, this._diskStatsWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_MODE}`, this._diskStatsModeChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_STATUS}`, this._diskSpaceStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_WIDTH}`, this._diskSpaceWidthChanged.bind(this));
-            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_UNIT}`, this._diskSpaceUnitChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_UNIT}`, this._diskSpaceUnitTypeChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_MONITOR}`, this._diskSpaceMonitorChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_DEVICES_LIST}`, this._diskDevicesListChanged.bind(this));
 
@@ -449,10 +461,10 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         // HANDLERS
-        _openSystemMonitor(actor, event) {
+        _clickManager(actor, event) {
             switch (event.get_button()) {
                 case 3: // Right Click
-                    if (this._prefsStatus) {
+                    if (this._rightClickStatus) {
                         ExtensionUtils.openPrefs();
                     }
 
@@ -461,13 +473,14 @@ const ResourceMonitor = GObject.registerClass(
                 case 1: // Left Click
 
                 default:
-                    if (this._systemMonitorStatus) {
-                        let app = global.log(Shell.AppSystem.get_default().lookup_app('gnome-system-monitor.desktop'));
+                    if (this._leftClickStatus !== "") {
+                        let app = global.log(Shell.AppSystem.get_default().lookup_app(this._leftClickStatus + '.desktop'));
 
-                        if (app != null)
+                        if (app != null) {
                             app.activate();
-                        else
-                            Util.spawn(['gnome-system-monitor']);
+                        } else {
+                            Util.spawn([this._leftClickStatus]);
+                        }
                     }
 
                     break;
@@ -542,12 +555,12 @@ const ResourceMonitor = GObject.registerClass(
             this._refreshHandler();
         }
 
-        _systemMonitorStatusChanged() {
-            this._systemMonitorStatus = this._settings.get_boolean(SYSTEM_MONITOR_STATUS);
+        _leftClickStatusChanged() {
+            this._leftClickStatus = this._settings.get_string(LEFT_CLICK_STATUS);
         }
 
-        _prefsStatusChanged() {
-            this._prefsStatus = this._settings.get_boolean(PREFS_STATUS);
+        _rightClickStatusChanged() {
+            this._rightClickStatus = this._settings.get_boolean(RIGHT_CLICK_STATUS);
         }
 
         _iconsStatusChanged() {
@@ -630,6 +643,22 @@ const ResourceMonitor = GObject.registerClass(
             this._basicItemWidth(this._ramWidth, this._ramValue);
         }
 
+        _ramUnitTypeChanged() {
+            this._ramUnitType = this._settings.get_string(RAM_UNIT);
+
+            if (this._ramStatus) {
+                this._refreshRamValue();
+            }
+        }
+
+        _ramMonitorChanged() {
+            this._ramMonitor = this._settings.get_string(RAM_MONITOR);
+
+            if (this._ramStatus) {
+                this._refreshRamValue();
+            }
+        }
+
         _swapStatusChanged() {
             this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
 
@@ -640,6 +669,22 @@ const ResourceMonitor = GObject.registerClass(
             this._swapWidth = this._settings.get_int(SWAP_WIDTH);
 
             this._basicItemWidth(this._swapWidth, this._swapValue);
+        }
+
+        _swapUnitTypeChanged() {
+            this._swapUnitType = this._settings.get_string(SWAP_UNIT);
+
+            if (this._swapStatus) {
+                this._refreshSwapValue();
+            }
+        }
+
+        _swapMonitorChanged() {
+            this._swapMonitor = this._settings.get_string(SWAP_MONITOR);
+
+            if (this._swapStatus) {
+                this._refreshSwapValue();
+            }
         }
 
         _diskStatsStatusChanged() {
@@ -672,8 +717,8 @@ const ResourceMonitor = GObject.registerClass(
             this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
         }
 
-        _diskSpaceUnitChanged() {
-            this._diskSpaceUnit = this._settings.get_string(DISK_SPACE_UNIT);
+        _diskSpaceUnitTypeChanged() {
+            this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
 
             if (this._diskSpaceStatus) {
                 this._refreshDiskSpaceValue();
@@ -837,9 +882,9 @@ const ResourceMonitor = GObject.registerClass(
 
             //this._decimalsStatusChanged();
 
-            //this._systemMonitorStatusChanged();
+            //this._leftClickStatusChanged();
 
-            this._prefsStatusChanged();
+            this._rightClickStatusChanged();
 
             this._iconsStatusChanged();
 
@@ -857,9 +902,17 @@ const ResourceMonitor = GObject.registerClass(
 
             this._ramWidthChanged();
 
+            //this._ramUnitTypeChanged();
+
+            //this._ramMonitorChanged();
+
             this._swapStatusChanged();
 
             this._swapWidthChanged();
+
+            //this._swapUnitTypeChanged();
+
+            //this._swapMonitorChanged();
 
             this._diskStatsStatusChanged();
 
@@ -871,7 +924,7 @@ const ResourceMonitor = GObject.registerClass(
 
             this._diskSpaceWidthChanged();
 
-            //this._diskSpaceUnitChanged();
+            //this._diskSpaceUnitTypeChanged();
 
             //this._diskSpaceMonitorChanged();
 
@@ -947,10 +1000,59 @@ const ResourceMonitor = GObject.registerClass(
 
                 used = total - available;
 
-                if (this._decimalsStatus) {
-                    this._ramValue.text = `${(100 * used / total).toFixed(1)}`;
-                } else {
-                    this._ramValue.text = `${(100 * used / total).toFixed(0)}`;
+                let value = 0;
+                switch (this._ramMonitor) {
+                    case 'free':
+                        value = available;
+
+                        break;
+
+                    case 'used':
+
+                    default:
+                        value = used;
+
+                        break;
+                }
+
+                switch (this._ramUnitType) {
+                    case 'perc':
+                        if (this._decimalsStatus) {
+                            this._ramValue.text = `${(100 * value / total).toFixed(1)}`;
+                        } else {
+                            this._ramValue.text = `${(100 * value / total).toFixed(0)}`;
+                        }
+
+                        this._ramUnit.text = '%';
+
+                        break;
+
+                    case 'numeric':
+
+                    default:
+                        let unit = 'MB';
+
+                        value /= 1024;
+                        if (value > 1024) {
+                            unit = 'GB';
+                            value /= 1024;
+                            if (value > 1024) {
+                                unit = 'TB';
+                                value /= 1024;
+                            }
+                        } else {
+                            unit = 'MB';
+                        }
+
+                        if (this._decimalsStatus) {
+                            this._ramValue.text = `${value.toFixed(1)}`;
+                        } else {
+                            this._ramValue.text = `${value.toFixed(0)}`;
+                        }
+
+                        this._ramUnit.text = unit;
+
+                        break;
                 }
             });
         }
@@ -976,10 +1078,59 @@ const ResourceMonitor = GObject.registerClass(
 
                 used = total - available;
 
-                if (this._decimalsStatus) {
-                    this._swapValue.text = `${(100 * used / total).toFixed(1)}`;
-                } else {
-                    this._swapValue.text = `${(100 * used / total).toFixed(0)}`;
+                let value = 0;
+                switch (this._swapMonitor) {
+                    case 'free':
+                        value = available;
+
+                        break;
+
+                    case 'used':
+
+                    default:
+                        value = used;
+
+                        break;
+                }
+
+                switch (this._swapUnitType) {
+                    case 'perc':
+                        if (this._decimalsStatus) {
+                            this._swapValue.text = `${(100 * value / total).toFixed(1)}`;
+                        } else {
+                            this._swapValue.text = `${(100 * value / total).toFixed(0)}`;
+                        }
+
+                        this._swapUnit.text = '%';
+
+                        break;
+
+                    case 'numeric':
+
+                    default:
+                        let unit = 'MB';
+
+                        value /= 1024;
+                        if (value > 1024) {
+                            unit = 'GB';
+                            value /= 1024;
+                            if (value > 1024) {
+                                unit = 'TB';
+                                value /= 1024;
+                            }
+                        } else {
+                            unit = 'MB';
+                        }
+
+                        if (this._decimalsStatus) {
+                            this._swapValue.text = `${value.toFixed(1)}`;
+                        } else {
+                            this._swapValue.text = `${value.toFixed(0)}`;
+                        }
+
+                        this._swapUnit.text = unit;
+
+                        break;
                 }
             });
         }
@@ -1119,7 +1270,7 @@ const ResourceMonitor = GObject.registerClass(
                     const filesystem = entry[0];
 
                     let value = '';
-                    switch (this._diskSpaceUnit) {
+                    switch (this._diskSpaceUnitType) {
                         case 'perc':
                             const used = `${entry[4].slice(0, -1)}`;
 
@@ -1660,7 +1811,7 @@ const DiskContainerSpace = GObject.registerClass(
 
             this._elementsUnit[filesystem] = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: this._diskSpaceUnit ? '%' : 'KB'
+                text: this._diskSpaceUnitType ? '%' : 'KB'
             });
             this._elementsUnit[filesystem].set_style('padding-left: 0.125em;');
 
