@@ -1,4 +1,6 @@
-# Resource_Monitor
+[ego]: https://extensions.gnome.org/extension/1634/resource-monitor/
+
+# Resource_Monitor [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego] 
 Resource_Monitor is a GNOME Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in GNOME shell top bar.
 
 # Screenshots
