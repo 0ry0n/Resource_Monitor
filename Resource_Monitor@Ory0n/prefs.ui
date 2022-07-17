@@ -1,0 +1,1270 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 0.10.2 -->
+<interface>
+  <!-- interface-name prefs.ui -->
+  <requires lib="gtk" version="4.6"/>
+  <object class="GtkNotebook" id="main_notebook">
+    <property name="page">0</property>
+    <property name="scrollable">True</property>
+    <property name="vexpand">True</property>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Refresh Time</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Seconds</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">seconds_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Extension</property>
+                <property name="margin-top">8</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Position</property>
+                    <property name="margin-start">8</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">extension_position_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Left-click on the extension</property>
+                <property name="margin-top">8</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <property name="orientation">vertical</property>
+                <child>
+                  <object class="GtkCheckButton" id="extension_left_click_sm">
+                    <property name="active">True</property>
+                    <property name="group">extension_left_click_sm</property>
+                    <property name="label">Launch GNOME System Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="extension_left_click_u">
+                    <property name="group">extension_left_click_sm</property>
+                    <property name="label">Launch GNOME Usage</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Right-click on the extension</property>
+                <property name="margin-top">8</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Show Prefs when clicking on extension</property>
+                    <property name="margin-start">8</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="extension_right_click_prefs"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="hexpand">True</property>
+                <property name="label">Decimals</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="decimals_display"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Icons</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="icons_display"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Position</property>
+                    <property name="margin-start">8</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">icons_position_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Global</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="cpu_display"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">cpu_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Frequency</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="cpu_frequency_display"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">cpu_frequency_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Cpu</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="ram_display"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">ram_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">ram_unit_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">ram_monitor_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Ram</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">swap_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">swap_unit_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">swap_monitor_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Swap</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Stats</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">disk_stats_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Mode</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">disk_stats_mode_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Space</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">disk_space_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">disk_space_unit_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">disk_space_monitor_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Devices</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeView">
+                <property name="headers-clickable">False</property>
+                <property name="margin-start">8</property>
+                <property name="model">disk_devices_model</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Device</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Mount Point</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Stats</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Space</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Disk</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Common</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Auto hide</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">net_unit_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Eth</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">eth_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Wlan</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">wlan_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Net</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Common</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText">
+                    <property name="id-column">0</property>
+                    <property name="model">thermal_unit_model</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Cpu Temperature</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">cpu_temperature_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Devices</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeView">
+                <property name="headers-clickable">False</property>
+                <property name="margin-start">8</property>
+                <property name="model">thermal_cpu_devices_model</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Device</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Name</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Monitor</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Gpu Temperature</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">gpu_temperature_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Devices</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeView">
+                <property name="headers-clickable">False</property>
+                <property name="margin-start">8</property>
+                <property name="model">thermal_gpu_devices_model</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Device</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Name</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Monitor</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Thermal</property>
+      </object>
+    </child>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="margin-bottom">16</property>
+            <property name="margin-end">16</property>
+            <property name="margin-start">16</property>
+            <property name="margin-top">16</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">8</property>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton">
+                    <property name="adjustment">gpu_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="halign">start</property>
+                <property name="label">Devices</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkTreeView">
+                <property name="headers-clickable">False</property>
+                <property name="margin-start">8</property>
+                <property name="model">gpu_devices_model</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Device</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Name</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Monitor</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel">
+        <property name="label">Gpu</property>
+      </object>
+    </child>
+  </object>
+  <object class="GtkAdjustment" id="cpu_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="seconds_adjustment">
+    <property name="step-increment">1.0</property>
+    <property name="upper">10.0</property>
+  </object>
+  <object class="GtkAdjustment" id="cpu_frequency_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="ram_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="swap_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="disk_stats_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="disk_space_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="eth_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="wlan_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="cpu_temperature_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="gpu_temperature_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="gpu_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkListStore" id="ram_unit_model">
+    <columns>
+      <!-- column-name Units -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Numeric</col>
+      </row>
+      <row>
+        <col id="0">%</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="icons_position_model">
+    <columns>
+      <!-- column-name Positions -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Left</col>
+      </row>
+      <row>
+        <col id="0">Center</col>
+      </row>
+      <row>
+        <col id="0">Right</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="extension_position_model">
+    <columns>
+      <!-- column-name Positions -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Left</col>
+      </row>
+      <row>
+        <col id="0">Center</col>
+      </row>
+      <row>
+        <col id="0">Right</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="ram_monitor_model">
+    <columns>
+      <!-- column-name Monitor -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Used Memory</col>
+      </row>
+      <row>
+        <col id="0">Free Memory</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="thermal_unit_model">
+    <columns>
+      <!-- column-name Units -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">°C</col>
+      </row>
+      <row>
+        <col id="0">°F</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="net_unit_model">
+    <columns>
+      <!-- column-name Units -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Bps</col>
+      </row>
+      <row>
+        <col id="0">bps</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="disk_stats_mode_model">
+    <columns>
+      <!-- column-name Mode -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Separated</col>
+      </row>
+      <row>
+        <col id="0">Joint</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="swap_unit_model">
+    <columns>
+      <!-- column-name Units -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Numeric</col>
+      </row>
+      <row>
+        <col id="0">%</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="swap_monitor_model">
+    <columns>
+      <!-- column-name Monitor -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Used Memory</col>
+      </row>
+      <row>
+        <col id="0">Free Memory</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="disk_space_monitor_model">
+    <columns>
+      <!-- column-name Monitor -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Used Space</col>
+      </row>
+      <row>
+        <col id="0">Free Space</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="disk_space_unit_model">
+    <columns>
+      <!-- column-name Units -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">Numeric</col>
+      </row>
+      <row>
+        <col id="0">%</col>
+      </row>
+    </data>
+  </object>
+  <object class="GtkListStore" id="gpu_devices_model"/>
+  <object class="GtkListStore" id="thermal_gpu_devices_model"/>
+  <object class="GtkListStore" id="thermal_cpu_devices_model"/>
+  <object class="GtkListStore" id="disk_devices_model"/>
+</interface>

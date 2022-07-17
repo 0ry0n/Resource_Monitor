@@ -186,5 +186,25 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="gpustatus" type="b">
+            <default>false</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpuwidth" type="i">
+            <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpudeviceslist" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpudevicessettingslist" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
     </schema>
 </schemalist>
