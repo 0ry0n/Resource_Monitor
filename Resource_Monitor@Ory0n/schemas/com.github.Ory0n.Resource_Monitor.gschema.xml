@@ -166,6 +166,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="thermaltemperatureunit" type="s">
+            <default>"c"</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="thermalcputemperaturestatus" type="b">
             <default>false</default>
             <summary></summary>
@@ -176,12 +181,22 @@
             <summary></summary>
             <description></description>
         </key>
-        <key name="thermalcputemperatureunit" type="s">
-            <default>"c"</default>
+        <key name="thermalcputemperaturedeviceslist" type="as">
+            <default>[]</default>
             <summary></summary>
             <description></description>
         </key>
-        <key name="thermalcputemperaturedeviceslist" type="as">
+        <key name="thermalgputemperaturestatus" type="b">
+            <default>false</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="thermalgputemperaturewidth" type="i">
+            <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="thermalgputemperaturedeviceslist" type="as">
             <default>[]</default>
             <summary></summary>
             <description></description>

@@ -26,14 +26,13 @@ const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
 
 const { GObject, St, Gio, Clutter, NM, GLib, Shell } = imports.gi;
 
-const Gettext = imports.gettext.domain(GETTEXT_DOMAIN);
-const _ = Gettext.gettext;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const Util = imports.misc.util;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const ByteArray = imports.byteArray;
+
+const _ = ExtensionUtils.gettext;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const IndicatorName = Me.metadata.name;
@@ -80,9 +79,9 @@ const NET_ETH_WIDTH = 'netethwidth';
 const NET_WLAN_STATUS = 'netwlanstatus';
 const NET_WLAN_WIDTH = 'netwlanwidth';
 
+const THERMAL_TEMPERATURE_UNIT = 'thermaltemperatureunit';
 const THERMAL_CPU_TEMPERATURE_STATUS = 'thermalcputemperaturestatus';
 const THERMAL_CPU_TEMPERATURE_WIDTH = 'thermalcputemperaturewidth';
-const THERMAL_CPU_TEMPERATURE_UNIT = 'thermalcputemperatureunit';
 const THERMAL_CPU_TEMPERATURE_DEVICES_LIST = 'thermalcputemperaturedeviceslist';
 const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = '-';
 
@@ -408,9 +407,9 @@ const ResourceMonitor = GObject.registerClass(
             this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
             this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
 
+            this._thermalTemperatureUnit = this._settings.get_string(THERMAL_TEMPERATURE_UNIT);
             this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
             this._thermalCpuTemperatureWidth = this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH);
-            this._thermalCpuTemperatureUnit = this._settings.get_string(THERMAL_CPU_TEMPERATURE_UNIT);
             this._thermalCpuTemperatureDevicesList = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
         }
 
@@ -454,9 +453,9 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_WLAN_STATUS}`, this._netWlanStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_WLAN_WIDTH}`, this._netWlanWidthChanged.bind(this));
 
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_TEMPERATURE_UNIT}`, this._thermalTemperatureUnitChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_STATUS}`, this._thermalCpuTemperatureStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_WIDTH}`, this._thermalCpuTemperatureWidthChanged.bind(this));
-            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_UNIT}`, this._thermalCpuTemperatureUnitChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_DEVICES_LIST}`, this._thermalCpuTemperatureDevicesListChanged.bind(this));
         }
 
@@ -825,10 +824,10 @@ const ResourceMonitor = GObject.registerClass(
             this._basicItemWidth(this._thermalCpuTemperatureWidth, this._cpuTemperatureValue);
         }
 
-        _thermalCpuTemperatureUnitChanged() {
-            this._thermalCpuTemperatureUnit = this._settings.get_string(THERMAL_CPU_TEMPERATURE_UNIT);
+        _thermalTemperatureUnitChanged() {
+            this._thermalTemperatureUnit = this._settings.get_string(THERMAL_TEMPERATURE_UNIT);
 
-            if (this._thermalCpuTemperatureStatus) {
+            if (this._thermalTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
             }
         }
@@ -1518,7 +1517,7 @@ const ResourceMonitor = GObject.registerClass(
                 // Temperatures Average
                 this._cpuTemperatures /= this._cpuTemperaturesReads;
 
-                switch (this._thermalCpuTemperatureUnit) {
+                switch (this._thermalTemperatureUnit) {
                     case 'f':
                         this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
                         this._cpuTemperatureUnit.text = '°F';

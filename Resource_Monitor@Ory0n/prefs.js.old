@@ -26,11 +26,10 @@ const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
 
 const { Gio, GObject, Gtk, GLib } = imports.gi;
 
-const Gettext = imports.gettext.domain(GETTEXT_DOMAIN);
-const _ = Gettext.gettext;
-
 const ExtensionUtils = imports.misc.extensionUtils;
 const ByteArray = imports.byteArray;
+
+const _ = ExtensionUtils.gettext;
 
 // Settings
 const REFRESH_TIME = 'refreshtime';

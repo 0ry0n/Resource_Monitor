@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<!-- Created with Cambalache 0.10.2 -->
+<!-- Created with Cambalache 0.10.3 -->
 <interface>
   <!-- interface-name prefs.ui -->
   <requires lib="gtk" version="4.6"/>
@@ -19,6 +19,7 @@
             <property name="spacing">8</property>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Refresh Time</property>
               </object>
@@ -34,7 +35,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="seconds_spinbutton">
                     <property name="adjustment">seconds_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -43,6 +44,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Extension</property>
                 <property name="margin-top">8</property>
@@ -59,41 +61,29 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="extension_position_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">extension_position_model</property>
                   </object>
                 </child>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Left-click on the extension</property>
                 <property name="margin-top">8</property>
               </object>
             </child>
             <child>
-              <object class="GtkBox">
+              <object class="GtkBox" id="extension_left_click_box">
                 <property name="margin-start">8</property>
                 <property name="orientation">vertical</property>
-                <child>
-                  <object class="GtkCheckButton" id="extension_left_click_sm">
-                    <property name="active">True</property>
-                    <property name="group">extension_left_click_sm</property>
-                    <property name="label">Launch GNOME System Monitor</property>
-                  </object>
-                </child>
-                <child>
-                  <object class="GtkCheckButton" id="extension_left_click_u">
-                    <property name="group">extension_left_click_sm</property>
-                    <property name="label">Launch GNOME Usage</property>
-                  </object>
-                </child>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Right-click on the extension</property>
                 <property name="margin-top">8</property>
@@ -116,6 +106,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="hexpand">True</property>
                 <property name="label">Decimals</property>
@@ -139,6 +130,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Icons</property>
                 <property name="margin-top">16</property>
@@ -170,9 +162,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="icons_position_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">icons_position_model</property>
                   </object>
                 </child>
               </object>
@@ -183,6 +174,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Global</property>
       </object>
     </child>
@@ -222,7 +214,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="cpu_width_spinbutton">
                     <property name="adjustment">cpu_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -231,6 +223,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Frequency</property>
                 <property name="margin-top">16</property>
@@ -262,7 +255,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="cpu_frequency_width_spinbutton">
                     <property name="adjustment">cpu_frequency_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -275,6 +268,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Cpu</property>
       </object>
     </child>
@@ -314,7 +308,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="ram_width_spinbutton">
                     <property name="adjustment">ram_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -332,9 +326,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="ram_unit_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">ram_unit_model</property>
                   </object>
                 </child>
               </object>
@@ -350,9 +343,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="ram_monitor_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">ram_monitor_model</property>
                   </object>
                 </child>
               </object>
@@ -363,6 +355,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Ram</property>
       </object>
     </child>
@@ -387,7 +380,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="swap_display"/>
                 </child>
               </object>
             </child>
@@ -402,7 +395,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="swap_width_spinbutton">
                     <property name="adjustment">swap_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -420,9 +413,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="swap_unit_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">swap_unit_model</property>
                   </object>
                 </child>
               </object>
@@ -438,9 +430,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="swap_monitor_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">swap_monitor_model</property>
                   </object>
                 </child>
               </object>
@@ -451,6 +442,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Swap</property>
       </object>
     </child>
@@ -466,6 +458,7 @@
             <property name="spacing">8</property>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Stats</property>
               </object>
@@ -481,7 +474,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="disk_stats_display"/>
                 </child>
               </object>
             </child>
@@ -496,7 +489,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="disk_stats_width_spinbutton">
                     <property name="adjustment">disk_stats_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -514,15 +507,15 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="disk_stats_mode_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">disk_stats_mode_model</property>
                   </object>
                 </child>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Space</property>
                 <property name="margin-top">16</property>
@@ -539,7 +532,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="disk_space_display"/>
                 </child>
               </object>
             </child>
@@ -554,7 +547,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="disk_space_width_spinbutton">
                     <property name="adjustment">disk_space_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -572,9 +565,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="disk_space_unit_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">disk_space_unit_model</property>
                   </object>
                 </child>
               </object>
@@ -590,15 +582,15 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="disk_space_monitor_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">disk_space_monitor_model</property>
                   </object>
                 </child>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Devices</property>
                 <property name="margin-top">16</property>
@@ -638,6 +630,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Disk</property>
       </object>
     </child>
@@ -653,6 +646,7 @@
             <property name="spacing">8</property>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Common</property>
               </object>
@@ -668,7 +662,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="net_auto_hide"/>
                 </child>
               </object>
             </child>
@@ -683,15 +677,15 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="net_unit_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">net_unit_model</property>
                   </object>
                 </child>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Eth</property>
                 <property name="margin-top">16</property>
@@ -708,7 +702,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="net_eth_display"/>
                 </child>
               </object>
             </child>
@@ -723,7 +717,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="net_eth_width_spinbutton">
                     <property name="adjustment">eth_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -732,6 +726,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Wlan</property>
                 <property name="margin-top">16</property>
@@ -748,7 +743,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="net_wlan_display"/>
                 </child>
               </object>
             </child>
@@ -763,7 +758,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="net_wlan_width_spinbutton">
                     <property name="adjustment">wlan_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -776,6 +771,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Net</property>
       </object>
     </child>
@@ -791,6 +787,7 @@
             <property name="spacing">8</property>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Common</property>
               </object>
@@ -806,15 +803,15 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkComboBoxText">
+                  <object class="GtkComboBoxText" id="thermal_unit_combobox">
                     <property name="id-column">0</property>
-                    <property name="model">thermal_unit_model</property>
                   </object>
                 </child>
               </object>
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Cpu Temperature</property>
               </object>
@@ -830,7 +827,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="thermal_cpu_display"/>
                 </child>
               </object>
             </child>
@@ -845,7 +842,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="thermal_cpu_width_spinbutton">
                     <property name="adjustment">cpu_temperature_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -854,6 +851,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Devices</property>
                 <property name="margin-top">16</property>
@@ -884,6 +882,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Gpu Temperature</property>
                 <property name="margin-top">16</property>
@@ -900,7 +899,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="thermal_gpu_display"/>
                 </child>
               </object>
             </child>
@@ -915,7 +914,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="thermal_gpu_width_spinbutton">
                     <property name="adjustment">gpu_temperature_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -924,6 +923,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Devices</property>
                 <property name="margin-top">16</property>
@@ -958,6 +958,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Thermal</property>
       </object>
     </child>
@@ -982,7 +983,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSwitch"/>
+                  <object class="GtkSwitch" id="gpu_display"/>
                 </child>
               </object>
             </child>
@@ -997,7 +998,7 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkSpinButton">
+                  <object class="GtkSpinButton" id="gpu_width_spinbutton">
                     <property name="adjustment">gpu_width_adjustment</property>
                     <property name="numeric">True</property>
                   </object>
@@ -1006,6 +1007,7 @@
             </child>
             <child>
               <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
                 <property name="label">Devices</property>
                 <property name="margin-top">16</property>
@@ -1040,6 +1042,7 @@
     </child>
     <child type="tab">
       <object class="GtkLabel">
+        <property name="css-classes">main-label</property>
         <property name="label">Gpu</property>
       </object>
     </child>
@@ -1102,166 +1105,6 @@
     <property name="page-increment">10.0</property>
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>
-  </object>
-  <object class="GtkListStore" id="ram_unit_model">
-    <columns>
-      <!-- column-name Units -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Numeric</col>
-      </row>
-      <row>
-        <col id="0">%</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="icons_position_model">
-    <columns>
-      <!-- column-name Positions -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Left</col>
-      </row>
-      <row>
-        <col id="0">Center</col>
-      </row>
-      <row>
-        <col id="0">Right</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="extension_position_model">
-    <columns>
-      <!-- column-name Positions -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Left</col>
-      </row>
-      <row>
-        <col id="0">Center</col>
-      </row>
-      <row>
-        <col id="0">Right</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="ram_monitor_model">
-    <columns>
-      <!-- column-name Monitor -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Used Memory</col>
-      </row>
-      <row>
-        <col id="0">Free Memory</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="thermal_unit_model">
-    <columns>
-      <!-- column-name Units -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">°C</col>
-      </row>
-      <row>
-        <col id="0">°F</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="net_unit_model">
-    <columns>
-      <!-- column-name Units -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Bps</col>
-      </row>
-      <row>
-        <col id="0">bps</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="disk_stats_mode_model">
-    <columns>
-      <!-- column-name Mode -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Separated</col>
-      </row>
-      <row>
-        <col id="0">Joint</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="swap_unit_model">
-    <columns>
-      <!-- column-name Units -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Numeric</col>
-      </row>
-      <row>
-        <col id="0">%</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="swap_monitor_model">
-    <columns>
-      <!-- column-name Monitor -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Used Memory</col>
-      </row>
-      <row>
-        <col id="0">Free Memory</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="disk_space_monitor_model">
-    <columns>
-      <!-- column-name Monitor -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Used Space</col>
-      </row>
-      <row>
-        <col id="0">Free Space</col>
-      </row>
-    </data>
-  </object>
-  <object class="GtkListStore" id="disk_space_unit_model">
-    <columns>
-      <!-- column-name Units -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">Numeric</col>
-      </row>
-      <row>
-        <col id="0">%</col>
-      </row>
-    </data>
   </object>
   <object class="GtkListStore" id="gpu_devices_model"/>
   <object class="GtkListStore" id="thermal_gpu_devices_model"/>
