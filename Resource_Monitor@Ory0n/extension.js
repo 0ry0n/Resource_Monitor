@@ -24,7 +24,12 @@
 
 const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
 
-const { GObject, St, Gio, Clutter, NM, GLib, Shell } = imports.gi;
+let NM = undefined;
+const { GObject, St, Gio, Clutter, GLib, Shell } = imports.gi;
+
+try {
+    NM = imports.gi["NM"];
+} catch { }
 
 const Gettext = imports.gettext.domain(GETTEXT_DOMAIN);
 const _ = Gettext.gettext;
@@ -122,12 +127,14 @@ const ResourceMonitor = GObject.registerClass(
 
             this.connect('button-press-event', this._clickManager.bind(this));
 
-            NM.Client.new_async(null, (client) => {
-                client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
-                client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
+            if (NM !== undefined) {
+                NM.Client.new_async(null, (client) => {
+                    client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
+                    client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
 
-                this._onActiveConnectionRemoved(client);
-            });
+                    this._onActiveConnectionRemoved(client);
+                });
+            }
 
             this._mainTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._refreshTime, this._refreshHandler.bind(this));
             this._refreshHandler();
@@ -488,6 +495,9 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _onActiveConnectionAdded(client, activeConnection) {
+            if (NM === undefined)
+                return;
+
             activeConnection.get_devices().forEach(device => {
                 switch (device.get_device_type()) {
                     case NM.DeviceType.ETHERNET:
@@ -513,6 +523,9 @@ const ResourceMonitor = GObject.registerClass(
         _onActiveConnectionRemoved(client, activeConnection) {
             this._nmEthStatus = false;
             this._nmWlanStatus = false;
+
+            if (NM === undefined)
+                return;
 
             client.get_active_connections().forEach(activeConnection => {
                 activeConnection.get_devices().forEach(device => {
