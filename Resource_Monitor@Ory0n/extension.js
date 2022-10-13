@@ -1492,57 +1492,61 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _refreshCpuTemperatureValue() {
-            for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
-                const element = this._thermalCpuTemperatureDevicesList[i];
-                const it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
+            if (this._thermalCpuTemperatureDevicesList.length > 0) {
+                for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
+                    const element = this._thermalCpuTemperatureDevicesList[i];
+                    const it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
 
-                const status = it[1];
-                const path = it[2];
+                    const status = it[1];
+                    const path = it[2];
 
-                if (status === 'false') {
-                    continue;
+                    if (status === 'false') {
+                        continue;
+                    }
+
+                    if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
+                        this._loadFile(path).then(contents => {
+                            const value = parseInt(ByteArray.toString(contents));
+
+                            this._cpuTemperatures += value / 1000;
+                            this._cpuTemperaturesReads++;
+
+                            if (this._cpuTemperaturesReads >= this._thermalCpuTemperatureDevicesList.length) {
+                                // Temperatures Average
+                                this._cpuTemperatures /= this._cpuTemperaturesReads;
+
+                                switch (this._thermalTemperatureUnit) {
+                                    case 'f':
+                                        this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
+                                        this._cpuTemperatureUnit.text = '°F';
+
+                                        break;
+
+                                    case 'c':
+
+                                    default:
+                                        this._cpuTemperatureUnit.text = '°C';
+
+                                        break;
+                                }
+
+                                if (this._decimalsStatus) {
+                                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}`;
+                                } else {
+                                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}`;
+                                }
+
+                                this._cpuTemperatures = 0;
+                                this._cpuTemperaturesReads = 0;
+                            }
+                        });
+                    } else {
+                        this._cpuTemperatureValue.text = _('[Temperature Error');
+                        this._cpuTemperatureUnit.text = '';
+                    }
                 }
-
-                if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
-                    this._loadFile(path).then(contents => {
-                        const value = parseInt(ByteArray.toString(contents));
-
-                        this._cpuTemperatures += value / 1000;
-                        this._cpuTemperaturesReads++;
-                    });
-                }
-            }
-
-            if (this._cpuTemperaturesReads > 0) {
-                // Temperatures Average
-                this._cpuTemperatures /= this._cpuTemperaturesReads;
-
-                switch (this._thermalTemperatureUnit) {
-                    case 'f':
-                        this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
-                        this._cpuTemperatureUnit.text = '°F';
-
-                        break;
-
-                    case 'c':
-
-                    default:
-                        this._cpuTemperatureUnit.text = '°C';
-
-                        break;
-                }
-
-                if (this._decimalsStatus) {
-                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}`;
-                } else {
-                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}`;
-                }
-
-                this._cpuTemperatures = 0;
-                this._cpuTemperaturesReads = 0;
             } else {
-                this._cpuTemperatureValue.text = _('[Temperature Error');
-                this._cpuTemperatureUnit.text = '';
+                this._cpuTemperatureValue.text = _('[--');
             }
         }
 
