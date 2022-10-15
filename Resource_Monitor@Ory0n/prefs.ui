@@ -597,11 +597,15 @@
               </object>
             </child>
             <child>
-              <object class="GtkTreeView">
+              <object class="GtkTreeView" id="disk_devices_treeview">
                 <property name="headers-clickable">False</property>
                 <property name="margin-start">8</property>
-                <property name="model">disk_devices_model</property>
                 <property name="vexpand">True</property>
+                <child internal-child="selection">
+                  <object class="GtkTreeSelection">
+                    <property name="mode">none</property>
+                  </object>
+                </child>
                 <child>
                   <object class="GtkTreeViewColumn">
                     <property name="title">Device</property>
@@ -858,11 +862,15 @@
               </object>
             </child>
             <child>
-              <object class="GtkTreeView">
+              <object class="GtkTreeView" id="thermal_cpu_devices_treeview">
                 <property name="headers-clickable">False</property>
                 <property name="margin-start">8</property>
-                <property name="model">thermal_cpu_devices_model</property>
                 <property name="vexpand">True</property>
+                <child internal-child="selection">
+                  <object class="GtkTreeSelection">
+                    <property name="mode">none</property>
+                  </object>
+                </child>
                 <child>
                   <object class="GtkTreeViewColumn">
                     <property name="title">Device</property>
@@ -930,11 +938,15 @@
               </object>
             </child>
             <child>
-              <object class="GtkTreeView">
+              <object class="GtkTreeView" id="thermal_gpu_devices_treeview">
                 <property name="headers-clickable">False</property>
                 <property name="margin-start">8</property>
-                <property name="model">thermal_gpu_devices_model</property>
                 <property name="vexpand">True</property>
+                <child internal-child="selection">
+                  <object class="GtkTreeSelection">
+                    <property name="mode">none</property>
+                  </object>
+                </child>
                 <child>
                   <object class="GtkTreeViewColumn">
                     <property name="title">Device</property>
@@ -1014,11 +1026,15 @@
               </object>
             </child>
             <child>
-              <object class="GtkTreeView">
+              <object class="GtkTreeView" id="gpu_devices_treeview">
                 <property name="headers-clickable">False</property>
                 <property name="margin-start">8</property>
-                <property name="model">gpu_devices_model</property>
                 <property name="vexpand">True</property>
+                <child internal-child="selection">
+                  <object class="GtkTreeSelection">
+                    <property name="mode">none</property>
+                  </object>
+                </child>
                 <child>
                   <object class="GtkTreeViewColumn">
                     <property name="title">Device</property>
@@ -1106,8 +1122,4 @@
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>
   </object>
-  <object class="GtkListStore" id="gpu_devices_model"/>
-  <object class="GtkListStore" id="thermal_gpu_devices_model"/>
-  <object class="GtkListStore" id="thermal_cpu_devices_model"/>
-  <object class="GtkListStore" id="disk_devices_model"/>
 </interface>
