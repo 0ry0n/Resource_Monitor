@@ -76,9 +76,38 @@
               </object>
             </child>
             <child>
-              <object class="GtkBox" id="extension_left_click_box">
+              <object class="GtkBox">
                 <property name="margin-start">8</property>
                 <property name="orientation">vertical</property>
+                  <child>
+                    <object class="GtkCheckButton" id="extension_left_click_radiobutton_sm">
+                      <property name="label" translatable="1">Launch GNOME System Monitor</property>
+                      <property name="active">1</property>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkCheckButton" id="extension_left_click_radiobutton_u">
+                      <property name="label" translatable="1">Launch GNOME Usage</property>
+                      <property name="active">1</property>
+                      <property name="group">extension_left_click_radiobutton_sm</property>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkCheckButton" id="extension_left_click_radiobutton_custom">
+                      <property name="label" translatable="1">Custom program</property>
+                      <property name="active">1</property>
+                      <property name="group">extension_left_click_radiobutton_u</property>
+                    </object>
+                  </child>
+                  <child>
+                    <object class="GtkTextView" id="extension_left_click_textview_custom">
+                      <property name="focusable">1</property>
+                      <property name="buffer">extension_left_click_textview_textbuffer</property>
+                      <property name="accepts-tab">0</property>
+                      <property name="monospace">1</property>
+                      <property name="input-purpose">terminal</property>
+                    </object>
+                  </child>
               </object>
             </child>
             <child>
@@ -1122,4 +1151,5 @@
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>
   </object>
+  <object class="GtkTextBuffer" id="extension_left_click_textview_textbuffer"/>
 </interface>

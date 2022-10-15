@@ -38,6 +38,7 @@ const EXTENSION_POSITION = 'extensionposition';
 const DECIMALS_STATUS = 'decimalsstatus';
 const LEFT_CLICK_STATUS = 'leftclickstatus';
 const RIGHT_CLICK_STATUS = 'rightclickstatus';
+const CUSTOM_LEFT_CLICK_STATUS = 'customleftclickstatus';
 
 const ICONS_STATUS = 'iconsstatus';
 const ICONS_POSITION = 'iconsposition';
@@ -125,65 +126,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             settings.bind(settingsName, element, 'active', Gio.SettingsBindFlags.DEFAULT);
         }
 
-        _connectRadioButton(settings, settingsName, element, initValueLabel, initValue) {
-            let radioButtonGroup = [];
-            let active = settings.get_string(settingsName, Gio.SettingsBindFlags.DEFAULT);
-
-            if (initValue !== null && initValue.length === initValueLabel.length) {
-                for (let i = 0; i < initValue.length; i++) {
-                    let radioButton = new Gtk.CheckButton({
-                        label: '%s'.format(initValueLabel[i]),
-                    });
-
-                    radioButton.connect('toggled', button => {
-                        if (button.active) {
-                            settings.set_string(settingsName, initValue[i]);
-                        }
-                    });
-
-                    radioButton.active = (initValue[i] === active);
-
-                    radioButtonGroup[i] = radioButton;
-
-                    if (i > 0) {
-                        radioButton.set_group(radioButtonGroup[i - 1]);
-                    }
-
-                    element.append(radioButton);
-                }
-
-                let box = new Gtk.Box({
-                    orientation: Gtk.Orientation.HORIZONTAL,
-                });
-
-                let radioButton = new Gtk.CheckButton({
-                    label: '%s'.format(_('Custom program')),
-                });
-
-                let textView = new Gtk.TextView({
-                    monospace: true,
-                    input_purpose: Gtk.InputPurpose.TERMINAL,
-                });
-
-                radioButton.connect('toggled', button => {
-                    if (button.active) {
-                        settings.set_string(settingsName, textView.buffer);
-                    }
-                });
-                // TODO add TextView correctly
-                radioButton.active = (textView.buffer === active);
-
-                radioButtonGroup[initValue.length] = radioButton;
-
-                radioButton.set_group(radioButtonGroup[initValue.length - 1]);
-
-                box.append(radioButton);
-                box.append(textView);
-
-                element.append(box);
-            }
-        }
-
         _init() {
             // Gtk Css Provider
             this._provider = new Gtk.CssProvider();
@@ -233,16 +175,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         _buildGlobal() {
             this._secondsSpinbutton = this._builder.get_object('seconds_spinbutton');
             this._extensionPositionCombobox = this._builder.get_object('extension_position_combobox');
-            this._extensionLeftClickBox = this._builder.get_object('extension_left_click_box');
+            this._extensionLeftClickRadioButtonSM = this._builder.get_object('extension_left_click_radiobutton_sm');
+            this._extensionLeftClickRadioButtonU = this._builder.get_object('extension_left_click_radiobutton_u');
+            this._extensionLeftClickRadioButtonCustom = this._builder.get_object('extension_left_click_radiobutton_custom');
+            this._extensionLeftClickTextViewCustom = this._builder.get_object('extension_left_click_textview_custom');
+            this._extensionLeftClickTextViewTextBuffer = this._builder.get_object('extension_left_click_textview_textbuffer');
             this._extensionRightClickPrefs = this._builder.get_object('extension_right_click_prefs');
             this._decimalsDisplay = this._builder.get_object('decimals_display');
             this._iconsDisplay = this._builder.get_object('icons_display')
             this._iconsPositionCombobox = this._builder.get_object('icons_position_combobox');
 
-
             this._connectSpinButton(this._settings, REFRESH_TIME, this._secondsSpinbutton);
             this._connectComboBox(this._settings, EXTENSION_POSITION, this._extensionPositionCombobox, [_('Left'), _('Center'), _('Right')], ['left', 'center', 'right']);
-            this._connectRadioButton(this._settings, LEFT_CLICK_STATUS, this._extensionLeftClickBox, [_('Launch GNOME System Monitor'), _('Launch GNOME Usage')], ['gnome-system-monitor', 'gnome-usage']);
             this._connectSwitchButton(this._settings, RIGHT_CLICK_STATUS, this._extensionRightClickPrefs);
             this._connectSwitchButton(this._settings, DECIMALS_STATUS, this._decimalsDisplay);
             this._connectSwitchButton(this._settings, ICONS_STATUS, this._iconsDisplay);
@@ -252,6 +196,39 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 this._iconsPositionCombobox.sensitive = button.active;
             });
             this._iconsPositionCombobox.sensitive = this._iconsDisplay.active;
+
+            // LEFT-CLICK
+            let active = this._settings.get_string(LEFT_CLICK_STATUS, Gio.SettingsBindFlags.DEFAULT);
+            let textBufferCustom = this._settings.get_string(CUSTOM_LEFT_CLICK_STATUS, Gio.SettingsBindFlags.DEFAULT);
+
+            this._extensionLeftClickRadioButtonSM.connect('toggled', button => {
+                if (button.active) {
+                    this._settings.set_string(LEFT_CLICK_STATUS, 'gnome-system-monitor');
+                }
+            });
+            this._extensionLeftClickRadioButtonSM.active = ('gnome-system-monitor' === active);
+
+            this._extensionLeftClickRadioButtonU.connect('toggled', button => {
+                if (button.active) {
+                    this._settings.set_string(LEFT_CLICK_STATUS, 'gnome-usage');
+                }
+            });
+            this._extensionLeftClickRadioButtonU.active = ('gnome-usage' === active);
+
+            this._extensionLeftClickRadioButtonCustom.connect('toggled', button => {
+                if (button.active) {
+                    this._settings.set_string(LEFT_CLICK_STATUS, textBufferCustom);
+                }
+                this._extensionLeftClickTextViewCustom.sensitive = button.active;
+            });
+            this._extensionLeftClickRadioButtonCustom.active = (textBufferCustom === active);
+            this._extensionLeftClickTextViewCustom.sensitive = this._extensionLeftClickRadioButtonCustom.active;
+            this._extensionLeftClickTextViewTextBuffer.text = textBufferCustom;
+            
+            this._extensionLeftClickTextViewTextBuffer.connect('changed', tBuffer => {
+                this._settings.set_string(LEFT_CLICK_STATUS, tBuffer.text);
+                this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, tBuffer.text);
+            });
         }
 
         _buildCpu() {

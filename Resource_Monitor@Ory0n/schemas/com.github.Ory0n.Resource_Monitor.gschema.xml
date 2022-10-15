@@ -21,6 +21,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="customleftclickstatus" type="s">
+            <default>"custom-program"</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="rightclickstatus" type="b">
             <default>true</default>
             <summary></summary>
