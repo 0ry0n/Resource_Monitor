@@ -1446,13 +1446,13 @@ const ResourceMonitor = GObject.registerClass(
                                         case 'k':
                                             unit = 'K';
                                             break;
-        
+
                                         case 'm':
                                             unit = 'M';
                                             rw[0] /= 1024;
                                             rw[1] /= 1024;
                                             break;
-        
+
                                         case 'g':
                                             unit = 'G';
                                             rw[0] /= 1024;
@@ -1460,7 +1460,7 @@ const ResourceMonitor = GObject.registerClass(
                                             rw[0] /= 1024;
                                             rw[1] /= 1024;
                                             break;
-        
+
                                         case 't':
                                             unit = 'T';
                                             rw[0] /= 1024;
@@ -1470,9 +1470,9 @@ const ResourceMonitor = GObject.registerClass(
                                             rw[0] /= 1024;
                                             rw[1] /= 1024;
                                             break;
-        
+
                                         case 'auto':
-        
+
                                         default:
                                             if (rw[0] > 1024 || rw[1] > 1024) {
                                                 unit = 'M';
@@ -1491,7 +1491,7 @@ const ResourceMonitor = GObject.registerClass(
                                             } else {
                                                 unit = 'K';
                                             }
-        
+
                                             break;
                                     }
                                 }
@@ -1567,27 +1567,27 @@ const ResourceMonitor = GObject.registerClass(
                                 case 'k':
                                     unit = 'KB';
                                     break;
-    
+
                                 case 'm':
                                     unit = 'MB';
                                     value /= 1024;
                                     break;
-    
+
                                 case 'g':
                                     unit = 'GB';
                                     value /= 1024;
                                     value /= 1024;
                                     break;
-    
+
                                 case 't':
                                     unit = 'TB';
                                     value /= 1024;
                                     value /= 1024;
                                     value /= 1024;
                                     break;
-    
+
                                 case 'auto':
-    
+
                                 default:
                                     if (value > 1024) {
                                         unit = 'MB';
@@ -1603,7 +1603,7 @@ const ResourceMonitor = GObject.registerClass(
                                     } else {
                                         unit = 'KB';
                                     }
-    
+
                                     break;
                             }
 
