@@ -47,28 +47,35 @@ const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
 const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+const CPU_LOADAVERAGE_STATUS = 'cpuloadaveragestatus';
+const CPU_LOADAVERAGE_WIDTH = 'cpuloadaveragewidth';
 
 const RAM_STATUS = 'ramstatus';
 const RAM_WIDTH = 'ramwidth';
 const RAM_UNIT = 'ramunit';
+const RAM_UNIT_MEASURE = 'ramunitmeasure';
 const RAM_MONITOR = 'rammonitor';
 
 const SWAP_STATUS = 'swapstatus';
 const SWAP_WIDTH = 'swapwidth';
 const SWAP_UNIT = 'swapunit';
+const SWAP_UNIT_MEASURE = 'swapunitmeasure';
 const SWAP_MONITOR = 'swapmonitor';
 
 const DISK_STATS_STATUS = 'diskstatsstatus';
 const DISK_STATS_WIDTH = 'diskstatswidth';
 const DISK_STATS_MODE = 'diskstatsmode';
+const DISK_STATS_UNIT_MEASURE = 'diskstatsunitmeasure';
 const DISK_SPACE_STATUS = 'diskspacestatus';
 const DISK_SPACE_WIDTH = 'diskspacewidth';
 const DISK_SPACE_UNIT = 'diskspaceunit';
+const DISK_SPACE_UNIT_MEASURE = 'diskspaceunitmeasure';
 const DISK_SPACE_MONITOR = 'diskspacemonitor';
 const DISK_DEVICES_LIST = 'diskdeviceslist';
 
 const NET_AUTO_HIDE_STATUS = 'netautohidestatus';
 const NET_UNIT = 'netunit';
+const NET_UNIT_MEASURE = 'netunitmeasure';
 const NET_ETH_STATUS = 'netethstatus';
 const NET_ETH_WIDTH = 'netethwidth';
 const NET_WLAN_STATUS = 'netwlanstatus';
@@ -84,8 +91,10 @@ const THERMAL_GPU_TEMPERATURE_DEVICES_LIST = 'thermalgputemperaturedeviceslist';
 
 const GPU_STATUS = 'gpustatus';
 const GPU_WIDTH = 'gpuwidth';
+const GPU_MEMORY_UNIT = 'gpumemoryunit';
+const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
+const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
 const GPU_DEVICES_LIST = 'gpudeviceslist';
-const GPU_DEVICES_SETTINGS_LIST = 'gpudevicessettingslist';
 
 const ResourceMonitorBuilderScope = GObject.registerClass({
     Implements: [Gtk.BuilderScope],
@@ -100,10 +109,6 @@ const ResourceMonitorBuilderScope = GObject.registerClass({
 
         return this[handlerName].bind(connectObject || this);
     }
-
-    /*on_btn_click(connectObject) {
-        connectObject.set_label("Clicked");
-    }*/
 });
 
 const ResourceMonitorPrefsWidget = GObject.registerClass(
@@ -112,13 +117,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             settings.bind(settingsName, element, 'value', Gio.SettingsBindFlags.DEFAULT);
         }
 
-        _connectComboBox(settings, settingsName, element, initValueLabel, initValue) {
-            if (initValue !== null && initValue.length === initValueLabel.length) {
-                for (let i = 0; i < initValue.length; i++) {
-                    element.insert(i, initValue[i], initValueLabel[i]);
-                }
-            }
-
+        _connectComboBox(settings, settingsName, element) {
             settings.bind(settingsName, element, 'active-id', Gio.SettingsBindFlags.DEFAULT);
         }
 
@@ -186,11 +185,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._iconsPositionCombobox = this._builder.get_object('icons_position_combobox');
 
             this._connectSpinButton(this._settings, REFRESH_TIME, this._secondsSpinbutton);
-            this._connectComboBox(this._settings, EXTENSION_POSITION, this._extensionPositionCombobox, [_('Left'), _('Center'), _('Right')], ['left', 'center', 'right']);
+            this._connectComboBox(this._settings, EXTENSION_POSITION, this._extensionPositionCombobox);
             this._connectSwitchButton(this._settings, RIGHT_CLICK_STATUS, this._extensionRightClickPrefs);
             this._connectSwitchButton(this._settings, DECIMALS_STATUS, this._decimalsDisplay);
             this._connectSwitchButton(this._settings, ICONS_STATUS, this._iconsDisplay);
-            this._connectComboBox(this._settings, ICONS_POSITION, this._iconsPositionCombobox, [_('Left'), _('Right')], ['left', 'right']);
+            this._connectComboBox(this._settings, ICONS_POSITION, this._iconsPositionCombobox);
 
             this._iconsDisplay.connect('state-set', button => {
                 this._iconsPositionCombobox.sensitive = button.active;
@@ -224,7 +223,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._extensionLeftClickRadioButtonCustom.active = (textBufferCustom === active);
             this._extensionLeftClickTextViewCustom.sensitive = this._extensionLeftClickRadioButtonCustom.active;
             this._extensionLeftClickTextViewTextBuffer.text = textBufferCustom;
-            
+
             this._extensionLeftClickTextViewTextBuffer.connect('changed', tBuffer => {
                 this._settings.set_string(LEFT_CLICK_STATUS, tBuffer.text);
                 this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, tBuffer.text);
@@ -236,11 +235,15 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._cpuWidthSpinbutton = this._builder.get_object('cpu_width_spinbutton');
             this._cpuFrequencyDisplay = this._builder.get_object('cpu_frequency_display');
             this._cpuFrequencyWidthSpinbutton = this._builder.get_object('cpu_frequency_width_spinbutton');
+            this._cpuLoadAverageDisplay = this._builder.get_object('cpu_loadaverage_display');
+            this._cpuLoadAverageWidthSpinbutton = this._builder.get_object('cpu_loadaverage_width_spinbutton');
 
             this._connectSwitchButton(this._settings, CPU_STATUS, this._cpuDisplay);
             this._connectSpinButton(this._settings, CPU_WIDTH, this._cpuWidthSpinbutton);
             this._connectSwitchButton(this._settings, CPU_FREQUENCY_STATUS, this._cpuFrequencyDisplay);
             this._connectSpinButton(this._settings, CPU_FREQUENCY_WIDTH, this._cpuFrequencyWidthSpinbutton);
+            this._connectSwitchButton(this._settings, CPU_LOADAVERAGE_STATUS, this._cpuLoadAverageDisplay);
+            this._connectSpinButton(this._settings, CPU_LOADAVERAGE_WIDTH, this._cpuLoadAverageWidthSpinbutton);
 
             this._cpuDisplay.connect('state-set', button => {
                 this._cpuWidthSpinbutton.sensitive = button.active;
@@ -248,29 +251,38 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._cpuWidthSpinbutton.sensitive = this._cpuDisplay.active;
 
             this._cpuFrequencyDisplay.connect('state-set', button => {
-                this._cpuWidthSpinbutton.sensitive = button.active;
+                this._cpuFrequencyWidthSpinbutton.sensitive = button.active;
             });
-            this._cpuWidthSpinbutton.sensitive = this._cpuFrequencyDisplay.active;
+            this._cpuFrequencyWidthSpinbutton.sensitive = this._cpuFrequencyDisplay.active;
+
+            this._cpuLoadAverageDisplay.connect('state-set', button => {
+                this._cpuLoadAverageWidthSpinbutton.sensitive = button.active;
+            });
+            this._cpuLoadAverageWidthSpinbutton.sensitive = this._cpuLoadAverageDisplay.active;
         }
 
         _buildRam() {
             this._ramDisplay = this._builder.get_object('ram_display');
             this._ramWidthSpinbutton = this._builder.get_object('ram_width_spinbutton');
             this._ramUnitCombobox = this._builder.get_object('ram_unit_combobox');
+            this._ramUnitMeasureCombobox = this._builder.get_object('ram_unit_measure_combobox');
             this._ramMonitorCombobox = this._builder.get_object('ram_monitor_combobox');
 
             this._connectSwitchButton(this._settings, RAM_STATUS, this._ramDisplay);
             this._connectSpinButton(this._settings, RAM_WIDTH, this._ramWidthSpinbutton);
-            this._connectComboBox(this._settings, RAM_UNIT, this._ramUnitCombobox, [_('Numeric'), _('%')], ['numeric', 'perc']);
-            this._connectComboBox(this._settings, RAM_MONITOR, this._ramMonitorCombobox, [_('Used Memory'), _('Free Memory')], ['used', 'free']);
+            this._connectComboBox(this._settings, RAM_UNIT, this._ramUnitCombobox);
+            this._connectComboBox(this._settings, RAM_UNIT_MEASURE, this._ramUnitMeasureCombobox);
+            this._connectComboBox(this._settings, RAM_MONITOR, this._ramMonitorCombobox);
 
             this._ramDisplay.connect('state-set', button => {
                 this._ramWidthSpinbutton.sensitive = button.active;
                 this._ramUnitCombobox.sensitive = button.active;
+                this._ramUnitMeasureCombobox.sensitive = button.active;
                 this._ramMonitorCombobox.sensitive = button.active;
             });
             this._ramWidthSpinbutton.sensitive = this._ramDisplay.active;
             this._ramUnitCombobox.sensitive = this._ramDisplay.active;
+            this._ramUnitMeasureCombobox.sensitive = this._ramDisplay.active;
             this._ramMonitorCombobox.sensitive = this._ramDisplay.active;
         }
 
@@ -278,20 +290,24 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._swapDisplay = this._builder.get_object('swap_display');
             this._swapWidthSpinbutton = this._builder.get_object('swap_width_spinbutton');
             this._swapUnitCombobox = this._builder.get_object('swap_unit_combobox');
+            this._swapUnitMeasureCombobox = this._builder.get_object('swap_unit_measure_combobox');
             this._swapMonitorCombobox = this._builder.get_object('swap_monitor_combobox');
 
             this._connectSwitchButton(this._settings, SWAP_STATUS, this._swapDisplay);
             this._connectSpinButton(this._settings, SWAP_WIDTH, this._swapWidthSpinbutton);
-            this._connectComboBox(this._settings, SWAP_UNIT, this._swapUnitCombobox, [_('Numeric'), _('%')], ['numeric', 'perc']);
-            this._connectComboBox(this._settings, SWAP_MONITOR, this._swapMonitorCombobox, [_('Used Memory'), _('Free Memory')], ['used', 'free']);
+            this._connectComboBox(this._settings, SWAP_UNIT, this._swapUnitCombobox);
+            this._connectComboBox(this._settings, SWAP_UNIT_MEASURE, this._swapUnitMeasureCombobox);
+            this._connectComboBox(this._settings, SWAP_MONITOR, this._swapMonitorCombobox);
 
             this._swapDisplay.connect('state-set', button => {
                 this._swapWidthSpinbutton.sensitive = button.active;
                 this._swapUnitCombobox.sensitive = button.active;
+                this._swapUnitMeasureCombobox.sensitive = button.active;
                 this._swapMonitorCombobox.sensitive = button.active;
             });
             this._swapWidthSpinbutton.sensitive = this._swapDisplay.active;
             this._swapUnitCombobox.sensitive = this._swapDisplay.active;
+            this._swapUnitMeasureCombobox.sensitive = this._swapDisplay.active;
             this._swapMonitorCombobox.sensitive = this._swapDisplay.active;
         }
 
@@ -299,36 +315,45 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._diskStatsDisplay = this._builder.get_object('disk_stats_display');
             this._diskStatsWidthSpinbutton = this._builder.get_object('disk_stats_width_spinbutton');
             this._diskStatsModeCombobox = this._builder.get_object('disk_stats_mode_combobox');
+            this._diskStatsUnitMeasureCombobox = this._builder.get_object('disk_stats_unit_measure_combobox');
             this._diskSpaceDisplay = this._builder.get_object('disk_space_display');
             this._diskSpaceWidthSpinbutton = this._builder.get_object('disk_space_width_spinbutton');
             this._diskSpaceUnitCombobox = this._builder.get_object('disk_space_unit_combobox');
+            this._diskSpaceUnitMeasureCombobox = this._builder.get_object('disk_space_unit_measure_combobox');
             this._diskSpaceMonitorCombobox = this._builder.get_object('disk_space_monitor_combobox');
             this._diskDevicesTreeView = this._builder.get_object('disk_devices_treeview')
 
             this._connectSwitchButton(this._settings, DISK_STATS_STATUS, this._diskStatsDisplay);
             this._connectSpinButton(this._settings, DISK_STATS_WIDTH, this._diskStatsWidthSpinbutton);
-            this._connectComboBox(this._settings, DISK_STATS_MODE, this._diskStatsModeCombobox, [_('Single Mode'), _('Multiple Mode')], ['single', 'multiple']);
+            this._connectComboBox(this._settings, DISK_STATS_MODE, this._diskStatsModeCombobox);
+            this._connectComboBox(this._settings, DISK_STATS_UNIT_MEASURE, this._diskStatsUnitMeasureCombobox);
             this._connectSwitchButton(this._settings, DISK_SPACE_STATUS, this._diskSpaceDisplay);
             this._connectSpinButton(this._settings, DISK_SPACE_WIDTH, this._diskSpaceWidthSpinbutton);
-            this._connectComboBox(this._settings, DISK_SPACE_UNIT, this._diskSpaceUnitCombobox, [_('Numeric'), _('%')], ['numeric', 'perc']);
-            this._connectComboBox(this._settings, DISK_SPACE_MONITOR, this._diskSpaceMonitorCombobox, [_('Used Space'), _('Free Space')], ['used', 'free']);
+            this._connectComboBox(this._settings, DISK_SPACE_UNIT, this._diskSpaceUnitCombobox);
+            this._connectComboBox(this._settings, DISK_SPACE_UNIT_MEASURE, this._diskSpaceUnitMeasureCombobox);
+            this._connectComboBox(this._settings, DISK_SPACE_MONITOR, this._diskSpaceMonitorCombobox);
 
             this._diskStatsDisplay.connect('state-set', button => {
                 this._diskStatsWidthSpinbutton.sensitive = button.active;
                 this._diskStatsModeCombobox.sensitive = button.active;
+                this._diskStatsUnitMeasureCombobox.sensitive = button.active;
             });
             this._diskStatsWidthSpinbutton.sensitive = this._diskStatsDisplay.active;
             this._diskStatsModeCombobox.sensitive = this._diskStatsDisplay.active;
+            this._diskStatsUnitMeasureCombobox.sensitive = this._diskStatsDisplay.active;
 
             this._diskSpaceDisplay.connect('state-set', button => {
                 this._diskSpaceWidthSpinbutton.sensitive = button.active;
                 this._diskSpaceUnitCombobox.sensitive = button.active;
                 this._diskSpaceMonitorCombobox.sensitive = button.active;
+                this._diskSpaceUnitMeasureCombobox.sensitive = button.active;
             });
             this._diskSpaceWidthSpinbutton.sensitive = this._diskSpaceDisplay.active;
             this._diskSpaceUnitCombobox.sensitive = this._diskSpaceDisplay.active;
             this._diskSpaceMonitorCombobox.sensitive = this._diskSpaceDisplay.active;
+            this._diskSpaceUnitMeasureCombobox.sensitive = this._diskSpaceDisplay.active;
 
+            // TreeView
             this._disk_devices_model = new Gtk.ListStore();
             this._disk_devices_model.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING, GObject.TYPE_BOOLEAN, GObject.TYPE_BOOLEAN]);
 
@@ -378,7 +403,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Array format
             // filesystem mountPoint stats space
             // Get current disks settings
-            let disksArray = this._settings.get_strv(DISK_DEVICES_LIST, Gio.SettingsBindFlags.DEFAULT);
+            let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
 
             this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 let lines = output.split('\n');
@@ -423,13 +448,15 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         _buildNet() {
             this._netAutoHide = this._builder.get_object('net_auto_hide');
             this._netUnitCombobox = this._builder.get_object('net_unit_combobox');
+            this._netUnitMeasureCombobox = this._builder.get_object('net_unit_measure_combobox');
             this._netEthDisplay = this._builder.get_object('net_eth_display');
             this._netEthWidthSpinbutton = this._builder.get_object('net_eth_width_spinbutton');
             this._netWlanDisplay = this._builder.get_object('net_wlan_display');
             this._netWlanWidthSpinbutton = this._builder.get_object('net_wlan_width_spinbutton');
 
             this._connectSwitchButton(this._settings, NET_AUTO_HIDE_STATUS, this._netAutoHide);
-            this._connectComboBox(this._settings, NET_UNIT, this._netUnitCombobox, [_('Bps'), _('bps')], ['bytes', 'bits']);
+            this._connectComboBox(this._settings, NET_UNIT, this._netUnitCombobox);
+            this._connectComboBox(this._settings, NET_UNIT_MEASURE, this._netUnitMeasureCombobox);
             this._connectSwitchButton(this._settings, NET_ETH_STATUS, this._netEthDisplay);
             this._connectSpinButton(this._settings, NET_ETH_WIDTH, this._netEthWidthSpinbutton);
             this._connectSwitchButton(this._settings, NET_WLAN_STATUS, this._netWlanDisplay);
@@ -455,7 +482,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._thermalGpuWidthSpinbutton = this._builder.get_object('thermal_gpu_width_spinbutton');
             this._thermalGpuDevicesTreeView = this._builder.get_object('thermal_gpu_devices_treeview');
 
-            this._connectComboBox(this._settings, THERMAL_TEMPERATURE_UNIT, this._thermalUnitCombobox, [_('°C'), _('°F')], ['c', 'f']);
+            this._connectComboBox(this._settings, THERMAL_TEMPERATURE_UNIT, this._thermalUnitCombobox);
             this._connectSwitchButton(this._settings, THERMAL_CPU_TEMPERATURE_STATUS, this._thermalCpuDisplay);
             this._connectSpinButton(this._settings, THERMAL_CPU_TEMPERATURE_WIDTH, this._thermalCpuWidthSpinbutton);
             this._connectSwitchButton(this._settings, THERMAL_GPU_TEMPERATURE_STATUS, this._thermalGpuDisplay);
@@ -471,6 +498,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             });
             this._thermalGpuWidthSpinbutton.sensitive = this._thermalGpuDisplay.active;
 
+            // TreeView
             this._thermalCpuDevicesModel = new Gtk.ListStore();
             this._thermalCpuDevicesModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING, GObject.TYPE_BOOLEAN]);
 
@@ -510,7 +538,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Array format
             // name-status-path
             // Get current disks settings
-            let cpuTempsArray = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, Gio.SettingsBindFlags.DEFAULT);
+            let cpuTempsArray = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
 
             // Detect sensors
             //let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
@@ -595,7 +623,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Array format
             // uuid:name:status
             // Get current disks settings
-            let gpuTempsArray = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, Gio.SettingsBindFlags.DEFAULT);
+            let gpuTempsArray = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
 
             this._executeCommand(['nvidia-smi', '-L']).then(output => {
                 let lines = output.split('\n');
@@ -637,22 +665,79 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         _buildGpu() {
             this._gpuDisplay = this._builder.get_object('gpu_display');
             this._gpuWidthSpinbutton = this._builder.get_object('gpu_width_spinbutton');
+            this._gpuMemoryUnitCombobox = this._builder.get_object('gpu_memory_unit_combobox');
+            this._gpuMemoryUnitMeasureCombobox = this._builder.get_object('gpu_memory_unit_measure_combobox');
+            this._gpuMemoryMonitorCombobox = this._builder.get_object('gpu_memory_monitor_combobox');
             this._gpuDevicesTreeView = this._builder.get_object('gpu_devices_treeview');
 
             this._connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
             this._connectSpinButton(this._settings, GPU_WIDTH, this._gpuWidthSpinbutton);
+            this._connectComboBox(this._settings, GPU_MEMORY_UNIT, this._gpuMemoryUnitCombobox);
+            this._connectComboBox(this._settings, GPU_MEMORY_UNIT_MEASURE, this._gpuMemoryUnitMeasureCombobox);
+            this._connectComboBox(this._settings, GPU_MEMORY_MONITOR, this._gpuMemoryMonitorCombobox);
 
             this._gpuDisplay.connect('state-set', button => {
                 this._gpuWidthSpinbutton.sensitive = button.active;
+                this._gpuMemoryUnitCombobox.sensitive = button.active;
+                this._gpuMemoryUnitMeasureCombobox.sensitive = button.active;
+                this._gpuMemoryMonitorCombobox.sensitive = button.active;
             });
             this._gpuWidthSpinbutton.sensitive = this._gpuDisplay.active;
+            this._gpuMemoryUnitCombobox.sensitive = this._gpuDisplay.active;
+            this._gpuMemoryUnitMeasureCombobox.sensitive = this._gpuDisplay.active;
+            this._gpuMemoryMonitorCombobox.sensitive = this._gpuDisplay.active;
+
+            // TreeView
+            this._gpuDevicesModel = new Gtk.ListStore();
+            this._gpuDevicesModel.set_column_types([GObject.TYPE_STRING, GObject.TYPE_STRING, GObject.TYPE_BOOLEAN, GObject.TYPE_BOOLEAN]);
+
+            this._gpuDevicesTreeView.set_model(this._gpuDevicesModel);
+
+            let gpuDeviceCol = this._gpuDevicesTreeView.get_column(0);
+            let gpuNameCol = this._gpuDevicesTreeView.get_column(1);
+            let gpuUsageMonitorCol = this._gpuDevicesTreeView.get_column(2);
+            let gpuMemoryMonitorCol = this._gpuDevicesTreeView.get_column(3);
+
+            let empty = new Gtk.TreeViewColumn();
+            empty.pack_start(new Gtk.CellRendererText(), true);
+            this._gpuDevicesTreeView.append_column(empty);
+
+            let gpuDeviceColText = new Gtk.CellRendererText();
+            gpuDeviceCol.pack_start(gpuDeviceColText, false);
+            gpuDeviceCol.add_attribute(gpuDeviceColText, 'text', 0);
+
+            let gpuNameColText = new Gtk.CellRendererText();
+            gpuNameCol.pack_start(gpuNameColText, false);
+            gpuNameCol.add_attribute(gpuNameColText, 'text', 1);
+
+            let gpuUsageMonitorColToggle = new Gtk.CellRendererToggle();
+            gpuUsageMonitorCol.pack_start(gpuUsageMonitorColToggle, false);
+            gpuUsageMonitorCol.add_attribute(gpuUsageMonitorColToggle, 'active', 2);
+            gpuUsageMonitorColToggle.connect('toggled', (toggle, row) => {
+                let treeiter = this._gpuDevicesModel.get_iter_from_string(row.toString()); // bool, iter
+
+                this._gpuDevicesModel.set_value(treeiter[1], 2, !toggle.active);
+            });
+
+            let gpuMemoryMonitorColToggle = new Gtk.CellRendererToggle();
+            gpuMemoryMonitorCol.pack_start(gpuMemoryMonitorColToggle, false);
+            gpuMemoryMonitorCol.add_attribute(gpuMemoryMonitorColToggle, 'active', 3);
+            gpuMemoryMonitorColToggle.connect('toggled', (toggle, row) => {
+                let treeiter = this._gpuDevicesModel.get_iter_from_string(row.toString()); // bool, iter
+
+                this._gpuDevicesModel.set_value(treeiter[1], 3, !toggle.active);
+            });
+
+            this._gpuDevicesModel.connect('row-changed', (list, path, iter) => {
+                let row = path.get_indices()[0];
+                gpuDevicesArray[row] = list.get_value(iter, 0) + ':' + list.get_value(iter, 1) + ':' + list.get_value(iter, 2) + ':' + list.get_value(iter, 3);
+                this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
+            });
 
             // Array format
-            // uuid-status
-            // Get current gpu devices settings
-            /* TODO let devicesArray = this._settings.get_strv(GPU_DEVICES_LIST, Gio.SettingsBindFlags.DEFAULT);
-            let newDevicesArray = [];
-            let x = 0;
+            // uuid:name:usage:memory
+            // Get current disks settings
+            let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
 
             this._executeCommand(['nvidia-smi', '-L']).then(output => {
                 let lines = output.split('\n');
@@ -665,137 +750,32 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     let name = entry[1].slice(1, -6);
                     let uuid = entry[2].slice(1, -1);
 
-                    let temp = new TempListItemRow(name + ": " + uuid);
+                    let usageButton = false;
+                    let memoryButton = false;
 
                     // Init gui
-                    for (let i = 0; i < devicesArray.length; i++) {
-                        let element = devicesArray[i];
+                    for (let i = 0; i < gpuDevicesArray.length; i++) {
+                        let element = gpuDevicesArray[i];
                         let it = element.split(':');
 
                         if (uuid === it[0]) {
-                            let statusButton = (it[1] === 'true');
-
-                            temp.button.active = statusButton;
+                            usageButton = (it[2] === 'true');
+                            memoryButton = (it[3] === 'true');
 
                             break;
                         }
                     }
 
-                    temp.button.connect('toggled', button => {
-                        // Save new button state
-                        let found = false;
-
-                        for (let i = 0; i < devicesArray.length; i++) {
-                            let element = devicesArray[i];
-                            let it = element.split(':');
-
-                            if (uuid === it[0]) {
-                                it[1] = button.active;
-                                devicesArray[i] = it[0] + ':' + it[1];
-
-                                found = true;
-                                break;
-                            }
-                        }
-
-                        // Add new device
-                        if (found === false) {
-                            devicesArray.push(uuid + ':' + temp.button.active);
-                            found = false;
-                        }
-
-                        // Save all
-                        this._settings.set_strv(GPU_DEVICES_LIST, devicesArray);
-                    });
-
-                    // Add device to newDevicesArray
-                    newDevicesArray[x++] = uuid + ':' + temp.button.active;
-
-                    devices.list.append(temp);
-                    devices.list.show();
+                    this._gpuDevicesModel.set(this._gpuDevicesModel.append(), [0, 1, 2, 3], [uuid, name, usageButton, memoryButton]);
                 }
 
-                // Save newDevicesArray with the list of new devices (to remove old devices)
-                devicesArray = newDevicesArray;
-                this._settings.set_strv(GPU_DEVICES_LIST, devicesArray);
-            });*/
-
-            /*// Array format
-            // name-status-path
-            // Get current disks settings
-            let tempsArray = this._settings.get_strv(GPU_ELEMENTS_LIST, Gio.SettingsBindFlags.DEFAULT);
-            let newTempsArray = [];
-            let y = 0;
-
-            this._executeCommand(['bash', '-c', '']).then(output => {
-                let result = output.split('\n')[0];
-                if (result === 'EXIST') {
-                    this._executeCommand(['bash', '-c', 'for echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; done']).then(output => {
-                        let lines = output.split('\n');
-
-                        for (let i = 0; i < lines.length - 1; i++) {
-                            let line = lines[i];
-                            let entry = line.trim().split(/-/);
-
-                            let device = entry[0];
-                            let path = entry[1];
-
-                            let temp = new TempListItemRow(device);
-
-                            // Init gui
-                            for (let i = 0; i < tempsArray.length; i++) {
-                                let element = tempsArray[i];
-                                let it = element.split('-');
-
-                                if (device === it[0]) {
-                                    let statusButton = (it[1] === 'true');
-
-                                    temp.button.active = statusButton;
-
-                                    break;
-                                }
-                            }
-
-                            temp.button.connect('toggled', button => {
-                                // Save new button state
-                                let found = false;
-
-                                for (let i = 0; i < tempsArray.length; i++) {
-                                    let element = tempsArray[i];
-                                    let it = element.split('-');
-
-                                    if (device === it[0]) {
-                                        it[1] = button.active;
-                                        tempsArray[i] = it[0] + '-' + it[1] + '-' + it[2];
-
-                                        found = true;
-                                        break;
-                                    }
-                                }
-
-                                // Add new device
-                                if (found === false) {
-                                    tempsArray.push(device + '-' + temp.button.active + '-' + path);
-                                    found = false;
-                                }
-
-                                // Save all
-                                this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);
-                            });
-
-                            // Add device to newTempsArray
-                            newTempsArray[x++] = device + '-' + temp.button.active + '-' + path;
-
-                            devices.list.append(temp);
-                            devices.list.show();
-                        }
-
-                        // Save newTempsArray with the list of new devices (to remove old devices)
-                        tempsArray = newTempsArray;
-                        this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, tempsArray);
-                    });
-                }
-            });*/
+                // Save new gpuTempsArray with the list of new devices (to remove old devices)
+                gpuDevicesArray = [];
+                this._gpuDevicesModel.foreach((list, path, iter) => {
+                    gpuDevicesArray.push(list.get_value(iter, 0) + ':' + list.get_value(iter, 1) + ':' + list.get_value(iter, 2) + ':' + list.get_value(iter, 3));
+                });
+                this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
+            });
         }
 
         _readOutput(proc, cancellable = null) {

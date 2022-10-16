@@ -62,7 +62,11 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="extension_position_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="left">Left</item>
+                      <item id="center">Center</item>
+                      <item id="right">Right</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -192,7 +196,10 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="icons_position_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="left">Left</item>
+                      <item id="right">Right</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -291,6 +298,47 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
+                <property name="halign">start</property>
+                <property name="label">Load Average</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="cpu_loadaverage_display"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Width</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="cpu_loadaverage_width_spinbutton">
+                    <property name="adjustment">cpu_loadaverage_width_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
       </object>
@@ -356,7 +404,33 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="ram_unit_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="numeric">Numeric</item>
+                      <item id="perc">%</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="ram_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">Kilo</item>
+                      <item id="m">Mega</item>
+                      <item id="g">Giga</item>
+                      <item id="t">Tera</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -373,7 +447,10 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="ram_monitor_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="used">Used Memory</item>
+                      <item id="free">Free Memory</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -443,7 +520,33 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="swap_unit_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="numeric">Numeric</item>
+                      <item id="perc">%</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="swap_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">Kilo</item>
+                      <item id="m">Mega</item>
+                      <item id="g">Giga</item>
+                      <item id="t">Tera</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -460,7 +563,10 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="swap_monitor_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="used">Used Memory</item>
+                      <item id="free">Free Memory</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -537,7 +643,33 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="disk_stats_mode_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="single">Single Mode</item>
+                      <item id="multiple">Multiple Mode</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="disk_stats_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">Kilo</item>
+                      <item id="m">Mega</item>
+                      <item id="g">Giga</item>
+                      <item id="t">Tera</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -595,7 +727,33 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="disk_space_unit_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="numeric">Numeric</item>
+                      <item id="perc">%</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="disk_space_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">Kilo</item>
+                      <item id="m">Mega</item>
+                      <item id="g">Giga</item>
+                      <item id="t">Tera</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -612,7 +770,10 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="disk_space_monitor_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="used">Used Space</item>
+                      <item id="free">Free Space</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -711,7 +872,33 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="net_unit_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="bytes">Bps</item>
+                      <item id="bits">bps</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="net_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">Kilo</item>
+                      <item id="m">Mega</item>
+                      <item id="g">Giga</item>
+                      <item id="t">Tera</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -837,7 +1024,10 @@
                 </child>
                 <child>
                   <object class="GtkComboBoxText" id="thermal_unit_combobox">
-                    <property name="id-column">0</property>
+                    <items>
+                      <item id="c">°C</item>
+                      <item id="f">°F</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -1047,6 +1237,69 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Memory Unit</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="gpu_memory_unit_combobox">
+                    <items>
+                      <item id="numeric">Numeric</item>
+                      <item id="perc">%</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Memory Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="gpu_memory_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">Kilo</item>
+                      <item id="m">Mega</item>
+                      <item id="g">Giga</item>
+                      <item id="t">Tera</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Memory Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="gpu_memory_monitor_combobox">
+                    <items>
+                      <item id="used">Used Memory</item>
+                      <item id="free">Free Memory</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel">
                 <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
@@ -1076,7 +1329,12 @@
                 </child>
                 <child>
                   <object class="GtkTreeViewColumn">
-                    <property name="title">Monitor</property>
+                    <property name="title">Usage Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTreeViewColumn">
+                    <property name="title">Memory Monitor</property>
                   </object>
                 </child>
               </object>
@@ -1102,6 +1360,11 @@
     <property name="upper">10.0</property>
   </object>
   <object class="GtkAdjustment" id="cpu_frequency_width_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="cpu_loadaverage_width_adjustment">
     <property name="page-increment">10.0</property>
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>

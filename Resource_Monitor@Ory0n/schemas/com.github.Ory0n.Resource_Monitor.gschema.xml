@@ -61,6 +61,16 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="cpuloadaveragestatus" type="b">
+            <default>false</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="cpuloadaveragewidth" type="i">
+            <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="ramstatus" type="b">
             <default>true</default>
             <summary></summary>
@@ -73,6 +83,11 @@
         </key>
         <key name="ramunit" type="s">
             <default>"numeric"</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="ramunitmeasure" type="s">
+            <default>"auto"</default>
             <summary></summary>
             <description></description>
         </key>
@@ -96,6 +111,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="swapunitmeasure" type="s">
+            <default>"auto"</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="swapmonitor" type="s">
             <default>"used"</default>
             <summary></summary>
@@ -116,6 +136,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="diskstatsunitmeasure" type="s">
+            <default>"auto"</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="diskspacestatus" type="b">
             <default>true</default>
             <summary></summary>
@@ -128,6 +153,11 @@
         </key>
         <key name="diskspaceunit" type="s">
             <default>"numeric"</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="diskspaceunitmeasure" type="s">
+            <default>"auto"</default>
             <summary></summary>
             <description></description>
         </key>
@@ -148,6 +178,11 @@
         </key>
         <key name="netunit" type="s">
             <default>"bytes"</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="netunitmeasure" type="s">
+            <default>"auto"</default>
             <summary></summary>
             <description></description>
         </key>
@@ -216,12 +251,22 @@
             <summary></summary>
             <description></description>
         </key>
-        <key name="gpudeviceslist" type="as">
-            <default>[]</default>
+        <key name="gpumemoryunit" type="s">
+            <default>"numeric"</default>
             <summary></summary>
             <description></description>
         </key>
-        <key name="gpudevicessettingslist" type="as">
+        <key name="gpumemoryunitmeasure" type="s">
+            <default>"auto"</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpumemorymonitor" type="s">
+            <default>"used"</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpudeviceslist" type="as">
             <default>[]</default>
             <summary></summary>
             <description></description>
