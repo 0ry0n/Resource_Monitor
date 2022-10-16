@@ -894,6 +894,7 @@
                   <object class="GtkComboBoxText" id="net_unit_measure_combobox">
                     <items>
                       <item id="auto">Auto</item>
+                      <item id="b">Byte/Bit</item>
                       <item id="k">Kilo</item>
                       <item id="m">Mega</item>
                       <item id="g">Giga</item>
