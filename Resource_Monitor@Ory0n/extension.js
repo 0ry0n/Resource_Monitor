@@ -51,29 +51,36 @@ const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
 const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+const CPU_LOADAVERAGE_STATUS = 'cpuloadaveragestatus';
+const CPU_LOADAVERAGE_WIDTH = 'cpuloadaveragewidth';
 
 const RAM_STATUS = 'ramstatus';
 const RAM_WIDTH = 'ramwidth';
 const RAM_UNIT = 'ramunit';
+const RAM_UNIT_MEASURE = 'ramunitmeasure';
 const RAM_MONITOR = 'rammonitor';
 
 const SWAP_STATUS = 'swapstatus';
 const SWAP_WIDTH = 'swapwidth';
 const SWAP_UNIT = 'swapunit';
+const SWAP_UNIT_MEASURE = 'swapunitmeasure';
 const SWAP_MONITOR = 'swapmonitor';
 
 const DISK_STATS_STATUS = 'diskstatsstatus';
 const DISK_STATS_WIDTH = 'diskstatswidth';
 const DISK_STATS_MODE = 'diskstatsmode';
+const DISK_STATS_UNIT_MEASURE = 'diskstatsunitmeasure';
 const DISK_SPACE_STATUS = 'diskspacestatus';
 const DISK_SPACE_WIDTH = 'diskspacewidth';
 const DISK_SPACE_UNIT = 'diskspaceunit';
+const DISK_SPACE_UNIT_MEASURE = 'diskspaceunitmeasure';
 const DISK_SPACE_MONITOR = 'diskspacemonitor';
 const DISK_DEVICES_LIST = 'diskdeviceslist';
 const DISK_DEVICES_LIST_SEPARATOR = ' ';
 
 const NET_AUTO_HIDE_STATUS = 'netautohidestatus';
 const NET_UNIT = 'netunit';
+const NET_UNIT_MEASURE = 'netunitmeasure';
 const NET_ETH_STATUS = 'netethstatus';
 const NET_ETH_WIDTH = 'netethwidth';
 const NET_WLAN_STATUS = 'netwlanstatus';
@@ -83,7 +90,18 @@ const THERMAL_TEMPERATURE_UNIT = 'thermaltemperatureunit';
 const THERMAL_CPU_TEMPERATURE_STATUS = 'thermalcputemperaturestatus';
 const THERMAL_CPU_TEMPERATURE_WIDTH = 'thermalcputemperaturewidth';
 const THERMAL_CPU_TEMPERATURE_DEVICES_LIST = 'thermalcputemperaturedeviceslist';
+const THERMAL_GPU_TEMPERATURE_STATUS = 'thermalgputemperaturestatus';
+const THERMAL_GPU_TEMPERATURE_WIDTH = 'thermalgputemperaturewidth';
+const THERMAL_GPU_TEMPERATURE_DEVICES_LIST = 'thermalgputemperaturedeviceslist';
 const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = '-';
+
+const GPU_STATUS = 'gpustatus';
+const GPU_WIDTH = 'gpuwidth';
+const GPU_MEMORY_UNIT = 'gpumemoryunit';
+const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
+const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
+const GPU_DEVICES_LIST = 'gpudeviceslist';
+const GPU_DEVICES_LIST_SEPARATOR = ':';
 
 const ResourceMonitor = GObject.registerClass(
     class ResourceMonitor extends PanelMenu.Button {
@@ -282,6 +300,12 @@ const ResourceMonitor = GObject.registerClass(
                 text: ']'
             });
             this._cpuFrequencyValue.set_style('text-align: right;');
+
+            this._cpuLoadAverageValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '[--]'
+            });
+            this._cpuLoadAverageValue.set_style('text-align: right;');
         }
 
         _buildMainGui() {
@@ -300,6 +324,7 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._cpuFrequencyValue);
                     this._box.add(this._cpuFrequencyUnit);
                     this._box.add(this._cpuFrequencyValueBracket);
+                    this._box.add(this._cpuLoadAverageValue);
 
                     this._box.add(this._ramIcon);
                     this._box.add(this._ramValue);
@@ -337,6 +362,7 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._cpuFrequencyValue);
                     this._box.add(this._cpuFrequencyUnit);
                     this._box.add(this._cpuFrequencyValueBracket);
+                    this._box.add(this._cpuLoadAverageValue);
                     this._box.add(this._cpuIcon);
 
                     this._box.add(this._ramValue);
@@ -380,6 +406,8 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuWidth = this._settings.get_int(CPU_WIDTH);
             this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+            this._cpuLoadAverageStatus = this._settings.get_boolean(CPU_LOADAVERAGE_STATUS);
+            this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
 
             this._ramStatus = this._settings.get_boolean(RAM_STATUS);
             this._ramWidth = this._settings.get_int(RAM_WIDTH);
@@ -426,6 +454,8 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_WIDTH}`, this._cpuWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_STATUS}`, this._cpuFrequencyStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_WIDTH}`, this._cpuFrequencyWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_STATUS}`, this._cpuLoadAverageStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_WIDTH}`, this._cpuLoadAverageWidthChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_STATUS}`, this._ramStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_WIDTH}`, this._ramWidthChanged.bind(this));
@@ -609,7 +639,7 @@ const ResourceMonitor = GObject.registerClass(
         _cpuStatusChanged() {
             this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
 
-            this._basicItemStatus(this._cpuStatus, (!this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuValue, this._cpuUnit);
+            this._basicItemStatus(this._cpuStatus, (!this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus &&!this._cpuLoadAverageStatus), this._cpuIcon, this._cpuValue, this._cpuUnit);
         }
 
         _cpuWidthChanged() {
@@ -621,13 +651,25 @@ const ResourceMonitor = GObject.registerClass(
         _cpuFrequencyStatusChanged() {
             this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
 
-            this._basicItemStatus(this._cpuFrequencyStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus), this._cpuIcon, this._cpuFrequencyValue, this._cpuFrequencyUnit, this._cpuFrequencyValueBracket);
+            this._basicItemStatus(this._cpuFrequencyStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus && !this._cpuLoadAverageStatus), this._cpuIcon, this._cpuFrequencyValue, this._cpuFrequencyUnit, this._cpuFrequencyValueBracket);
         }
 
         _cpuFrequencyWidthChanged() {
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
 
             this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+        }
+
+        _cpuLoadAverageStatusChanged() {
+            this._cpuLoadAverageStatus = this._settings.get_boolean(CPU_LOADAVERAGE_STATUS);
+
+            this._basicItemStatus(this._cpuLoadAverageStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuLoadAverageValue);
+        }
+
+        _cpuLoadAverageWidthChanged() {
+            this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
+
+            this._basicItemWidth(this._cpuLoadAverageWidth, this._cpuLoadAverageValue);
         }
 
         _ramStatusChanged() {
@@ -815,7 +857,7 @@ const ResourceMonitor = GObject.registerClass(
         _thermalCpuTemperatureStatusChanged() {
             this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
 
-            this._basicItemStatus(this._thermalCpuTemperatureStatus, (!this._cpuStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuTemperatureValue, this._cpuTemperatureUnit, this._cpuTemperatureValueBracket);
+            this._basicItemStatus(this._thermalCpuTemperatureStatus, (!this._cpuStatus && !this._cpuFrequencyStatus && !this._cpuLoadAverageStatus), this._cpuIcon, this._cpuTemperatureValue, this._cpuTemperatureUnit, this._cpuTemperatureValueBracket);
         }
 
         _thermalCpuTemperatureWidthChanged() {
@@ -868,6 +910,9 @@ const ResourceMonitor = GObject.registerClass(
             if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
             }
+            if (this._cpuLoadAverageStatus) {
+                this._refreshCpuLoadAverageValue();
+            }
 
             return GLib.SOURCE_CONTINUE;
         }
@@ -896,6 +941,10 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuFrequencyStatusChanged();
 
             this._cpuFrequencyWidthChanged();
+
+            this._cpuLoadAverageStatusChanged();
+
+            this._cpuLoadAverageWidthChanged();
 
             this._ramStatusChanged();
 
@@ -1548,6 +1597,20 @@ const ResourceMonitor = GObject.registerClass(
             } else {
                 this._cpuTemperatureValue.text = _('[--');
             }
+        }
+
+        _refreshCpuLoadAverageValue() {
+            this._loadFile('/proc/loadavg').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                const entry = lines[0].trim().split(/\s/);
+                
+                const l0 = entry[0];
+                const l1 = entry[1];
+                const l2 = entry[2];
+
+                this._cpuLoadAverageValue.text = '[' + l0 + ' ' + l1 + ' ' + l2 + ']';
+            });
         }
 
         // Common Function

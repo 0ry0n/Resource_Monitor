@@ -72,6 +72,7 @@ const DISK_SPACE_UNIT = 'diskspaceunit';
 const DISK_SPACE_UNIT_MEASURE = 'diskspaceunitmeasure';
 const DISK_SPACE_MONITOR = 'diskspacemonitor';
 const DISK_DEVICES_LIST = 'diskdeviceslist';
+const DISK_DEVICES_LIST_SEPARATOR = ' ';
 
 const NET_AUTO_HIDE_STATUS = 'netautohidestatus';
 const NET_UNIT = 'netunit';
@@ -88,6 +89,7 @@ const THERMAL_CPU_TEMPERATURE_DEVICES_LIST = 'thermalcputemperaturedeviceslist';
 const THERMAL_GPU_TEMPERATURE_STATUS = 'thermalgputemperaturestatus';
 const THERMAL_GPU_TEMPERATURE_WIDTH = 'thermalgputemperaturewidth';
 const THERMAL_GPU_TEMPERATURE_DEVICES_LIST = 'thermalgputemperaturedeviceslist';
+const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = '-';
 
 const GPU_STATUS = 'gpustatus';
 const GPU_WIDTH = 'gpuwidth';
@@ -95,6 +97,7 @@ const GPU_MEMORY_UNIT = 'gpumemoryunit';
 const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
 const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
 const GPU_DEVICES_LIST = 'gpudeviceslist';
+const GPU_DEVICES_LIST_SEPARATOR = ':';
 
 const ResourceMonitorBuilderScope = GObject.registerClass({
     Implements: [Gtk.BuilderScope],
@@ -396,7 +399,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._disk_devices_model.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
-                disksArray[row] = list.get_value(iter, 0) + ' ' + list.get_value(iter, 1) + ' ' + list.get_value(iter, 2) + ' ' + list.get_value(iter, 3);
+                disksArray[row] = list.get_value(iter, 0) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3);
                 this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
             });
 
@@ -423,7 +426,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     for (let i = 0; i < disksArray.length; i++) {
                         let element = disksArray[i];
 
-                        let it = element.split(' ');
+                        let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
 
                         if (filesystem === it[0]) {
                             dStButton = (it[2] === 'true');
@@ -439,7 +442,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 // Save new disksArray with the list of new disks (to remove old disks)
                 disksArray = [];
                 this._disk_devices_model.foreach((list, path, iter) => {
-                    disksArray.push(list.get_value(iter, 0) + ' ' + list.get_value(iter, 1) + ' ' + list.get_value(iter, 2) + ' ' + list.get_value(iter, 3));
+                    disksArray.push(list.get_value(iter, 0) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
                 });
                 this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
             });
@@ -531,7 +534,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._thermalCpuDevicesModel.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
-                cpuTempsArray[row] = list.get_value(iter, 1) + '-' + list.get_value(iter, 2) + '-' + list.get_value(iter, 0);
+                cpuTempsArray[row] = list.get_value(iter, 1) + THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR + list.get_value(iter, 0);
                 this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, cpuTempsArray);
             });
 
@@ -561,7 +564,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                             // Init gui
                             for (let i = 0; i < cpuTempsArray.length; i++) {
                                 let element = cpuTempsArray[i];
-                                let it = element.split('-');
+                                let it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
 
                                 if (device === it[0]) {
                                     statusButton = (it[1] === 'true');
@@ -576,7 +579,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                         // Save new cpuTempsArray with the list of new devices (to remove old devices)
                         cpuTempsArray = [];
                         this._thermalCpuDevicesModel.foreach((list, path, iter) => {
-                            cpuTempsArray.push(list.get_value(iter, 1) + '-' + list.get_value(iter, 2) + '-' + list.get_value(iter, 0));
+                            cpuTempsArray.push(list.get_value(iter, 1) + THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR + list.get_value(iter, 0));
                         });
                         this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, cpuTempsArray);
                     });
@@ -616,7 +619,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._thermalGpuDevicesModel.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
-                gpuTempsArray[row] = list.get_value(iter, 0) + ':' + list.get_value(iter, 1) + ':' + list.get_value(iter, 2);
+                gpuTempsArray[row] = list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2);
                 this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
             });
 
@@ -641,7 +644,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     // Init gui
                     for (let i = 0; i < gpuTempsArray.length; i++) {
                         let element = gpuTempsArray[i];
-                        let it = element.split(':');
+                        let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
                         if (uuid === it[0]) {
                             statusButton = (it[2] === 'true');
@@ -656,7 +659,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 // Save new gpuTempsArray with the list of new devices (to remove old devices)
                 gpuTempsArray = [];
                 this._thermalGpuDevicesModel.foreach((list, path, iter) => {
-                    gpuTempsArray.push(list.get_value(iter, 0) + ':' + list.get_value(iter, 1) + ':' + list.get_value(iter, 2));
+                    gpuTempsArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2));
                 });
                 this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
             });
@@ -730,7 +733,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._gpuDevicesModel.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
-                gpuDevicesArray[row] = list.get_value(iter, 0) + ':' + list.get_value(iter, 1) + ':' + list.get_value(iter, 2) + ':' + list.get_value(iter, 3);
+                gpuDevicesArray[row] = list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3);
                 this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
             });
 
@@ -756,7 +759,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     // Init gui
                     for (let i = 0; i < gpuDevicesArray.length; i++) {
                         let element = gpuDevicesArray[i];
-                        let it = element.split(':');
+                        let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
                         if (uuid === it[0]) {
                             usageButton = (it[2] === 'true');
@@ -772,7 +775,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 // Save new gpuTempsArray with the list of new devices (to remove old devices)
                 gpuDevicesArray = [];
                 this._gpuDevicesModel.foreach((list, path, iter) => {
-                    gpuDevicesArray.push(list.get_value(iter, 0) + ':' + list.get_value(iter, 1) + ':' + list.get_value(iter, 2) + ':' + list.get_value(iter, 3));
+                    gpuDevicesArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
                 });
                 this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
             });
