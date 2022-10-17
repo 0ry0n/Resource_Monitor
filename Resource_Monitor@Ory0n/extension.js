@@ -24,7 +24,14 @@
 
 const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
 
-const { GObject, St, Gio, Clutter, NM, GLib, Shell } = imports.gi;
+const { GObject, St, Gio, Clutter, GLib, Shell } = imports.gi;
+
+var NM;
+try {
+    NM = imports.gi.NM;
+} catch (error) {
+    log('[Resource_Monitor] NetworkManager not found (' + error + '): The \"Auto Hide\" feature has been disabled');
+}
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Util = imports.misc.util;
@@ -139,12 +146,14 @@ const ResourceMonitor = GObject.registerClass(
 
             this.connect('button-press-event', this._clickManager.bind(this));
 
-            NM.Client.new_async(null, (client) => {
-                client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
-                client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
+            if (typeof NM !== 'undefined') {
+                NM.Client.new_async(null, (client) => {
+                    client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
+                    client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
 
-                this._onActiveConnectionRemoved(client);
-            });
+                    this._onActiveConnectionRemoved(client);
+                });
+            }
 
             this._mainTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._refreshTime, this._refreshHandler.bind(this));
             this._refreshHandler();
@@ -445,7 +454,7 @@ const ResourceMonitor = GObject.registerClass(
             this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
             this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
 
-            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
+            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS) && typeof NM !== 'undefined';
             this._netUnit = this._settings.get_string(NET_UNIT);
             this._netUnitMeasure = this._settings.get_string(NET_UNIT_MEASURE);
             this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
@@ -888,7 +897,7 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _netAutoHideStatusChanged() {
-            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
+            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS) && typeof NM !== 'undefined';
 
             this._basicItemStatus((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus), true, this._ethIcon, this._ethValue, this._ethUnit);
             this._basicItemStatus((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus), true, this._wlanIcon, this._wlanValue, this._wlanUnit);
