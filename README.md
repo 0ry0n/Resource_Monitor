@@ -4,8 +4,6 @@
 Resource_Monitor is a GNOME Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in GNOME shell top bar.
 
 # Screenshots
-![](/images/top.png)
-
 ![](/images/main.png)
 
 # GNOME Shell versions supported
@@ -48,8 +46,6 @@ gnome-extensions enable Resource_Monitor@Ory0n
 ```
 
 # Preferences
-![](/images/main.png)
-
 ![](/images/global.png)
 
 ![](/images/cpu.png)
