@@ -204,6 +204,11 @@ const ResourceMonitor = GObject.registerClass(
                 style_class: 'system-status-icon'
             });
 
+            this._gpuIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
             // Unit
             this._cpuTemperatureUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
@@ -306,6 +311,8 @@ const ResourceMonitor = GObject.registerClass(
                 text: '[--]'
             });
             this._cpuLoadAverageValue.set_style('text-align: right;');
+
+            this._gpuBox = new GpuContainer();
         }
 
         _buildMainGui() {
@@ -348,6 +355,9 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._wlanValue);
                     this._box.add(this._wlanUnit);
 
+                    this._box.add(this._gpuIcon);
+                    this._box.add(this._gpuBox);
+
                     break;
 
                 case 'right':
@@ -385,6 +395,9 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._wlanValue);
                     this._box.add(this._wlanUnit);
                     this._box.add(this._wlanIcon);
+
+                    this._box.add(this._gpuBox);
+                    this._box.add(this._gpuIcon);
 
                     break;
             }
@@ -430,7 +443,7 @@ const ResourceMonitor = GObject.registerClass(
             this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
             this._diskSpaceUnitMeasure = this._settings.get_string(DISK_SPACE_UNIT_MEASURE);
             this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
-            this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
+            this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
 
             this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
             this._netUnit = this._settings.get_string(NET_UNIT);
@@ -444,6 +457,16 @@ const ResourceMonitor = GObject.registerClass(
             this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
             this._thermalCpuTemperatureWidth = this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH);
             this._thermalCpuTemperatureDevicesList = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
+            this._thermalGpuTemperatureStatus = this._settings.get_boolean(THERMAL_GPU_TEMPERATURE_STATUS);
+            this._thermalGpuTemperatureWidth = this._settings.get_int(THERMAL_GPU_TEMPERATURE_WIDTH);
+            this._thermalGpuTemperatureDevicesList = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+
+            this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
+            this._gpuWidth = this._settings.get_int(GPU_WIDTH);
+            this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
+            this._gpuMemoryUnitMeasure = this._settings.get_string(GPU_MEMORY_UNIT_MEASURE);
+            this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
+            this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
         }
 
         _connectSettingsSignals() {
@@ -497,6 +520,16 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_STATUS}`, this._thermalCpuTemperatureStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_WIDTH}`, this._thermalCpuTemperatureWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_DEVICES_LIST}`, this._thermalCpuTemperatureDevicesListChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_GPU_TEMPERATURE_STATUS}`, this._thermalGpuTemperatureStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_GPU_TEMPERATURE_WIDTH}`, this._thermalGpuTemperatureWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_GPU_TEMPERATURE_DEVICES_LIST}`, this._thermalGpuTemperatureDevicesListChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_STATUS}`, this._gpuStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_WIDTH}`, this._gpuWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT}`, this._gpuMemoryUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT_MEASURE}`, this._gpuMemoryUnitMeasureChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_MONITOR}`, this._gpuMemoryMonitorChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_DEVICES_LIST}`, this._gpuDevicesListChanged.bind(this));
         }
 
         // HANDLERS
@@ -817,12 +850,12 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _diskDevicesListChanged() {
-            this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
+            this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
 
             this._diskStatsBox.cleanup_elements();
             this._diskSpaceBox.cleanup_elements();
 
-            this._diskDeviceslist.forEach(element => {
+            this._diskDevicesList.forEach(element => {
                 const it = element.split(DISK_DEVICES_LIST_SEPARATOR);
 
                 const filesystem = it[0];
@@ -922,7 +955,7 @@ const ResourceMonitor = GObject.registerClass(
         _thermalTemperatureUnitChanged() {
             this._thermalTemperatureUnit = this._settings.get_string(THERMAL_TEMPERATURE_UNIT);
 
-            if (this._thermalTemperatureStatus) {
+            if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
             }
         }
@@ -933,6 +966,92 @@ const ResourceMonitor = GObject.registerClass(
             if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
             }
+        }
+
+        _thermalGpuTemperatureStatusChanged() {
+            this._thermalGpuTemperatureStatus = this._settings.get_boolean(THERMAL_GPU_TEMPERATURE_STATUS);
+
+            this._basicItemStatus((this._gpuStatus || this._thermalGpuTemperatureStatus), !this._gpuStatus, this._gpuIcon, this._gpuBox);
+            this._gpuDevicesListChanged();
+        }
+
+        _thermalGpuTemperatureWidthChanged() {
+            this._thermalGpuTemperatureWidth = this._settings.get_int(THERMAL_GPU_TEMPERATURE_WIDTH);
+
+            this._gpuBox.set_element_thermal_width(this._thermalGpuTemperatureWidth);
+        }
+
+        _thermalGpuTemperatureDevicesListChanged() {
+            this._thermalGpuTemperatureDevicesList = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+
+            this._gpuDevicesListChanged();
+        }
+
+        _gpuStatusChanged() {
+            this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
+
+            this._basicItemStatus((this._gpuStatus || this._thermalGpuTemperatureStatus), !this._thermalGpuTemperatureStatus, this._gpuIcon, this._gpuBox);
+            this._gpuDevicesListChanged();
+        }
+
+        _gpuWidthChanged() {
+            this._gpuWidth = this._settings.get_int(GPU_WIDTH);
+
+            this._gpuBox.set_element_width(this._gpuWidth);
+        }
+
+        _gpuMemoryUnitTypeChanged() {
+            this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
+
+            if (this._gpuStatus) {
+                this._refreshGpuValue();
+            }
+        }
+
+        _gpuMemoryUnitMeasureChanged() {
+            this._gpuMemoryUnitMeasure = this._settings.get_string(GPU_MEMORY_UNIT_MEASURE);
+
+            if (this._gpuStatus) {
+                this._refreshGpuValue();
+            }
+        }
+
+        _gpuMemoryMonitorChanged() {
+            this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
+
+            if (this._gpuStatus) {
+                this._refreshGpuValue();
+            }
+        }
+
+        _gpuDevicesListChanged() {
+            this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
+
+            this._gpuBox.cleanup_elements();
+
+            this._gpuDevicesList.forEach(element => {
+                const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+
+                const uuid = it[0];
+                const name = it[1];
+                const usage = (it[2] === 'true') && this._gpuStatus;
+                const memory = (it[3] === 'true') && this._gpuStatus;
+                let thermal = false;
+
+                if (this._thermalGpuTemperatureStatus) {
+                    this._thermalGpuTemperatureDevicesList.forEach(element => {
+                        const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+
+                        if (uuid === it[0]) {
+                            thermal = (it[2] === 'true');
+                        }
+                    });
+                }
+
+                this._gpuBox.add_element(uuid, name, usage, memory, thermal);
+            });
+
+            this._gpuBox.set_element_width(this._gpuWidth);
         }
 
         _refreshHandler() {
@@ -960,11 +1079,14 @@ const ResourceMonitor = GObject.registerClass(
             if (this._cpuFrequencyStatus) {
                 this._refreshCpuFrequencyValue();
             }
+            if (this._cpuLoadAverageStatus) {
+                this._refreshCpuLoadAverageValue();
+            }
             if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
             }
-            if (this._cpuLoadAverageStatus) {
-                this._refreshCpuLoadAverageValue();
+            if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
+                this._refreshGpuValue();
             }
 
             return GLib.SOURCE_CONTINUE;
@@ -1060,6 +1182,24 @@ const ResourceMonitor = GObject.registerClass(
             //this._thermalCpuTemperatureUnitChanged();
 
             //this._thermalCpuTemperatureDevicesListChanged();
+
+            this._thermalGpuTemperatureStatusChanged();
+
+            this._thermalGpuTemperatureWidthChanged();
+
+            //this._thermalGpuTemperatureDevicesListChanged();
+
+            this._gpuStatusChanged();
+
+            this._gpuWidthChanged();
+
+            //this._gpuMemoryUnitTypeChanged();
+
+            //this._gpuMemoryUnitMeasureChanged();
+
+            //this._gpuMemoryMonitorChanged();
+
+            this._gpuDevicesListChanged();
         }
 
         _refreshCpuValue() {
@@ -1877,6 +2017,20 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _refreshCpuLoadAverageValue() {
+            this._loadFile('/proc/loadavg').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                const entry = lines[0].trim().split(/\s/);
+
+                const l0 = entry[0];
+                const l1 = entry[1];
+                const l2 = entry[2];
+
+                this._cpuLoadAverageValue.text = '[' + l0 + ' ' + l1 + ' ' + l2 + ']';
+            });
+        }
+
         _refreshCpuTemperatureValue() {
             if (this._thermalCpuTemperatureDevicesList.length > 0) {
                 for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
@@ -1936,17 +2090,129 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
-        _refreshCpuLoadAverageValue() {
-            this._loadFile('/proc/loadavg').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+        _refreshGpuValue() {
+            this._executeCommand(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu', '--format=csv,noheader']).then(output => {
+                const lines = output.split('\n');
 
-                const entry = lines[0].trim().split(/\s/);
+                for (let i = 0; i < lines.length - 1; i++) {
+                    const line = lines[i];
+                    const entry = line.trim().split(/\,\s/);
 
-                const l0 = entry[0];
-                const l1 = entry[1];
-                const l2 = entry[2];
+                    const uuid = entry[0];
+                    const memoryTotal = entry[1].slice(0, -4);
+                    const memoryUsed = entry[2].slice(0, -4);
+                    const memoryFree = entry[3].slice(0, -4);
+                    const usage = entry[4].slice(0, -1);
+                    const temperature = entry[5];
 
-                this._cpuLoadAverageValue.text = '[' + l0 + ' ' + l1 + ' ' + l2 + ']';
+                    this._gpuBox.update_element_value(uuid, usage, '%');
+
+                    let value = 0;
+                    let unit = 'MiB';
+                    switch (this._gpuMemoryUnitType) {
+                        case 'perc':
+                            const used = (100 * parseInt(memoryUsed)) / parseInt(memoryTotal);
+                            unit = '%';
+
+                            switch (this._gpuMemoryMonitor) {
+                                case 'free':
+                                    value = 100 - used;
+
+                                    break;
+
+                                case 'used':
+
+                                default:
+                                    value = used;
+
+                                    break;
+                            }
+
+                            break;
+
+                        case 'numeric':
+
+                        default:
+                            switch (this._gpuMemoryMonitor) {
+                                case 'free':
+                                    value = parseInt(memoryFree);
+
+                                    break;
+
+                                case 'used':
+
+                                default:
+                                    value = parseInt(memoryUsed);
+
+                                    break;
+                            }
+
+                            switch (this._gpuMemoryUnitMeasure) {
+                                case 'k':
+                                    unit = 'KiB';
+                                    value *= 1024;
+                                    break;
+
+                                case 'm':
+                                    unit = 'MiB';
+                                    break;
+
+                                case 'g':
+                                    unit = 'GiB';
+                                    value /= 1024;
+                                    break;
+
+                                case 't':
+                                    unit = 'TiB';
+                                    value /= 1024;
+                                    value /= 1024;
+                                    break;
+
+                                case 'auto':
+
+                                default:
+                                    if (value > 1024) {
+                                        unit = 'GiB';
+                                        value /= 1024;
+                                        if (value > 1024) {
+                                            unit = 'TiB';
+                                            value /= 1024;
+                                        }
+                                    } else {
+                                        unit = 'MiB';
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+                    }
+
+                    let valueT = parseInt(temperature);
+                    let unitT = '°C';
+                    switch (this._thermalTemperatureUnit) {
+                        case 'f':
+                            valueT = (valueT * 1.8) + 32;
+                            unitT = '°F';
+
+                            break;
+
+                        case 'c':
+
+                        default:
+                            unitT = '°C';
+
+                            break;
+                    }
+
+                    if (this._decimalsStatus) {
+                        this._gpuBox.update_element_memory_value(uuid, `${value.toFixed(1)}`, unit);
+                        this._gpuBox.update_element_thermal_value(uuid, `${valueT.toFixed(1)}`, unitT);
+                    } else {
+                        this._gpuBox.update_element_memory_value(uuid, `${value.toFixed(0)}`, unit);
+                        this._gpuBox.update_element_thermal_value(uuid, `${valueT.toFixed(0)}`, unitT);
+                    }
+                }
             });
         }
 
@@ -2227,6 +2493,193 @@ const DiskContainerSpace = GObject.registerClass(
             if (this._elementsValue[filesystem]) {
                 this._elementsValue[filesystem].text = value;
                 this._elementsUnit[filesystem].text = unit;
+            }
+        }
+    });
+
+const GpuContainer = GObject.registerClass(
+    class GpuContainer extends St.BoxLayout {
+        _init() {
+            super._init();
+
+            this._elementsUuid = [];
+            this._elementsName = [];
+            this._elementsValue = [];
+            this._elementsUnit = [];
+            this._elementsMemoryValue = [];
+            this._elementsMemoryUnit = [];
+            this._elementsThermalValue = [];
+            this._elementsThermalUnit = [];
+        }
+
+        set_element_width(width) {
+            if (width === 0) {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsValue[element] !== 'undefined') {
+                        this._elementsValue[element].min_width = 0;
+                        this._elementsValue[element].natural_width = 0;
+                        this._elementsValue[element].min_width_set = false;
+                        this._elementsValue[element].natural_width_set = false;
+                    }
+
+                    if (typeof this._elementsMemoryValue[element] !== 'undefined') {
+                        this._elementsMemoryValue[element].min_width = 0;
+                        this._elementsMemoryValue[element].natural_width = 0;
+                        this._elementsMemoryValue[element].min_width_set = false;
+                        this._elementsMemoryValue[element].natural_width_set = false;
+                    }
+                });
+            } else {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsValue[element] !== 'undefined') {
+                        this._elementsValue[element].width = width;
+                    }
+
+                    if (typeof this._elementsMemoryValue[element] !== 'undefined') {
+                        this._elementsMemoryValue[element].width = width;
+                    }
+                });
+            }
+        }
+
+        set_element_thermal_width(width) {
+            if (width === 0) {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsThermalValue[element] !== 'undefined') {
+                        this._elementsThermalValue[element].min_width = 0;
+                        this._elementsThermalValue[element].natural_width = 0;
+                        this._elementsThermalValue[element].min_width_set = false;
+                        this._elementsThermalValue[element].natural_width_set = false;
+                    }
+                });
+            } else {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsThermalValue[element] !== 'undefined') {
+                        this._elementsThermalValue[element].width = width;
+                    }
+                });
+            }
+        }
+
+        cleanup_elements() {
+            this._elementsUuid = [];
+            this._elementsName = [];
+            this._elementsValue = [];
+            this._elementsUnit = [];
+            this._elementsMemoryValue = [];
+            this._elementsMemoryUnit = [];
+            this._elementsThermalValue = [];
+            this._elementsThermalUnit = [];
+
+            this.remove_all_children();
+        }
+
+        add_element(uuid, label, usage, memory, thermal) {
+            this._elementsUuid.push(uuid);
+
+            this._elementsName[uuid] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ` ${label}: `
+            });
+            this.add(this._elementsName[uuid]);
+
+            // Usage
+            if (usage) {
+                this._elementsValue[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '--'
+                });
+                this._elementsValue[uuid].set_style('text-align: right;');
+
+                this._elementsUnit[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '%'
+                });
+                this._elementsUnit[uuid].set_style('padding-left: 0.125em;');
+
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '['
+                }));
+                this.add(this._elementsValue[uuid]);
+                this.add(this._elementsUnit[uuid]);
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ']'
+                }));
+            }
+
+            // Memory
+            if (memory) {
+                this._elementsMemoryValue[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '--'
+                });
+                this._elementsMemoryValue[uuid].set_style('text-align: right;');
+
+                this._elementsMemoryUnit[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: this._gpuMemoryUnitType ? '%' : 'KB'
+                });
+                this._elementsMemoryUnit[uuid].set_style('padding-left: 0.125em;');
+
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '['
+                }));
+                this.add(this._elementsMemoryValue[uuid]);
+                this.add(this._elementsMemoryUnit[uuid]);
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ']'
+                }));
+            }
+
+            // Thermal
+            if (thermal) {
+                this._elementsThermalValue[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '--'
+                });
+                this._elementsThermalValue[uuid].set_style('text-align: right;');
+
+                this._elementsThermalUnit[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '°C'
+                });
+                this._elementsThermalUnit[uuid].set_style('padding-left: 0.125em;');
+
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '['
+                }));
+                this.add(this._elementsThermalValue[uuid]);
+                this.add(this._elementsThermalUnit[uuid]);
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ']'
+                }));
+            }
+        }
+
+        update_element_value(uuid, value, unit) {
+            if (this._elementsValue[uuid]) {
+                this._elementsValue[uuid].text = value;
+                this._elementsUnit[uuid].text = unit;
+            }
+        }
+
+        update_element_memory_value(uuid, value, unit) {
+            if (this._elementsMemoryValue[uuid]) {
+                this._elementsMemoryValue[uuid].text = value;
+                this._elementsMemoryUnit[uuid].text = unit;
+            }
+        }
+
+        update_element_thermal_value(uuid, value, unit) {
+            if (this._elementsThermalValue[uuid]) {
+                this._elementsThermalValue[uuid].text = value;
+                this._elementsThermalUnit[uuid].text = unit;
             }
         }
     });
