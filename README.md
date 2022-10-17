@@ -4,10 +4,10 @@
 Resource_Monitor is a GNOME Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in GNOME shell top bar.
 
 # Screenshots
-![](/main.png)
+![](/images/main.png)
 
 # GNOME Shell versions supported
-**40, 41, 42**
+**40, 41, 42, 43**
 - For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) branch.
 
 # How-To Install
@@ -46,14 +46,35 @@ gnome-extensions enable Resource_Monitor@Ory0n
 ```
 
 # Preferences
-![](/settings.png)
+![](/images/global.png)
 
-![](/system-monitor.png)
+![](/images/cpu.png)
+
+![](/images/ram.png)
+
+![](/images/swap.png)
+
+![](/images/disk.png)
+
+![](/images/net.png)
+
+![](/images/thermal.png)
+
+![](/images/gpu.png)
 
 # Bug Reporting
 Use the GitHub [Issues](../../issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 18 (Oct 17, 2022)**
+- Added support for gnome 43.
+- Added GPU monitor (NVIDIA only).
+- Added Load Average monitor.
+- Added the ability to use fixed units of measure.
+- Added the ability to use a custom application to launch when left-clicking the mouse.
+- New preferences window.
+- Bug fixed.
+
 **version 17 (May 9, 2022)**
 - Added support for gnome 42.
 - Added the ability to choose to monitor the used or free ram and swap and whether to use the percentage or the size.

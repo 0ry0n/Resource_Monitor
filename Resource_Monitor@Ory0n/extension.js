@@ -24,16 +24,22 @@
 
 const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
 
-const { GObject, St, Gio, Clutter, NM, GLib, Shell } = imports.gi;
+const { GObject, St, Gio, Clutter, GLib, Shell } = imports.gi;
 
-const Gettext = imports.gettext.domain(GETTEXT_DOMAIN);
-const _ = Gettext.gettext;
+var NM;
+try {
+    NM = imports.gi.NM;
+} catch (error) {
+    log('[Resource_Monitor] NetworkManager not found (' + error + '): The \"Auto Hide\" feature has been disabled');
+}
 
 const ExtensionUtils = imports.misc.extensionUtils;
 const Util = imports.misc.util;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const ByteArray = imports.byteArray;
+
+const _ = ExtensionUtils.gettext;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const IndicatorName = Me.metadata.name;
@@ -52,39 +58,57 @@ const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
 const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+const CPU_LOADAVERAGE_STATUS = 'cpuloadaveragestatus';
+const CPU_LOADAVERAGE_WIDTH = 'cpuloadaveragewidth';
 
 const RAM_STATUS = 'ramstatus';
 const RAM_WIDTH = 'ramwidth';
 const RAM_UNIT = 'ramunit';
+const RAM_UNIT_MEASURE = 'ramunitmeasure';
 const RAM_MONITOR = 'rammonitor';
 
 const SWAP_STATUS = 'swapstatus';
 const SWAP_WIDTH = 'swapwidth';
 const SWAP_UNIT = 'swapunit';
+const SWAP_UNIT_MEASURE = 'swapunitmeasure';
 const SWAP_MONITOR = 'swapmonitor';
 
 const DISK_STATS_STATUS = 'diskstatsstatus';
 const DISK_STATS_WIDTH = 'diskstatswidth';
 const DISK_STATS_MODE = 'diskstatsmode';
+const DISK_STATS_UNIT_MEASURE = 'diskstatsunitmeasure';
 const DISK_SPACE_STATUS = 'diskspacestatus';
 const DISK_SPACE_WIDTH = 'diskspacewidth';
 const DISK_SPACE_UNIT = 'diskspaceunit';
+const DISK_SPACE_UNIT_MEASURE = 'diskspaceunitmeasure';
 const DISK_SPACE_MONITOR = 'diskspacemonitor';
 const DISK_DEVICES_LIST = 'diskdeviceslist';
 const DISK_DEVICES_LIST_SEPARATOR = ' ';
 
 const NET_AUTO_HIDE_STATUS = 'netautohidestatus';
 const NET_UNIT = 'netunit';
+const NET_UNIT_MEASURE = 'netunitmeasure';
 const NET_ETH_STATUS = 'netethstatus';
 const NET_ETH_WIDTH = 'netethwidth';
 const NET_WLAN_STATUS = 'netwlanstatus';
 const NET_WLAN_WIDTH = 'netwlanwidth';
 
+const THERMAL_TEMPERATURE_UNIT = 'thermaltemperatureunit';
 const THERMAL_CPU_TEMPERATURE_STATUS = 'thermalcputemperaturestatus';
 const THERMAL_CPU_TEMPERATURE_WIDTH = 'thermalcputemperaturewidth';
-const THERMAL_CPU_TEMPERATURE_UNIT = 'thermalcputemperatureunit';
 const THERMAL_CPU_TEMPERATURE_DEVICES_LIST = 'thermalcputemperaturedeviceslist';
+const THERMAL_GPU_TEMPERATURE_STATUS = 'thermalgputemperaturestatus';
+const THERMAL_GPU_TEMPERATURE_WIDTH = 'thermalgputemperaturewidth';
+const THERMAL_GPU_TEMPERATURE_DEVICES_LIST = 'thermalgputemperaturedeviceslist';
 const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = '-';
+
+const GPU_STATUS = 'gpustatus';
+const GPU_WIDTH = 'gpuwidth';
+const GPU_MEMORY_UNIT = 'gpumemoryunit';
+const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
+const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
+const GPU_DEVICES_LIST = 'gpudeviceslist';
+const GPU_DEVICES_LIST_SEPARATOR = ':';
 
 const ResourceMonitor = GObject.registerClass(
     class ResourceMonitor extends PanelMenu.Button {
@@ -122,12 +146,14 @@ const ResourceMonitor = GObject.registerClass(
 
             this.connect('button-press-event', this._clickManager.bind(this));
 
-            NM.Client.new_async(null, (client) => {
-                client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
-                client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
+            if (typeof NM !== 'undefined') {
+                NM.Client.new_async(null, (client) => {
+                    client.connect('active-connection-added', this._onActiveConnectionAdded.bind(this));
+                    client.connect('active-connection-removed', this._onActiveConnectionRemoved.bind(this));
 
-                this._onActiveConnectionRemoved(client);
-            });
+                    this._onActiveConnectionRemoved(client);
+                });
+            }
 
             this._mainTimer = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, this._refreshTime, this._refreshHandler.bind(this));
             this._refreshHandler();
@@ -187,6 +213,11 @@ const ResourceMonitor = GObject.registerClass(
                 style_class: 'system-status-icon'
             });
 
+            this._gpuIcon = new St.Icon({
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
+                style_class: 'system-status-icon'
+            });
+
             // Unit
             this._cpuTemperatureUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
@@ -208,13 +239,13 @@ const ResourceMonitor = GObject.registerClass(
 
             this._ramUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: this._ramUnitType ? '%' : 'MB'
+                text: this._ramUnitType ? '%' : 'KB'
             });
             this._ramUnit.set_style('padding-left: 0.125em;');
 
             this._swapUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: this._swapUnitType ? '%' : 'MB'
+                text: this._swapUnitType ? '%' : 'KB'
             });
             this._swapUnit.set_style('padding-left: 0.125em;');
 
@@ -283,6 +314,14 @@ const ResourceMonitor = GObject.registerClass(
                 text: ']'
             });
             this._cpuFrequencyValue.set_style('text-align: right;');
+
+            this._cpuLoadAverageValue = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: '[--]'
+            });
+            this._cpuLoadAverageValue.set_style('text-align: right;');
+
+            this._gpuBox = new GpuContainer();
         }
 
         _buildMainGui() {
@@ -301,6 +340,7 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._cpuFrequencyValue);
                     this._box.add(this._cpuFrequencyUnit);
                     this._box.add(this._cpuFrequencyValueBracket);
+                    this._box.add(this._cpuLoadAverageValue);
 
                     this._box.add(this._ramIcon);
                     this._box.add(this._ramValue);
@@ -324,6 +364,9 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._wlanValue);
                     this._box.add(this._wlanUnit);
 
+                    this._box.add(this._gpuIcon);
+                    this._box.add(this._gpuBox);
+
                     break;
 
                 case 'right':
@@ -338,6 +381,7 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._cpuFrequencyValue);
                     this._box.add(this._cpuFrequencyUnit);
                     this._box.add(this._cpuFrequencyValueBracket);
+                    this._box.add(this._cpuLoadAverageValue);
                     this._box.add(this._cpuIcon);
 
                     this._box.add(this._ramValue);
@@ -360,6 +404,9 @@ const ResourceMonitor = GObject.registerClass(
                     this._box.add(this._wlanValue);
                     this._box.add(this._wlanUnit);
                     this._box.add(this._wlanIcon);
+
+                    this._box.add(this._gpuBox);
+                    this._box.add(this._gpuIcon);
 
                     break;
             }
@@ -381,37 +428,54 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuWidth = this._settings.get_int(CPU_WIDTH);
             this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+            this._cpuLoadAverageStatus = this._settings.get_boolean(CPU_LOADAVERAGE_STATUS);
+            this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
 
             this._ramStatus = this._settings.get_boolean(RAM_STATUS);
             this._ramWidth = this._settings.get_int(RAM_WIDTH);
             this._ramUnitType = this._settings.get_string(RAM_UNIT);
+            this._ramUnitMeasure = this._settings.get_string(RAM_UNIT_MEASURE);
             this._ramMonitor = this._settings.get_string(RAM_MONITOR);
 
             this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
             this._swapWidth = this._settings.get_int(SWAP_WIDTH);
             this._swapUnitType = this._settings.get_string(SWAP_UNIT);
+            this._swapUnitMeasure = this._settings.get_string(SWAP_UNIT_MEASURE);
             this._swapMonitor = this._settings.get_string(SWAP_MONITOR);
 
             this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
             this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
             this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
+            this._diskStatsUnitMeasure = this._settings.get_string(DISK_STATS_UNIT_MEASURE);
             this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
             this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
             this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
+            this._diskSpaceUnitMeasure = this._settings.get_string(DISK_SPACE_UNIT_MEASURE);
             this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
-            this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
+            this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
 
-            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
+            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS) && typeof NM !== 'undefined';
             this._netUnit = this._settings.get_string(NET_UNIT);
+            this._netUnitMeasure = this._settings.get_string(NET_UNIT_MEASURE);
             this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
             this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
             this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
             this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
 
+            this._thermalTemperatureUnit = this._settings.get_string(THERMAL_TEMPERATURE_UNIT);
             this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
             this._thermalCpuTemperatureWidth = this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH);
-            this._thermalCpuTemperatureUnit = this._settings.get_string(THERMAL_CPU_TEMPERATURE_UNIT);
             this._thermalCpuTemperatureDevicesList = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
+            this._thermalGpuTemperatureStatus = this._settings.get_boolean(THERMAL_GPU_TEMPERATURE_STATUS);
+            this._thermalGpuTemperatureWidth = this._settings.get_int(THERMAL_GPU_TEMPERATURE_WIDTH);
+            this._thermalGpuTemperatureDevicesList = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+
+            this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
+            this._gpuWidth = this._settings.get_int(GPU_WIDTH);
+            this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
+            this._gpuMemoryUnitMeasure = this._settings.get_string(GPU_MEMORY_UNIT_MEASURE);
+            this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
+            this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
         }
 
         _connectSettingsSignals() {
@@ -427,37 +491,54 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_WIDTH}`, this._cpuWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_STATUS}`, this._cpuFrequencyStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_WIDTH}`, this._cpuFrequencyWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_STATUS}`, this._cpuLoadAverageStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_WIDTH}`, this._cpuLoadAverageWidthChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_STATUS}`, this._ramStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_WIDTH}`, this._ramWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_UNIT}`, this._ramUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_UNIT_MEASURE}`, this._ramUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${RAM_MONITOR}`, this._ramMonitorChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_STATUS}`, this._swapStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_WIDTH}`, this._swapWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_UNIT}`, this._swapUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_UNIT_MEASURE}`, this._swapUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${SWAP_MONITOR}`, this._swapMonitorChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_STATUS}`, this._diskStatsStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_WIDTH}`, this._diskStatsWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_MODE}`, this._diskStatsModeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_STATS_UNIT_MEASURE}`, this._diskStatsUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_STATUS}`, this._diskSpaceStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_WIDTH}`, this._diskSpaceWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_UNIT}`, this._diskSpaceUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_UNIT_MEASURE}`, this._diskSpaceUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_SPACE_MONITOR}`, this._diskSpaceMonitorChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${DISK_DEVICES_LIST}`, this._diskDevicesListChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_AUTO_HIDE_STATUS}`, this._netAutoHideStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_UNIT}`, this._netUnitChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_UNIT_MEASURE}`, this._netUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_ETH_STATUS}`, this._netEthStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_ETH_WIDTH}`, this._netEthWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_WLAN_STATUS}`, this._netWlanStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${NET_WLAN_WIDTH}`, this._netWlanWidthChanged.bind(this));
 
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_TEMPERATURE_UNIT}`, this._thermalTemperatureUnitChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_STATUS}`, this._thermalCpuTemperatureStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_WIDTH}`, this._thermalCpuTemperatureWidthChanged.bind(this));
-            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_UNIT}`, this._thermalCpuTemperatureUnitChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_CPU_TEMPERATURE_DEVICES_LIST}`, this._thermalCpuTemperatureDevicesListChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_GPU_TEMPERATURE_STATUS}`, this._thermalGpuTemperatureStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_GPU_TEMPERATURE_WIDTH}`, this._thermalGpuTemperatureWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${THERMAL_GPU_TEMPERATURE_DEVICES_LIST}`, this._thermalGpuTemperatureDevicesListChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_STATUS}`, this._gpuStatusChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_WIDTH}`, this._gpuWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT}`, this._gpuMemoryUnitTypeChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT_MEASURE}`, this._gpuMemoryUnitMeasureChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_MONITOR}`, this._gpuMemoryMonitorChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_DEVICES_LIST}`, this._gpuDevicesListChanged.bind(this));
         }
 
         // HANDLERS
@@ -610,7 +691,7 @@ const ResourceMonitor = GObject.registerClass(
         _cpuStatusChanged() {
             this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
 
-            this._basicItemStatus(this._cpuStatus, (!this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuValue, this._cpuUnit);
+            this._basicItemStatus(this._cpuStatus, (!this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus && !this._cpuLoadAverageStatus), this._cpuIcon, this._cpuValue, this._cpuUnit);
         }
 
         _cpuWidthChanged() {
@@ -622,13 +703,25 @@ const ResourceMonitor = GObject.registerClass(
         _cpuFrequencyStatusChanged() {
             this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
 
-            this._basicItemStatus(this._cpuFrequencyStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus), this._cpuIcon, this._cpuFrequencyValue, this._cpuFrequencyUnit, this._cpuFrequencyValueBracket);
+            this._basicItemStatus(this._cpuFrequencyStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus && !this._cpuLoadAverageStatus), this._cpuIcon, this._cpuFrequencyValue, this._cpuFrequencyUnit, this._cpuFrequencyValueBracket);
         }
 
         _cpuFrequencyWidthChanged() {
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
 
             this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+        }
+
+        _cpuLoadAverageStatusChanged() {
+            this._cpuLoadAverageStatus = this._settings.get_boolean(CPU_LOADAVERAGE_STATUS);
+
+            this._basicItemStatus(this._cpuLoadAverageStatus, (!this._cpuStatus && !this._thermalCpuTemperatureStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuLoadAverageValue);
+        }
+
+        _cpuLoadAverageWidthChanged() {
+            this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
+
+            this._basicItemWidth(this._cpuLoadAverageWidth, this._cpuLoadAverageValue);
         }
 
         _ramStatusChanged() {
@@ -645,6 +738,14 @@ const ResourceMonitor = GObject.registerClass(
 
         _ramUnitTypeChanged() {
             this._ramUnitType = this._settings.get_string(RAM_UNIT);
+
+            if (this._ramStatus) {
+                this._refreshRamValue();
+            }
+        }
+
+        _ramUnitMeasureChanged() {
+            this._ramUnitMeasure = this._settings.get_string(RAM_UNIT_MEASURE);
 
             if (this._ramStatus) {
                 this._refreshRamValue();
@@ -679,6 +780,14 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _swapUnitMeasureChanged() {
+            this._swapUnitMeasure = this._settings.get_string(SWAP_UNIT_MEASURE);
+
+            if (this._swapStatus) {
+                this._refreshSwapValue();
+            }
+        }
+
         _swapMonitorChanged() {
             this._swapMonitor = this._settings.get_string(SWAP_MONITOR);
 
@@ -705,6 +814,14 @@ const ResourceMonitor = GObject.registerClass(
             this._diskStatsBox.update_mode(this._diskStatsMode);
         }
 
+        _diskStatsUnitMeasureChanged() {
+            this._diskStatsUnitMeasure = this._settings.get_string(DISK_STATS_UNIT_MEASURE);
+
+            if (this._diskStatsStatus) {
+                this._refreshDiskStatsValue();
+            }
+        }
+
         _diskSpaceStatusChanged() {
             this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
 
@@ -725,6 +842,14 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _diskSpaceUnitMeasureChanged() {
+            this._diskSpaceUnitMeasure = this._settings.get_string(DISK_SPACE_UNIT_MEASURE);
+
+            if (this._diskSpaceStatus) {
+                this._refreshDiskSpaceValue();
+            }
+        }
+
         _diskSpaceMonitorChanged() {
             this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
 
@@ -734,12 +859,12 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _diskDevicesListChanged() {
-            this._diskDeviceslist = this._settings.get_strv(DISK_DEVICES_LIST);
+            this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
 
             this._diskStatsBox.cleanup_elements();
             this._diskSpaceBox.cleanup_elements();
 
-            this._diskDeviceslist.forEach(element => {
+            this._diskDevicesList.forEach(element => {
                 const it = element.split(DISK_DEVICES_LIST_SEPARATOR);
 
                 const filesystem = it[0];
@@ -772,7 +897,7 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _netAutoHideStatusChanged() {
-            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS);
+            this._netAutoHideStatus = this._settings.get_boolean(NET_AUTO_HIDE_STATUS) && typeof NM !== 'undefined';
 
             this._basicItemStatus((this._netEthStatus && this._nmEthStatus) || (this._netEthStatus && !this._netAutoHideStatus), true, this._ethIcon, this._ethValue, this._ethUnit);
             this._basicItemStatus((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus), true, this._wlanIcon, this._wlanValue, this._wlanUnit);
@@ -780,6 +905,17 @@ const ResourceMonitor = GObject.registerClass(
 
         _netUnitChanged() {
             this._netUnit = this._settings.get_string(NET_UNIT);
+
+            if (this._netEthStatus) {
+                this._refreshEthValue();
+            }
+            if (this._netWlanStatus) {
+                this._refreshWlanValue();
+            }
+        }
+
+        _netUnitMeasureChanged() {
+            this._netUnitMeasure = this._settings.get_string(NET_UNIT_MEASURE);
 
             if (this._netEthStatus) {
                 this._refreshEthValue();
@@ -816,7 +952,7 @@ const ResourceMonitor = GObject.registerClass(
         _thermalCpuTemperatureStatusChanged() {
             this._thermalCpuTemperatureStatus = this._settings.get_boolean(THERMAL_CPU_TEMPERATURE_STATUS);
 
-            this._basicItemStatus(this._thermalCpuTemperatureStatus, (!this._cpuStatus && !this._cpuFrequencyStatus), this._cpuIcon, this._cpuTemperatureValue, this._cpuTemperatureUnit, this._cpuTemperatureValueBracket);
+            this._basicItemStatus(this._thermalCpuTemperatureStatus, (!this._cpuStatus && !this._cpuFrequencyStatus && !this._cpuLoadAverageStatus), this._cpuIcon, this._cpuTemperatureValue, this._cpuTemperatureUnit, this._cpuTemperatureValueBracket);
         }
 
         _thermalCpuTemperatureWidthChanged() {
@@ -825,8 +961,8 @@ const ResourceMonitor = GObject.registerClass(
             this._basicItemWidth(this._thermalCpuTemperatureWidth, this._cpuTemperatureValue);
         }
 
-        _thermalCpuTemperatureUnitChanged() {
-            this._thermalCpuTemperatureUnit = this._settings.get_string(THERMAL_CPU_TEMPERATURE_UNIT);
+        _thermalTemperatureUnitChanged() {
+            this._thermalTemperatureUnit = this._settings.get_string(THERMAL_TEMPERATURE_UNIT);
 
             if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
@@ -839,6 +975,92 @@ const ResourceMonitor = GObject.registerClass(
             if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
             }
+        }
+
+        _thermalGpuTemperatureStatusChanged() {
+            this._thermalGpuTemperatureStatus = this._settings.get_boolean(THERMAL_GPU_TEMPERATURE_STATUS);
+
+            this._basicItemStatus((this._gpuStatus || this._thermalGpuTemperatureStatus), !this._gpuStatus, this._gpuIcon, this._gpuBox);
+            this._gpuDevicesListChanged();
+        }
+
+        _thermalGpuTemperatureWidthChanged() {
+            this._thermalGpuTemperatureWidth = this._settings.get_int(THERMAL_GPU_TEMPERATURE_WIDTH);
+
+            this._gpuBox.set_element_thermal_width(this._thermalGpuTemperatureWidth);
+        }
+
+        _thermalGpuTemperatureDevicesListChanged() {
+            this._thermalGpuTemperatureDevicesList = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+
+            this._gpuDevicesListChanged();
+        }
+
+        _gpuStatusChanged() {
+            this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
+
+            this._basicItemStatus((this._gpuStatus || this._thermalGpuTemperatureStatus), !this._thermalGpuTemperatureStatus, this._gpuIcon, this._gpuBox);
+            this._gpuDevicesListChanged();
+        }
+
+        _gpuWidthChanged() {
+            this._gpuWidth = this._settings.get_int(GPU_WIDTH);
+
+            this._gpuBox.set_element_width(this._gpuWidth);
+        }
+
+        _gpuMemoryUnitTypeChanged() {
+            this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
+
+            if (this._gpuStatus) {
+                this._refreshGpuValue();
+            }
+        }
+
+        _gpuMemoryUnitMeasureChanged() {
+            this._gpuMemoryUnitMeasure = this._settings.get_string(GPU_MEMORY_UNIT_MEASURE);
+
+            if (this._gpuStatus) {
+                this._refreshGpuValue();
+            }
+        }
+
+        _gpuMemoryMonitorChanged() {
+            this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
+
+            if (this._gpuStatus) {
+                this._refreshGpuValue();
+            }
+        }
+
+        _gpuDevicesListChanged() {
+            this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
+
+            this._gpuBox.cleanup_elements();
+
+            this._gpuDevicesList.forEach(element => {
+                const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+
+                const uuid = it[0];
+                const name = it[1];
+                const usage = (it[2] === 'true') && this._gpuStatus;
+                const memory = (it[3] === 'true') && this._gpuStatus;
+                let thermal = false;
+
+                if (this._thermalGpuTemperatureStatus) {
+                    this._thermalGpuTemperatureDevicesList.forEach(element => {
+                        const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+
+                        if (uuid === it[0]) {
+                            thermal = (it[2] === 'true');
+                        }
+                    });
+                }
+
+                this._gpuBox.add_element(uuid, name, usage, memory, thermal);
+            });
+
+            this._gpuBox.set_element_width(this._gpuWidth);
         }
 
         _refreshHandler() {
@@ -866,8 +1088,14 @@ const ResourceMonitor = GObject.registerClass(
             if (this._cpuFrequencyStatus) {
                 this._refreshCpuFrequencyValue();
             }
+            if (this._cpuLoadAverageStatus) {
+                this._refreshCpuLoadAverageValue();
+            }
             if (this._thermalCpuTemperatureStatus) {
                 this._refreshCpuTemperatureValue();
+            }
+            if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
+                this._refreshGpuValue();
             }
 
             return GLib.SOURCE_CONTINUE;
@@ -898,11 +1126,17 @@ const ResourceMonitor = GObject.registerClass(
 
             this._cpuFrequencyWidthChanged();
 
+            this._cpuLoadAverageStatusChanged();
+
+            this._cpuLoadAverageWidthChanged();
+
             this._ramStatusChanged();
 
             this._ramWidthChanged();
 
             //this._ramUnitTypeChanged();
+
+            //this._ramUnitMeasureChanged();
 
             //this._ramMonitorChanged();
 
@@ -912,6 +1146,8 @@ const ResourceMonitor = GObject.registerClass(
 
             //this._swapUnitTypeChanged();
 
+            //this._swapUnitMeasureChanged();
+
             //this._swapMonitorChanged();
 
             this._diskStatsStatusChanged();
@@ -920,11 +1156,15 @@ const ResourceMonitor = GObject.registerClass(
 
             this._diskStatsModeChanged();
 
+            //this._diskStatsUnitMeasureChanged();
+
             this._diskSpaceStatusChanged();
 
             this._diskSpaceWidthChanged();
 
             //this._diskSpaceUnitTypeChanged();
+
+            //this._diskSpaceUnitMeasureChanged();
 
             //this._diskSpaceMonitorChanged();
 
@@ -933,6 +1173,8 @@ const ResourceMonitor = GObject.registerClass(
             //this._netAutoHideStatusChanged();
 
             //this._netUnitChanged();
+
+            //this._netUnitMeasureChanged();
 
             this._netEthStatusChanged();
 
@@ -949,6 +1191,24 @@ const ResourceMonitor = GObject.registerClass(
             //this._thermalCpuTemperatureUnitChanged();
 
             //this._thermalCpuTemperatureDevicesListChanged();
+
+            this._thermalGpuTemperatureStatusChanged();
+
+            this._thermalGpuTemperatureWidthChanged();
+
+            //this._thermalGpuTemperatureDevicesListChanged();
+
+            this._gpuStatusChanged();
+
+            this._gpuWidthChanged();
+
+            //this._gpuMemoryUnitTypeChanged();
+
+            //this._gpuMemoryUnitMeasureChanged();
+
+            //this._gpuMemoryMonitorChanged();
+
+            this._gpuDevicesListChanged();
         }
 
         _refreshCpuValue() {
@@ -1001,6 +1261,7 @@ const ResourceMonitor = GObject.registerClass(
                 used = total - available;
 
                 let value = 0;
+                let unit = 'KB';
                 switch (this._ramMonitor) {
                     case 'free':
                         value = available;
@@ -1030,18 +1291,48 @@ const ResourceMonitor = GObject.registerClass(
                     case 'numeric':
 
                     default:
-                        let unit = 'MB';
+                        switch (this._ramUnitMeasure) {
+                            case 'k':
+                                unit = 'KB';
+                                break;
 
-                        value /= 1024;
-                        if (value > 1024) {
-                            unit = 'GB';
-                            value /= 1024;
-                            if (value > 1024) {
+                            case 'm':
+                                unit = 'MB';
+                                value /= 1024;
+                                break;
+
+                            case 'g':
+                                unit = 'GB';
+                                value /= 1024;
+                                value /= 1024;
+                                break;
+
+                            case 't':
                                 unit = 'TB';
                                 value /= 1024;
-                            }
-                        } else {
-                            unit = 'MB';
+                                value /= 1024;
+                                value /= 1024;
+                                break;
+
+                            case 'auto':
+
+                            default:
+                                if (value > 1024) {
+                                    unit = 'MB';
+                                    value /= 1024;
+                                    if (value > 1024) {
+                                        unit = 'GB';
+                                        value /= 1024;
+                                        if (value > 1024) {
+                                            unit = 'TB';
+                                            value /= 1024;
+                                        }
+                                    }
+                                } else {
+                                    unit = 'KB';
+                                }
+
+                                break;
                         }
 
                         if (this._decimalsStatus) {
@@ -1079,6 +1370,7 @@ const ResourceMonitor = GObject.registerClass(
                 used = total - available;
 
                 let value = 0;
+                let unit = 'KB';
                 switch (this._swapMonitor) {
                     case 'free':
                         value = available;
@@ -1108,18 +1400,48 @@ const ResourceMonitor = GObject.registerClass(
                     case 'numeric':
 
                     default:
-                        let unit = 'MB';
+                        switch (this._swapUnitMeasure) {
+                            case 'k':
+                                unit = 'KB';
+                                break;
 
-                        value /= 1024;
-                        if (value > 1024) {
-                            unit = 'GB';
-                            value /= 1024;
-                            if (value > 1024) {
+                            case 'm':
+                                unit = 'MB';
+                                value /= 1024;
+                                break;
+
+                            case 'g':
+                                unit = 'GB';
+                                value /= 1024;
+                                value /= 1024;
+                                break;
+
+                            case 't':
                                 unit = 'TB';
                                 value /= 1024;
-                            }
-                        } else {
-                            unit = 'MB';
+                                value /= 1024;
+                                value /= 1024;
+                                break;
+
+                            case 'auto':
+
+                            default:
+                                if (value > 1024) {
+                                    unit = 'MB';
+                                    value /= 1024;
+                                    if (value > 1024) {
+                                        unit = 'GB';
+                                        value /= 1024;
+                                        if (value > 1024) {
+                                            unit = 'TB';
+                                            value /= 1024;
+                                        }
+                                    }
+                                } else {
+                                    unit = 'KB';
+                                }
+
+                                break;
                         }
 
                         if (this._decimalsStatus) {
@@ -1174,17 +1496,57 @@ const ResourceMonitor = GObject.registerClass(
                             }
                             this._diskStatsBox.set_rw_tot(filesystem, rwTot);
 
-                            if (rw[0] > 1024 || rw[1] > 1024) {
-                                unit = 'M';
-                                rw[0] /= 1024;
-                                rw[1] /= 1024;
-                                if (rw[0] > 1024 || rw[1] > 1024) {
+                            switch (this._diskStatsUnitMeasure) {
+                                case 'k':
+                                    unit = 'K';
+                                    break;
+
+                                case 'm':
+                                    unit = 'M';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    break;
+
+                                case 'g':
                                     unit = 'G';
                                     rw[0] /= 1024;
                                     rw[1] /= 1024;
-                                }
-                            } else {
-                                unit = 'K';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    break;
+
+                                case 't':
+                                    unit = 'T';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    break;
+
+                                case 'auto':
+
+                                default:
+                                    if (rw[0] > 1024 || rw[1] > 1024) {
+                                        unit = 'M';
+                                        rw[0] /= 1024;
+                                        rw[1] /= 1024;
+                                        if (rw[0] > 1024 || rw[1] > 1024) {
+                                            unit = 'G';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            if (rw[0] > 1024 || rw[1] > 1024) {
+                                                unit = 'T';
+                                                rw[0] /= 1024;
+                                                rw[1] /= 1024;
+                                            }
+                                        }
+                                    } else {
+                                        unit = 'K';
+                                    }
+
+                                    break;
                             }
                         }
 
@@ -1229,17 +1591,57 @@ const ResourceMonitor = GObject.registerClass(
                                     }
                                     this._diskStatsBox.set_rw_tot(filesystem, rwTot);
 
-                                    if (rw[0] > 1024 || rw[1] > 1024) {
-                                        unit = 'M';
-                                        rw[0] /= 1024;
-                                        rw[1] /= 1024;
-                                        if (rw[0] > 1024 || rw[1] > 1024) {
+                                    switch (this._diskStatsUnitMeasure) {
+                                        case 'k':
+                                            unit = 'K';
+                                            break;
+
+                                        case 'm':
+                                            unit = 'M';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            break;
+
+                                        case 'g':
                                             unit = 'G';
                                             rw[0] /= 1024;
                                             rw[1] /= 1024;
-                                        }
-                                    } else {
-                                        unit = 'K';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            break;
+
+                                        case 't':
+                                            unit = 'T';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            break;
+
+                                        case 'auto':
+
+                                        default:
+                                            if (rw[0] > 1024 || rw[1] > 1024) {
+                                                unit = 'M';
+                                                rw[0] /= 1024;
+                                                rw[1] /= 1024;
+                                                if (rw[0] > 1024 || rw[1] > 1024) {
+                                                    unit = 'G';
+                                                    rw[0] /= 1024;
+                                                    rw[1] /= 1024;
+                                                    if (rw[0] > 1024 || rw[1] > 1024) {
+                                                        unit = 'T';
+                                                        rw[0] /= 1024;
+                                                        rw[1] /= 1024;
+                                                    }
+                                                }
+                                            } else {
+                                                unit = 'K';
+                                            }
+
+                                            break;
                                     }
                                 }
 
@@ -1270,6 +1672,7 @@ const ResourceMonitor = GObject.registerClass(
                     const filesystem = entry[0];
 
                     let value = '';
+                    let unit = 'KB';
                     switch (this._diskSpaceUnitType) {
                         case 'perc':
                             const used = `${entry[4].slice(0, -1)}`;
@@ -1309,21 +1712,48 @@ const ResourceMonitor = GObject.registerClass(
                                     break;
                             }
 
-                            let unit = 'KB';
+                            switch (this._diskSpaceUnitMeasure) {
+                                case 'k':
+                                    unit = 'KB';
+                                    break;
 
-                            if (value > 1024) {
-                                unit = 'MB';
-                                value /= 1024;
-                                if (value > 1024) {
+                                case 'm':
+                                    unit = 'MB';
+                                    value /= 1024;
+                                    break;
+
+                                case 'g':
                                     unit = 'GB';
                                     value /= 1024;
+                                    value /= 1024;
+                                    break;
+
+                                case 't':
+                                    unit = 'TB';
+                                    value /= 1024;
+                                    value /= 1024;
+                                    value /= 1024;
+                                    break;
+
+                                case 'auto':
+
+                                default:
                                     if (value > 1024) {
-                                        unit = 'TB';
+                                        unit = 'MB';
                                         value /= 1024;
+                                        if (value > 1024) {
+                                            unit = 'GB';
+                                            value /= 1024;
+                                            if (value > 1024) {
+                                                unit = 'TB';
+                                                value /= 1024;
+                                            }
+                                        }
+                                    } else {
+                                        unit = 'KB';
                                     }
-                                }
-                            } else {
-                                unit = 'KB';
+
+                                    break;
                             }
 
                             if (this._decimalsStatus) {
@@ -1373,22 +1803,74 @@ const ResourceMonitor = GObject.registerClass(
                         this._duTotEthOld[i] = duTot[i];
                     }
 
-                    if (du[0] > unit || du[1] > unit) {
-                        this._ethUnit.text = boolUnit ? 'k' : 'K';
-                        du[0] /= unit;
-                        du[1] /= unit;
-                        if (du[0] > unit || du[1] > unit) {
+                    switch (this._netUnitMeasure) {
+                        case 'b':
+                            this._ethUnit.text = boolUnit ? 'b' : 'B';
+                            break;
+
+                        case 'k':
+                            this._ethUnit.text = boolUnit ? 'k' : 'K';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 'm':
                             this._ethUnit.text = boolUnit ? 'm' : 'M';
                             du[0] /= unit;
                             du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 'g':
+                            this._ethUnit.text = boolUnit ? 'g' : 'G';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 't':
+                            this._ethUnit.text = boolUnit ? 't' : 'T';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 'auto':
+
+                        default:
                             if (du[0] > unit || du[1] > unit) {
-                                this._ethUnit.text = boolUnit ? 'g' : 'G';
+                                this._ethUnit.text = boolUnit ? 'k' : 'K';
                                 du[0] /= unit;
                                 du[1] /= unit;
+                                if (du[0] > unit || du[1] > unit) {
+                                    this._ethUnit.text = boolUnit ? 'm' : 'M';
+                                    du[0] /= unit;
+                                    du[1] /= unit;
+                                    if (du[0] > unit || du[1] > unit) {
+                                        this._ethUnit.text = boolUnit ? 'g' : 'G';
+                                        du[0] /= unit;
+                                        du[1] /= unit;
+                                        if (du[0] > unit || du[1] > unit) {
+                                            this._ethUnit.text = boolUnit ? 't' : 'T';
+                                            du[0] /= unit;
+                                            du[1] /= unit;
+                                        }
+                                    }
+                                }
+                            } else {
+                                this._ethUnit.text = boolUnit ? 'b' : 'B';
                             }
-                        }
-                    } else {
-                        this._ethUnit.text = boolUnit ? 'b' : 'B';
+
+                            break;
                     }
                 }
 
@@ -1437,22 +1919,74 @@ const ResourceMonitor = GObject.registerClass(
                         this._duTotWlanOld[i] = duTot[i];
                     }
 
-                    if (du[0] > unit || du[1] > unit) {
-                        this._wlanUnit.text = boolUnit ? 'k' : 'K';
-                        du[0] /= unit;
-                        du[1] /= unit;
-                        if (du[0] > unit || du[1] > unit) {
+                    switch (this._netUnitMeasure) {
+                        case 'b':
+                            this._wlanUnit.text = boolUnit ? 'b' : 'B';
+                            break;
+
+                        case 'k':
+                            this._wlanUnit.text = boolUnit ? 'k' : 'K';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 'm':
                             this._wlanUnit.text = boolUnit ? 'm' : 'M';
                             du[0] /= unit;
                             du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 'g':
+                            this._wlanUnit.text = boolUnit ? 'g' : 'G';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 't':
+                            this._wlanUnit.text = boolUnit ? 't' : 'T';
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            du[0] /= unit;
+                            du[1] /= unit;
+                            break;
+
+                        case 'auto':
+
+                        default:
                             if (du[0] > unit || du[1] > unit) {
-                                this._wlanUnit.text = boolUnit ? 'g' : 'G';
+                                this._wlanUnit.text = boolUnit ? 'k' : 'K';
                                 du[0] /= unit;
                                 du[1] /= unit;
+                                if (du[0] > unit || du[1] > unit) {
+                                    this._wlanUnit.text = boolUnit ? 'm' : 'M';
+                                    du[0] /= unit;
+                                    du[1] /= unit;
+                                    if (du[0] > unit || du[1] > unit) {
+                                        this._wlanUnit.text = boolUnit ? 'g' : 'G';
+                                        du[0] /= unit;
+                                        du[1] /= unit;
+                                        if (du[0] > unit || du[1] > unit) {
+                                            this._wlanUnit.text = boolUnit ? 't' : 'T';
+                                            du[0] /= unit;
+                                            du[1] /= unit;
+                                        }
+                                    }
+                                }
+                            } else {
+                                this._wlanUnit.text = boolUnit ? 'b' : 'B';
                             }
-                        }
-                    } else {
-                        this._wlanUnit.text = boolUnit ? 'b' : 'B';
+
+                            break;
                     }
                 }
 
@@ -1492,59 +2026,203 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _refreshCpuLoadAverageValue() {
+            this._loadFile('/proc/loadavg').then(contents => {
+                const lines = ByteArray.toString(contents).split('\n');
+
+                const entry = lines[0].trim().split(/\s/);
+
+                const l0 = entry[0];
+                const l1 = entry[1];
+                const l2 = entry[2];
+
+                this._cpuLoadAverageValue.text = '[' + l0 + ' ' + l1 + ' ' + l2 + ']';
+            });
+        }
+
         _refreshCpuTemperatureValue() {
-            for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
-                const element = this._thermalCpuTemperatureDevicesList[i];
-                const it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
+            if (this._thermalCpuTemperatureDevicesList.length > 0) {
+                for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
+                    const element = this._thermalCpuTemperatureDevicesList[i];
+                    const it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
 
-                const status = it[1];
-                const path = it[2];
+                    const status = it[1];
+                    const path = it[2];
 
-                if (status === 'false') {
-                    continue;
+                    if (status === 'false') {
+                        continue;
+                    }
+
+                    if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
+                        this._loadFile(path).then(contents => {
+                            const value = parseInt(ByteArray.toString(contents));
+
+                            this._cpuTemperatures += value / 1000;
+                            this._cpuTemperaturesReads++;
+
+                            if (this._cpuTemperaturesReads >= this._thermalCpuTemperatureDevicesList.length) {
+                                // Temperatures Average
+                                this._cpuTemperatures /= this._cpuTemperaturesReads;
+
+                                switch (this._thermalTemperatureUnit) {
+                                    case 'f':
+                                        this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
+                                        this._cpuTemperatureUnit.text = '°F';
+
+                                        break;
+
+                                    case 'c':
+
+                                    default:
+                                        this._cpuTemperatureUnit.text = '°C';
+
+                                        break;
+                                }
+
+                                if (this._decimalsStatus) {
+                                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}`;
+                                } else {
+                                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}`;
+                                }
+
+                                this._cpuTemperatures = 0;
+                                this._cpuTemperaturesReads = 0;
+                            }
+                        });
+                    } else {
+                        this._cpuTemperatureValue.text = _('[Temperature Error');
+                        this._cpuTemperatureUnit.text = '';
+                    }
                 }
-
-                if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
-                    this._loadFile(path).then(contents => {
-                        const value = parseInt(ByteArray.toString(contents));
-
-                        this._cpuTemperatures += value / 1000;
-                        this._cpuTemperaturesReads++;
-                    });
-                }
-            }
-
-            if (this._cpuTemperaturesReads > 0) {
-                // Temperatures Average
-                this._cpuTemperatures /= this._cpuTemperaturesReads;
-
-                switch (this._thermalCpuTemperatureUnit) {
-                    case 'f':
-                        this._cpuTemperatures = (this._cpuTemperatures * 1.8) + 32;
-                        this._cpuTemperatureUnit.text = '°F';
-
-                        break;
-
-                    case 'c':
-
-                    default:
-                        this._cpuTemperatureUnit.text = '°C';
-
-                        break;
-                }
-
-                if (this._decimalsStatus) {
-                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(1)}`;
-                } else {
-                    this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(0)}`;
-                }
-
-                this._cpuTemperatures = 0;
-                this._cpuTemperaturesReads = 0;
             } else {
-                this._cpuTemperatureValue.text = _('[Temperature Error');
-                this._cpuTemperatureUnit.text = '';
+                this._cpuTemperatureValue.text = _('[--');
             }
+        }
+
+        _refreshGpuValue() {
+            this._executeCommand(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu', '--format=csv,noheader']).then(output => {
+                const lines = output.split('\n');
+
+                for (let i = 0; i < lines.length - 1; i++) {
+                    const line = lines[i];
+                    const entry = line.trim().split(/\,\s/);
+
+                    const uuid = entry[0];
+                    const memoryTotal = entry[1].slice(0, -4);
+                    const memoryUsed = entry[2].slice(0, -4);
+                    const memoryFree = entry[3].slice(0, -4);
+                    const usage = entry[4].slice(0, -1);
+                    const temperature = entry[5];
+
+                    this._gpuBox.update_element_value(uuid, usage, '%');
+
+                    let value = 0;
+                    let unit = 'MiB';
+                    switch (this._gpuMemoryUnitType) {
+                        case 'perc':
+                            const used = (100 * parseInt(memoryUsed)) / parseInt(memoryTotal);
+                            unit = '%';
+
+                            switch (this._gpuMemoryMonitor) {
+                                case 'free':
+                                    value = 100 - used;
+
+                                    break;
+
+                                case 'used':
+
+                                default:
+                                    value = used;
+
+                                    break;
+                            }
+
+                            break;
+
+                        case 'numeric':
+
+                        default:
+                            switch (this._gpuMemoryMonitor) {
+                                case 'free':
+                                    value = parseInt(memoryFree);
+
+                                    break;
+
+                                case 'used':
+
+                                default:
+                                    value = parseInt(memoryUsed);
+
+                                    break;
+                            }
+
+                            switch (this._gpuMemoryUnitMeasure) {
+                                case 'k':
+                                    unit = 'KiB';
+                                    value *= 1024;
+                                    break;
+
+                                case 'm':
+                                    unit = 'MiB';
+                                    break;
+
+                                case 'g':
+                                    unit = 'GiB';
+                                    value /= 1024;
+                                    break;
+
+                                case 't':
+                                    unit = 'TiB';
+                                    value /= 1024;
+                                    value /= 1024;
+                                    break;
+
+                                case 'auto':
+
+                                default:
+                                    if (value > 1024) {
+                                        unit = 'GiB';
+                                        value /= 1024;
+                                        if (value > 1024) {
+                                            unit = 'TiB';
+                                            value /= 1024;
+                                        }
+                                    } else {
+                                        unit = 'MiB';
+                                    }
+
+                                    break;
+                            }
+
+                            break;
+                    }
+
+                    let valueT = parseInt(temperature);
+                    let unitT = '°C';
+                    switch (this._thermalTemperatureUnit) {
+                        case 'f':
+                            valueT = (valueT * 1.8) + 32;
+                            unitT = '°F';
+
+                            break;
+
+                        case 'c':
+
+                        default:
+                            unitT = '°C';
+
+                            break;
+                    }
+
+                    if (this._decimalsStatus) {
+                        this._gpuBox.update_element_memory_value(uuid, `${value.toFixed(1)}`, unit);
+                        this._gpuBox.update_element_thermal_value(uuid, `${valueT.toFixed(1)}`, unitT);
+                    } else {
+                        this._gpuBox.update_element_memory_value(uuid, `${value.toFixed(0)}`, unit);
+                        this._gpuBox.update_element_thermal_value(uuid, `${valueT.toFixed(0)}`, unitT);
+                    }
+                }
+            });
         }
 
         // Common Function
@@ -1824,6 +2502,193 @@ const DiskContainerSpace = GObject.registerClass(
             if (this._elementsValue[filesystem]) {
                 this._elementsValue[filesystem].text = value;
                 this._elementsUnit[filesystem].text = unit;
+            }
+        }
+    });
+
+const GpuContainer = GObject.registerClass(
+    class GpuContainer extends St.BoxLayout {
+        _init() {
+            super._init();
+
+            this._elementsUuid = [];
+            this._elementsName = [];
+            this._elementsValue = [];
+            this._elementsUnit = [];
+            this._elementsMemoryValue = [];
+            this._elementsMemoryUnit = [];
+            this._elementsThermalValue = [];
+            this._elementsThermalUnit = [];
+        }
+
+        set_element_width(width) {
+            if (width === 0) {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsValue[element] !== 'undefined') {
+                        this._elementsValue[element].min_width = 0;
+                        this._elementsValue[element].natural_width = 0;
+                        this._elementsValue[element].min_width_set = false;
+                        this._elementsValue[element].natural_width_set = false;
+                    }
+
+                    if (typeof this._elementsMemoryValue[element] !== 'undefined') {
+                        this._elementsMemoryValue[element].min_width = 0;
+                        this._elementsMemoryValue[element].natural_width = 0;
+                        this._elementsMemoryValue[element].min_width_set = false;
+                        this._elementsMemoryValue[element].natural_width_set = false;
+                    }
+                });
+            } else {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsValue[element] !== 'undefined') {
+                        this._elementsValue[element].width = width;
+                    }
+
+                    if (typeof this._elementsMemoryValue[element] !== 'undefined') {
+                        this._elementsMemoryValue[element].width = width;
+                    }
+                });
+            }
+        }
+
+        set_element_thermal_width(width) {
+            if (width === 0) {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsThermalValue[element] !== 'undefined') {
+                        this._elementsThermalValue[element].min_width = 0;
+                        this._elementsThermalValue[element].natural_width = 0;
+                        this._elementsThermalValue[element].min_width_set = false;
+                        this._elementsThermalValue[element].natural_width_set = false;
+                    }
+                });
+            } else {
+                this._elementsUuid.forEach(element => {
+                    if (typeof this._elementsThermalValue[element] !== 'undefined') {
+                        this._elementsThermalValue[element].width = width;
+                    }
+                });
+            }
+        }
+
+        cleanup_elements() {
+            this._elementsUuid = [];
+            this._elementsName = [];
+            this._elementsValue = [];
+            this._elementsUnit = [];
+            this._elementsMemoryValue = [];
+            this._elementsMemoryUnit = [];
+            this._elementsThermalValue = [];
+            this._elementsThermalUnit = [];
+
+            this.remove_all_children();
+        }
+
+        add_element(uuid, label, usage, memory, thermal) {
+            this._elementsUuid.push(uuid);
+
+            this._elementsName[uuid] = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                text: ` ${label}: `
+            });
+            this.add(this._elementsName[uuid]);
+
+            // Usage
+            if (usage) {
+                this._elementsValue[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '--'
+                });
+                this._elementsValue[uuid].set_style('text-align: right;');
+
+                this._elementsUnit[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '%'
+                });
+                this._elementsUnit[uuid].set_style('padding-left: 0.125em;');
+
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '['
+                }));
+                this.add(this._elementsValue[uuid]);
+                this.add(this._elementsUnit[uuid]);
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ']'
+                }));
+            }
+
+            // Memory
+            if (memory) {
+                this._elementsMemoryValue[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '--'
+                });
+                this._elementsMemoryValue[uuid].set_style('text-align: right;');
+
+                this._elementsMemoryUnit[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: this._gpuMemoryUnitType ? '%' : 'KB'
+                });
+                this._elementsMemoryUnit[uuid].set_style('padding-left: 0.125em;');
+
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '['
+                }));
+                this.add(this._elementsMemoryValue[uuid]);
+                this.add(this._elementsMemoryUnit[uuid]);
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ']'
+                }));
+            }
+
+            // Thermal
+            if (thermal) {
+                this._elementsThermalValue[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '--'
+                });
+                this._elementsThermalValue[uuid].set_style('text-align: right;');
+
+                this._elementsThermalUnit[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '°C'
+                });
+                this._elementsThermalUnit[uuid].set_style('padding-left: 0.125em;');
+
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: '['
+                }));
+                this.add(this._elementsThermalValue[uuid]);
+                this.add(this._elementsThermalUnit[uuid]);
+                this.add(new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ']'
+                }));
+            }
+        }
+
+        update_element_value(uuid, value, unit) {
+            if (this._elementsValue[uuid]) {
+                this._elementsValue[uuid].text = value;
+                this._elementsUnit[uuid].text = unit;
+            }
+        }
+
+        update_element_memory_value(uuid, value, unit) {
+            if (this._elementsMemoryValue[uuid]) {
+                this._elementsMemoryValue[uuid].text = value;
+                this._elementsMemoryUnit[uuid].text = unit;
+            }
+        }
+
+        update_element_thermal_value(uuid, value, unit) {
+            if (this._elementsThermalValue[uuid]) {
+                this._elementsThermalValue[uuid].text = value;
+                this._elementsThermalUnit[uuid].text = unit;
             }
         }
     });

@@ -8,3 +8,5 @@ Thank you for your contribution to the Resource_Monitor repo.
 
 - [ ] Your code builds clean without any errors or warnings.
 - [ ] You are using approved terminology.
+
+## Please, submit your changes to the develop branch.
