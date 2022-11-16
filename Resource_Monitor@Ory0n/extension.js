@@ -1057,7 +1057,7 @@ const ResourceMonitor = GObject.registerClass(
                     });
                 }
 
-                this._gpuBox.add_element(uuid, name, usage, memory, thermal);
+                this._gpuBox.add_element(uuid, usage, memory, thermal);
             });
 
             this._gpuBox.set_element_width(this._gpuWidth);
@@ -2583,14 +2583,8 @@ const GpuContainer = GObject.registerClass(
             this.remove_all_children();
         }
 
-        add_element(uuid, label, usage, memory, thermal) {
+        add_element(uuid, usage, memory, thermal) {
             this._elementsUuid.push(uuid);
-
-            this._elementsName[uuid] = new St.Label({
-                y_align: Clutter.ActorAlign.CENTER,
-                text: ` ${label}: `
-            });
-            this.add(this._elementsName[uuid]);
 
             // Usage
             if (usage) {
@@ -2606,15 +2600,11 @@ const GpuContainer = GObject.registerClass(
                 });
                 this._elementsUnit[uuid].set_style('padding-left: 0.125em;');
 
-                this.add(new St.Label({
-                    y_align: Clutter.ActorAlign.CENTER,
-                    text: '['
-                }));
                 this.add(this._elementsValue[uuid]);
                 this.add(this._elementsUnit[uuid]);
                 this.add(new St.Label({
                     y_align: Clutter.ActorAlign.CENTER,
-                    text: ']'
+                    text: ' '
                 }));
             }
 
