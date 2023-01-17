@@ -61,6 +61,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="cpufrequencyunitmeasure" type="s">
+            <default>"auto"</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="cpuloadaveragestatus" type="b">
             <default>false</default>
             <summary></summary>

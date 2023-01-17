@@ -299,6 +299,28 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="cpu_frequency_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="g">GHz</item>
+                      <item id="m">MHz</item>
+                      <item id="k">KHz</item>
+                    </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel">
                 <property name="css-classes">main-label</property>
                 <property name="halign">start</property>

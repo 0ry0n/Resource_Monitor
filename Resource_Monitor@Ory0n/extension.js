@@ -58,6 +58,7 @@ const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
 const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+const CPU_FREQUENCY_UNIT_MEASURE = 'cpufrequencyunitmeasure';
 const CPU_LOADAVERAGE_STATUS = 'cpuloadaveragestatus';
 const CPU_LOADAVERAGE_WIDTH = 'cpuloadaveragewidth';
 
@@ -428,6 +429,7 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuWidth = this._settings.get_int(CPU_WIDTH);
             this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+            this._cpuFrequencyUnitMeasure = this._settings.get_string(CPU_FREQUENCY_UNIT_MEASURE);
             this._cpuLoadAverageStatus = this._settings.get_boolean(CPU_LOADAVERAGE_STATUS);
             this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
 
@@ -491,6 +493,7 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_WIDTH}`, this._cpuWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_STATUS}`, this._cpuFrequencyStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_WIDTH}`, this._cpuFrequencyWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_UNIT_MEASURE}`, this._cpuFrequencyUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_STATUS}`, this._cpuLoadAverageStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_WIDTH}`, this._cpuLoadAverageWidthChanged.bind(this));
 
@@ -710,6 +713,14 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
 
             this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+        }
+
+        _cpuFrequencyUnitMeasureChanged() {
+            this._cpuFrequencyUnitMeasure = this._settings.get_string(CPU_FREQUENCY_UNIT_MEASURE);
+
+            if (this._cpuFrequencyStatus) {
+                this._refreshCpuFrequencyValue();
+            }
         }
 
         _cpuLoadAverageStatusChanged() {
@@ -1125,6 +1136,8 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuFrequencyStatusChanged();
 
             this._cpuFrequencyWidthChanged();
+
+            //this._cpuFrequencyUnitMeasureChanged();
 
             this._cpuLoadAverageStatusChanged();
 
@@ -2004,15 +2017,40 @@ const ResourceMonitor = GObject.registerClass(
             if (GLib.file_test('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq', GLib.FileTest.EXISTS)) {
                 this._loadFile('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq').then(contents => {
                     let value = parseInt(ByteArray.toString(contents));
+                    let unit = "";
 
-                    if (value > 999999) {
-                        this._cpuFrequencyUnit.text = 'GHz';
-                        value /= 1000;
-                        value /= 1000;
-                    } else {
-                        this._cpuFrequencyUnit.text = 'MHz';
-                        value /= 1000;
+                    switch (this._cpuFrequencyUnitMeasure) {
+                        case 'k':
+                            unit = "KHz"
+                            break;
+
+                        case 'm':
+                            unit = "MHz"
+                            value /= 1000;
+                            break;
+
+                        case 'g':
+                            unit = "GHz"
+                            value /= 1000;
+                            value /= 1000;
+                            break;
+
+                        case 'auto':
+
+                        default:
+                            if (value > 999999) {
+                                unit = 'GHz';
+                                value /= 1000;
+                                value /= 1000;
+                            } else {
+                                unit = 'MHz';
+                                value /= 1000;
+                            }
+
+                            break;
                     }
+
+                    this._cpuFrequencyUnit.text = unit;
 
                     if (this._decimalsStatus) {
                         this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
