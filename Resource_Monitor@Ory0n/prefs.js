@@ -97,6 +97,7 @@ const GPU_WIDTH = 'gpuwidth';
 const GPU_MEMORY_UNIT = 'gpumemoryunit';
 const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
 const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
+const GPU_DISPLAY_DEVICE_NAME = 'gpudisplaydevicename'
 const GPU_DEVICES_LIST = 'gpudeviceslist';
 const GPU_DEVICES_LIST_SEPARATOR = ':';
 
@@ -676,6 +677,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._gpuMemoryUnitCombobox = this._builder.get_object('gpu_memory_unit_combobox');
             this._gpuMemoryUnitMeasureCombobox = this._builder.get_object('gpu_memory_unit_measure_combobox');
             this._gpuMemoryMonitorCombobox = this._builder.get_object('gpu_memory_monitor_combobox');
+            this._gpuDisplayDeviceName = this._builder.get_object('gpu_display_device_name');
             this._gpuDevicesTreeView = this._builder.get_object('gpu_devices_treeview');
 
             this._connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
@@ -683,17 +685,20 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._connectComboBox(this._settings, GPU_MEMORY_UNIT, this._gpuMemoryUnitCombobox);
             this._connectComboBox(this._settings, GPU_MEMORY_UNIT_MEASURE, this._gpuMemoryUnitMeasureCombobox);
             this._connectComboBox(this._settings, GPU_MEMORY_MONITOR, this._gpuMemoryMonitorCombobox);
+            this._connectSwitchButton(this._settings, GPU_DISPLAY_DEVICE_NAME, this._gpuDisplayDeviceName);
 
             this._gpuDisplay.connect('state-set', button => {
                 this._gpuWidthSpinbutton.sensitive = button.active;
                 this._gpuMemoryUnitCombobox.sensitive = button.active;
                 this._gpuMemoryUnitMeasureCombobox.sensitive = button.active;
                 this._gpuMemoryMonitorCombobox.sensitive = button.active;
+                this._gpuDisplayDeviceName.sensitive = button.active;
             });
             this._gpuWidthSpinbutton.sensitive = this._gpuDisplay.active;
             this._gpuMemoryUnitCombobox.sensitive = this._gpuDisplay.active;
             this._gpuMemoryUnitMeasureCombobox.sensitive = this._gpuDisplay.active;
             this._gpuMemoryMonitorCombobox.sensitive = this._gpuDisplay.active;
+            this._gpuDisplayDeviceName.sensitive = this._gpuDisplay.active;
 
             // TreeView
             this._gpuDevicesModel = new Gtk.ListStore();

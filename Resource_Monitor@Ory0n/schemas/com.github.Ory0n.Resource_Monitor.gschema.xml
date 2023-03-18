@@ -271,6 +271,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="gpudisplaydevicename" type="b">
+            <default>true</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="gpudeviceslist" type="as">
             <default>[]</default>
             <summary></summary>

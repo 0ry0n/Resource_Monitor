@@ -108,6 +108,7 @@ const GPU_WIDTH = 'gpuwidth';
 const GPU_MEMORY_UNIT = 'gpumemoryunit';
 const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
 const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
+const GPU_DISPLAY_DEVICE_NAME = 'gpudisplaydevicename'
 const GPU_DEVICES_LIST = 'gpudeviceslist';
 const GPU_DEVICES_LIST_SEPARATOR = ':';
 
@@ -228,7 +229,7 @@ const ResourceMonitor = GObject.registerClass(
 
             this._cpuFrequencyUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: 'MHz'
+                text: 'KHz'
             });
             this._cpuFrequencyUnit.set_style('padding-left: 0.125em;');
 
@@ -477,6 +478,7 @@ const ResourceMonitor = GObject.registerClass(
             this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
             this._gpuMemoryUnitMeasure = this._settings.get_string(GPU_MEMORY_UNIT_MEASURE);
             this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
+            this._gpuDisplayDeviceName = this._settings.get_boolean(GPU_DISPLAY_DEVICE_NAME);
             this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
         }
 
@@ -541,6 +543,7 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT}`, this._gpuMemoryUnitTypeChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT_MEASURE}`, this._gpuMemoryUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_MONITOR}`, this._gpuMemoryMonitorChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_DISPLAY_DEVICE_NAME}`, this._gpuDisplayDeviceNameChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_DEVICES_LIST}`, this._gpuDevicesListChanged.bind(this));
         }
 
@@ -1044,6 +1047,12 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _gpuDisplayDeviceNameChanged() {
+            this._gpuDisplayDeviceName = this._settings.get_boolean(GPU_DISPLAY_DEVICE_NAME);
+
+            this._gpuDevicesListChanged();
+        }
+
         _gpuDevicesListChanged() {
             this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
 
@@ -1053,7 +1062,7 @@ const ResourceMonitor = GObject.registerClass(
                 const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
                 const uuid = it[0];
-                const name = it[1];
+                const name = this._gpuDisplayDeviceName ? it[1] : null;
                 const usage = (it[2] === 'true') && this._gpuStatus;
                 const memory = (it[3] === 'true') && this._gpuStatus;
                 let thermal = false;
@@ -1220,6 +1229,8 @@ const ResourceMonitor = GObject.registerClass(
             //this._gpuMemoryUnitMeasureChanged();
 
             //this._gpuMemoryMonitorChanged();
+
+            //this._gpuDisplayDeviceNameChanged();
 
             this._gpuDevicesListChanged();
         }
@@ -2634,11 +2645,13 @@ const GpuContainer = GObject.registerClass(
         add_element(uuid, label, usage, memory, thermal) {
             this._elementsUuid.push(uuid);
 
-            this._elementsName[uuid] = new St.Label({
-                y_align: Clutter.ActorAlign.CENTER,
-                text: ` ${label}: `
-            });
-            this.add(this._elementsName[uuid]);
+            if (label !== null) {
+                this._elementsName[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ` ${label}: `
+                });
+                this.add(this._elementsName[uuid]);
+            }
 
             // Usage
             if (usage) {

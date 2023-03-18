@@ -1323,6 +1323,21 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display Device name</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="gpu_display_device_name"/>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel">
                 <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
