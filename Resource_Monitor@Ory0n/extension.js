@@ -1311,34 +1311,34 @@ const ResourceMonitor = GObject.registerClass(
 
                             case 'm':
                                 unit = 'MB';
-                                value /= 1024;
+                                value /= 1000;
                                 break;
 
                             case 'g':
                                 unit = 'GB';
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 't':
                                 unit = 'TB';
-                                value /= 1024;
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 'auto':
 
                             default:
-                                if (value > 1024) {
+                                if (value > 1000) {
                                     unit = 'MB';
-                                    value /= 1024;
-                                    if (value > 1024) {
+                                    value /= 1000;
+                                    if (value > 1000) {
                                         unit = 'GB';
-                                        value /= 1024;
-                                        if (value > 1024) {
+                                        value /= 1000;
+                                        if (value > 1000) {
                                             unit = 'TB';
-                                            value /= 1024;
+                                            value /= 1000;
                                         }
                                     }
                                 } else {
@@ -1420,34 +1420,34 @@ const ResourceMonitor = GObject.registerClass(
 
                             case 'm':
                                 unit = 'MB';
-                                value /= 1024;
+                                value /= 1000;
                                 break;
 
                             case 'g':
                                 unit = 'GB';
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 't':
                                 unit = 'TB';
-                                value /= 1024;
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 'auto':
 
                             default:
-                                if (value > 1024) {
+                                if (value > 1000) {
                                     unit = 'MB';
-                                    value /= 1024;
-                                    if (value > 1024) {
+                                    value /= 1000;
+                                    if (value > 1000) {
                                         unit = 'GB';
-                                        value /= 1024;
-                                        if (value > 1024) {
+                                        value /= 1000;
+                                        if (value > 1000) {
                                             unit = 'TB';
-                                            value /= 1024;
+                                            value /= 1000;
                                         }
                                     }
                                 } else {
@@ -1493,6 +1493,11 @@ const ResourceMonitor = GObject.registerClass(
                             if (this._diskStatsBox.get_filesystem(entry[2])) {
                                 rwTot[0] += parseInt(entry[5]);
                                 rwTot[1] += parseInt(entry[9]);
+
+                                // sector is 512 bytes
+                                // 1 kilobyte = 2 sectors
+                                rwTot[0] /= 2;
+                                rwTot[1] /= 2;
                             }
                         }
 
@@ -1511,48 +1516,48 @@ const ResourceMonitor = GObject.registerClass(
 
                             switch (this._diskStatsUnitMeasure) {
                                 case 'k':
-                                    unit = 'K';
+                                    unit = 'KB';
                                     break;
 
                                 case 'm':
-                                    unit = 'M';
-                                    rw[0] /= 1024;
-                                    rw[1] /= 1024;
+                                    unit = 'MB';
+                                    rw[0] /= 1000;
+                                    rw[1] /= 1000;
                                     break;
 
                                 case 'g':
-                                    unit = 'G';
-                                    rw[0] /= 1024;
-                                    rw[1] /= 1024;
-                                    rw[0] /= 1024;
-                                    rw[1] /= 1024;
+                                    unit = 'GB';
+                                    rw[0] /= 1000;
+                                    rw[1] /= 1000;
+                                    rw[0] /= 1000;
+                                    rw[1] /= 1000;
                                     break;
 
                                 case 't':
-                                    unit = 'T';
-                                    rw[0] /= 1024;
-                                    rw[1] /= 1024;
-                                    rw[0] /= 1024;
-                                    rw[1] /= 1024;
-                                    rw[0] /= 1024;
-                                    rw[1] /= 1024;
+                                    unit = 'TB';
+                                    rw[0] /= 1000;
+                                    rw[1] /= 1000;
+                                    rw[0] /= 1000;
+                                    rw[1] /= 1000;
+                                    rw[0] /= 1000;
+                                    rw[1] /= 1000;
                                     break;
 
                                 case 'auto':
 
                                 default:
-                                    if (rw[0] > 1024 || rw[1] > 1024) {
-                                        unit = 'M';
-                                        rw[0] /= 1024;
-                                        rw[1] /= 1024;
-                                        if (rw[0] > 1024 || rw[1] > 1024) {
-                                            unit = 'G';
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
-                                            if (rw[0] > 1024 || rw[1] > 1024) {
-                                                unit = 'T';
-                                                rw[0] /= 1024;
-                                                rw[1] /= 1024;
+                                    if (rw[0] > 1000 || rw[1] > 1000) {
+                                        unit = 'MB';
+                                        rw[0] /= 1000;
+                                        rw[1] /= 1000;
+                                        if (rw[0] > 1000 || rw[1] > 1000) {
+                                            unit = 'GB';
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
+                                            if (rw[0] > 1000 || rw[1] > 1000) {
+                                                unit = 'TB';
+                                                rw[0] /= 1000;
+                                                rw[1] /= 1000;
                                             }
                                         }
                                     } else {
@@ -1591,6 +1596,11 @@ const ResourceMonitor = GObject.registerClass(
                                 rwTot[0] += parseInt(entry[5]);
                                 rwTot[1] += parseInt(entry[9]);
 
+                                // sector is 512 bytes
+                                // 1 kilobyte = 2 sectors
+                                rwTot[0] /= 2;
+                                rwTot[1] /= 2;
+
                                 const idle = GLib.get_monotonic_time() / 1000;
                                 const delta = (idle - this._diskStatsBox.get_idle(filesystem)) / 1000;
                                 this._diskStatsBox.set_idle(filesystem, idle);
@@ -1606,52 +1616,52 @@ const ResourceMonitor = GObject.registerClass(
 
                                     switch (this._diskStatsUnitMeasure) {
                                         case 'k':
-                                            unit = 'K';
+                                            unit = 'KB';
                                             break;
 
                                         case 'm':
-                                            unit = 'M';
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
+                                            unit = 'MB';
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
                                             break;
 
                                         case 'g':
-                                            unit = 'G';
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
+                                            unit = 'GB';
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
                                             break;
 
                                         case 't':
-                                            unit = 'T';
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
-                                            rw[0] /= 1024;
-                                            rw[1] /= 1024;
+                                            unit = 'TB';
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
+                                            rw[0] /= 1000;
+                                            rw[1] /= 1000;
                                             break;
 
                                         case 'auto':
 
                                         default:
-                                            if (rw[0] > 1024 || rw[1] > 1024) {
-                                                unit = 'M';
-                                                rw[0] /= 1024;
-                                                rw[1] /= 1024;
-                                                if (rw[0] > 1024 || rw[1] > 1024) {
-                                                    unit = 'G';
-                                                    rw[0] /= 1024;
-                                                    rw[1] /= 1024;
-                                                    if (rw[0] > 1024 || rw[1] > 1024) {
-                                                        unit = 'T';
-                                                        rw[0] /= 1024;
-                                                        rw[1] /= 1024;
+                                            if (rw[0] > 1000 || rw[1] > 1000) {
+                                                unit = 'MB';
+                                                rw[0] /= 1000;
+                                                rw[1] /= 1000;
+                                                if (rw[0] > 1000 || rw[1] > 1000) {
+                                                    unit = 'GB';
+                                                    rw[0] /= 1000;
+                                                    rw[1] /= 1000;
+                                                    if (rw[0] > 1000 || rw[1] > 1000) {
+                                                        unit = 'TB';
+                                                        rw[0] /= 1000;
+                                                        rw[1] /= 1000;
                                                     }
                                                 }
                                             } else {
-                                                unit = 'K';
+                                                unit = 'KB';
                                             }
 
                                             break;
@@ -1674,7 +1684,7 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _refreshDiskSpaceValue() {
-            this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
+            this._executeCommand(['df', '-BKB', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 const lines = output.split('\n');
 
                 // Excludes the first line of output
@@ -1732,34 +1742,34 @@ const ResourceMonitor = GObject.registerClass(
 
                                 case 'm':
                                     unit = 'MB';
-                                    value /= 1024;
+                                    value /= 1000;
                                     break;
 
                                 case 'g':
                                     unit = 'GB';
-                                    value /= 1024;
-                                    value /= 1024;
+                                    value /= 1000;
+                                    value /= 1000;
                                     break;
 
                                 case 't':
                                     unit = 'TB';
-                                    value /= 1024;
-                                    value /= 1024;
-                                    value /= 1024;
+                                    value /= 1000;
+                                    value /= 1000;
+                                    value /= 1000;
                                     break;
 
                                 case 'auto':
 
                                 default:
-                                    if (value > 1024) {
+                                    if (value > 1000) {
                                         unit = 'MB';
-                                        value /= 1024;
-                                        if (value > 1024) {
+                                        value /= 1000;
+                                        if (value > 1000) {
                                             unit = 'GB';
-                                            value /= 1024;
-                                            if (value > 1024) {
+                                            value /= 1000;
+                                            if (value > 1000) {
                                                 unit = 'TB';
-                                                value /= 1024;
+                                                value /= 1000;
                                             }
                                         }
                                     } else {
@@ -1807,7 +1817,6 @@ const ResourceMonitor = GObject.registerClass(
                 // False Bytes
                 const boolUnit = this._netUnit === 'bits';
 
-                const unit = boolUnit ? 1000 : 1024;
                 const factor = boolUnit ? 8 : 1;
 
                 if (delta > 0) {
@@ -1823,59 +1832,59 @@ const ResourceMonitor = GObject.registerClass(
 
                         case 'k':
                             this._ethUnit.text = boolUnit ? 'k' : 'K';
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'm':
                             this._ethUnit.text = boolUnit ? 'm' : 'M';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'g':
                             this._ethUnit.text = boolUnit ? 'g' : 'G';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 't':
                             this._ethUnit.text = boolUnit ? 't' : 'T';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'auto':
 
                         default:
-                            if (du[0] > unit || du[1] > unit) {
+                            if (du[0] > 1024 || du[1] > 1024) {
                                 this._ethUnit.text = boolUnit ? 'k' : 'K';
-                                du[0] /= unit;
-                                du[1] /= unit;
-                                if (du[0] > unit || du[1] > unit) {
+                                du[0] /= 1024;
+                                du[1] /= 1024;
+                                if (du[0] > 1024 || du[1] > 1024) {
                                     this._ethUnit.text = boolUnit ? 'm' : 'M';
-                                    du[0] /= unit;
-                                    du[1] /= unit;
-                                    if (du[0] > unit || du[1] > unit) {
+                                    du[0] /= 1024;
+                                    du[1] /= 1024;
+                                    if (du[0] > 1024 || du[1] > 1024) {
                                         this._ethUnit.text = boolUnit ? 'g' : 'G';
-                                        du[0] /= unit;
-                                        du[1] /= unit;
-                                        if (du[0] > unit || du[1] > unit) {
+                                        du[0] /= 1024;
+                                        du[1] /= 1024;
+                                        if (du[0] > 1024 || du[1] > 1024) {
                                             this._ethUnit.text = boolUnit ? 't' : 'T';
-                                            du[0] /= unit;
-                                            du[1] /= unit;
+                                            du[0] /= 1024;
+                                            du[1] /= 1024;
                                         }
                                     }
                                 }
@@ -1923,7 +1932,6 @@ const ResourceMonitor = GObject.registerClass(
                 // False Bytes
                 const boolUnit = this._netUnit === 'bits';
 
-                const unit = boolUnit ? 1000 : 1024;
                 const factor = boolUnit ? 8 : 1;
 
                 if (delta > 0) {
@@ -1939,59 +1947,59 @@ const ResourceMonitor = GObject.registerClass(
 
                         case 'k':
                             this._wlanUnit.text = boolUnit ? 'k' : 'K';
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'm':
                             this._wlanUnit.text = boolUnit ? 'm' : 'M';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'g':
                             this._wlanUnit.text = boolUnit ? 'g' : 'G';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 't':
                             this._wlanUnit.text = boolUnit ? 't' : 'T';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'auto':
 
                         default:
-                            if (du[0] > unit || du[1] > unit) {
+                            if (du[0] > 1024 || du[1] > 1024) {
                                 this._wlanUnit.text = boolUnit ? 'k' : 'K';
-                                du[0] /= unit;
-                                du[1] /= unit;
-                                if (du[0] > unit || du[1] > unit) {
+                                du[0] /= 1024;
+                                du[1] /= 1024;
+                                if (du[0] > 1024 || du[1] > 1024) {
                                     this._wlanUnit.text = boolUnit ? 'm' : 'M';
-                                    du[0] /= unit;
-                                    du[1] /= unit;
-                                    if (du[0] > unit || du[1] > unit) {
+                                    du[0] /= 1024;
+                                    du[1] /= 1024;
+                                    if (du[0] > 1024 || du[1] > 1024) {
                                         this._wlanUnit.text = boolUnit ? 'g' : 'G';
-                                        du[0] /= unit;
-                                        du[1] /= unit;
-                                        if (du[0] > unit || du[1] > unit) {
+                                        du[0] /= 1024;
+                                        du[1] /= 1024;
+                                        if (du[0] > 1024 || du[1] > 1024) {
                                             this._wlanUnit.text = boolUnit ? 't' : 'T';
-                                            du[0] /= unit;
-                                            du[1] /= unit;
+                                            du[0] /= 1024;
+                                            du[1] /= 1024;
                                         }
                                     }
                                 }
@@ -2038,12 +2046,11 @@ const ResourceMonitor = GObject.registerClass(
                         case 'auto':
 
                         default:
-                            if (value > 999) {
+                            if (value > 1000) {
                                 unit = 'MHz';
                                 value /= 1000;
-                                if (value > 999999) {
+                                if (value > 1000) {
                                     unit = 'GHz';
-                                    value /= 1000;
                                     value /= 1000;
                                 }
                             } else {
@@ -2158,7 +2165,7 @@ const ResourceMonitor = GObject.registerClass(
                     this._gpuBox.update_element_value(uuid, usage, '%');
 
                     let value = 0;
-                    let unit = 'MiB';
+                    let unit = 'M';
                     switch (this._gpuMemoryUnitType) {
                         case 'perc':
                             const used = (100 * parseInt(memoryUsed)) / parseInt(memoryTotal);
@@ -2199,21 +2206,21 @@ const ResourceMonitor = GObject.registerClass(
 
                             switch (this._gpuMemoryUnitMeasure) {
                                 case 'k':
-                                    unit = 'KiB';
+                                    unit = 'K';
                                     value *= 1024;
                                     break;
 
                                 case 'm':
-                                    unit = 'MiB';
+                                    unit = 'M';
                                     break;
 
                                 case 'g':
-                                    unit = 'GiB';
+                                    unit = 'G';
                                     value /= 1024;
                                     break;
 
                                 case 't':
-                                    unit = 'TiB';
+                                    unit = 'T';
                                     value /= 1024;
                                     value /= 1024;
                                     break;
@@ -2222,14 +2229,14 @@ const ResourceMonitor = GObject.registerClass(
 
                                 default:
                                     if (value > 1024) {
-                                        unit = 'GiB';
+                                        unit = 'G';
                                         value /= 1024;
                                         if (value > 1024) {
-                                            unit = 'TiB';
+                                            unit = 'T';
                                             value /= 1024;
                                         }
                                     } else {
-                                        unit = 'MiB';
+                                        unit = 'M';
                                     }
 
                                     break;
