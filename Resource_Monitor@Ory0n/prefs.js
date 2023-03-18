@@ -47,6 +47,7 @@ const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
 const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+const CPU_FREQUENCY_UNIT_MEASURE = 'cpufrequencyunitmeasure';
 const CPU_LOADAVERAGE_STATUS = 'cpuloadaveragestatus';
 const CPU_LOADAVERAGE_WIDTH = 'cpuloadaveragewidth';
 
@@ -238,6 +239,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._cpuWidthSpinbutton = this._builder.get_object('cpu_width_spinbutton');
             this._cpuFrequencyDisplay = this._builder.get_object('cpu_frequency_display');
             this._cpuFrequencyWidthSpinbutton = this._builder.get_object('cpu_frequency_width_spinbutton');
+            this._cpuFrequencyUnitMeasureCombobox = this._builder.get_object('cpu_frequency_unit_measure_combobox');
             this._cpuLoadAverageDisplay = this._builder.get_object('cpu_loadaverage_display');
             this._cpuLoadAverageWidthSpinbutton = this._builder.get_object('cpu_loadaverage_width_spinbutton');
 
@@ -245,6 +247,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._connectSpinButton(this._settings, CPU_WIDTH, this._cpuWidthSpinbutton);
             this._connectSwitchButton(this._settings, CPU_FREQUENCY_STATUS, this._cpuFrequencyDisplay);
             this._connectSpinButton(this._settings, CPU_FREQUENCY_WIDTH, this._cpuFrequencyWidthSpinbutton);
+            this._connectComboBox(this._settings, CPU_FREQUENCY_UNIT_MEASURE, this._cpuFrequencyUnitMeasureCombobox);
             this._connectSwitchButton(this._settings, CPU_LOADAVERAGE_STATUS, this._cpuLoadAverageDisplay);
             this._connectSpinButton(this._settings, CPU_LOADAVERAGE_WIDTH, this._cpuLoadAverageWidthSpinbutton);
 
@@ -255,8 +258,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._cpuFrequencyDisplay.connect('state-set', button => {
                 this._cpuFrequencyWidthSpinbutton.sensitive = button.active;
+                this._cpuFrequencyUnitMeasureCombobox.sensitive = button.active;
             });
             this._cpuFrequencyWidthSpinbutton.sensitive = this._cpuFrequencyDisplay.active;
+            this._cpuFrequencyUnitMeasureCombobox.sensitive = this._cpuFrequencyDisplay.active;
 
             this._cpuLoadAverageDisplay.connect('state-set', button => {
                 this._cpuLoadAverageWidthSpinbutton.sensitive = button.active;
