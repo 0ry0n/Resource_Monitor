@@ -312,9 +312,9 @@
                   <object class="GtkComboBoxText" id="cpu_frequency_unit_measure_combobox">
                     <items>
                       <item id="auto">Auto</item>
-                      <item id="g">GHz</item>
-                      <item id="m">MHz</item>
                       <item id="k">KHz</item>
+                      <item id="m">MHz</item>
+                      <item id="g">GHz</item>
                     </items>
                   </object>
                 </child>
