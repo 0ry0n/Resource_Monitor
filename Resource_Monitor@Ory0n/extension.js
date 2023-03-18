@@ -2038,13 +2038,16 @@ const ResourceMonitor = GObject.registerClass(
                         case 'auto':
 
                         default:
-                            if (value > 999999) {
-                                unit = 'GHz';
-                                value /= 1000;
-                                value /= 1000;
-                            } else {
+                            if (value > 999) {
                                 unit = 'MHz';
                                 value /= 1000;
+                                if (value > 999999) {
+                                    unit = 'GHz';
+                                    value /= 1000;
+                                    value /= 1000;
+                                }
+                            } else {
+                                unit = 'KHz';
                             }
 
                             break;
