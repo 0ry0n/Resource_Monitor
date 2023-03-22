@@ -2,7 +2,7 @@
 /* exported init */
 
 /*
- * Resource_Monitor is Copyright © 2018-2022 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
