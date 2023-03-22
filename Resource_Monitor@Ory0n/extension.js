@@ -216,7 +216,7 @@ const ResourceMonitor = GObject.registerClass(
             });
 
             this._gpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/gpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
