@@ -1611,48 +1611,48 @@ const ResourceMonitor = GObject.registerClass(
 
                             switch (this._diskStatsUnitMeasure) {
                                 case 'k':
-                                    unit = 'KB';
+                                    unit = 'K';
                                     break;
 
                                 case 'm':
-                                    unit = 'MB';
-                                    rw[0] /= 1000;
-                                    rw[1] /= 1000;
+                                    unit = 'M';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
                                     break;
 
                                 case 'g':
-                                    unit = 'GB';
-                                    rw[0] /= 1000;
-                                    rw[1] /= 1000;
-                                    rw[0] /= 1000;
-                                    rw[1] /= 1000;
+                                    unit = 'G';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
                                     break;
 
                                 case 't':
-                                    unit = 'TB';
-                                    rw[0] /= 1000;
-                                    rw[1] /= 1000;
-                                    rw[0] /= 1000;
-                                    rw[1] /= 1000;
-                                    rw[0] /= 1000;
-                                    rw[1] /= 1000;
+                                    unit = 'T';
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
+                                    rw[0] /= 1024;
+                                    rw[1] /= 1024;
                                     break;
 
                                 case 'auto':
 
                                 default:
-                                    if (rw[0] > 1000 || rw[1] > 1000) {
-                                        unit = 'MB';
-                                        rw[0] /= 1000;
-                                        rw[1] /= 1000;
-                                        if (rw[0] > 1000 || rw[1] > 1000) {
-                                            unit = 'GB';
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
-                                            if (rw[0] > 1000 || rw[1] > 1000) {
-                                                unit = 'TB';
-                                                rw[0] /= 1000;
-                                                rw[1] /= 1000;
+                                    if (rw[0] > 1024 || rw[1] > 1024) {
+                                        unit = 'M';
+                                        rw[0] /= 1024;
+                                        rw[1] /= 1024;
+                                        if (rw[0] > 1024 || rw[1] > 1024) {
+                                            unit = 'G';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            if (rw[0] > 1024 || rw[1] > 1024) {
+                                                unit = 'T';
+                                                rw[0] /= 1024;
+                                                rw[1] /= 1024;
                                             }
                                         }
                                     } else {
@@ -1711,52 +1711,52 @@ const ResourceMonitor = GObject.registerClass(
 
                                     switch (this._diskStatsUnitMeasure) {
                                         case 'k':
-                                            unit = 'KB';
+                                            unit = 'K';
                                             break;
 
                                         case 'm':
-                                            unit = 'MB';
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
+                                            unit = 'M';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
                                             break;
 
                                         case 'g':
-                                            unit = 'GB';
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
+                                            unit = 'G';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
                                             break;
 
                                         case 't':
-                                            unit = 'TB';
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
-                                            rw[0] /= 1000;
-                                            rw[1] /= 1000;
+                                            unit = 'T';
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
+                                            rw[0] /= 1024;
+                                            rw[1] /= 1024;
                                             break;
 
                                         case 'auto':
 
                                         default:
-                                            if (rw[0] > 1000 || rw[1] > 1000) {
-                                                unit = 'MB';
-                                                rw[0] /= 1000;
-                                                rw[1] /= 1000;
-                                                if (rw[0] > 1000 || rw[1] > 1000) {
-                                                    unit = 'GB';
-                                                    rw[0] /= 1000;
-                                                    rw[1] /= 1000;
-                                                    if (rw[0] > 1000 || rw[1] > 1000) {
-                                                        unit = 'TB';
-                                                        rw[0] /= 1000;
-                                                        rw[1] /= 1000;
+                                            if (rw[0] > 1024 || rw[1] > 1024) {
+                                                unit = 'M';
+                                                rw[0] /= 1024;
+                                                rw[1] /= 1024;
+                                                if (rw[0] > 1024 || rw[1] > 1024) {
+                                                    unit = 'G';
+                                                    rw[0] /= 1024;
+                                                    rw[1] /= 1024;
+                                                    if (rw[0] > 1024 || rw[1] > 1024) {
+                                                        unit = 'T';
+                                                        rw[0] /= 1024;
+                                                        rw[1] /= 1024;
                                                     }
                                                 }
                                             } else {
-                                                unit = 'KB';
+                                                unit = 'K';
                                             }
 
                                             break;
