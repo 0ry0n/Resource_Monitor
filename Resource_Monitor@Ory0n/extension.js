@@ -724,7 +724,7 @@ const ResourceMonitor = GObject.registerClass(
             this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
 
             if (this._iconsStatus) {
-                if (this._cpuStatus) {
+                if (this._cpuStatus || this._cpuFrequencyStatus || this._cpuLoadAverageStatus || this._thermalCpuTemperatureStatus) {
                     this._cpuIcon.show();
                 }
                 if (this._ramStatus) {
@@ -745,6 +745,9 @@ const ResourceMonitor = GObject.registerClass(
                 if ((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus)) {
                     this._wlanIcon.show();
                 }
+                if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
+                    this._gpuIcon.show();
+                }
             } else {
                 this._cpuIcon.hide();
                 this._ramIcon.hide();
@@ -753,6 +756,7 @@ const ResourceMonitor = GObject.registerClass(
                 this._diskSpaceIcon.hide();
                 this._ethIcon.hide();
                 this._wlanIcon.hide();
+                this._gpuIcon.hide();
             }
         }
 
