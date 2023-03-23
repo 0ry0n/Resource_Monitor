@@ -41,6 +41,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="itemsposition" type="as">
+            <default>["cpu", "ram", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="cpustatus" type="b">
             <default>true</default>
             <summary></summary>

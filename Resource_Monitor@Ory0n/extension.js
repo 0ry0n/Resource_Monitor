@@ -54,6 +54,8 @@ const RIGHT_CLICK_STATUS = 'rightclickstatus';
 const ICONS_STATUS = 'iconsstatus';
 const ICONS_POSITION = 'iconsposition';
 
+const ITEMS_POSITION = 'itemsposition';
+
 const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
@@ -332,83 +334,147 @@ const ResourceMonitor = GObject.registerClass(
 
             switch (this._iconsPosition) {
                 case 'left':
-                    this._box.add(this._cpuIcon);
-                    this._box.add(this._cpuValue);
-                    this._box.add(this._cpuUnit);
+                    this._itemsPosition.forEach(element => {
+                        switch (element) {
+                            case 'cpu':
+                                this._box.add(this._cpuIcon);
+                                this._box.add(this._cpuValue);
+                                this._box.add(this._cpuUnit);
 
-                    this._box.add(this._cpuTemperatureValue);
-                    this._box.add(this._cpuTemperatureUnit);
-                    this._box.add(this._cpuTemperatureValueBracket);
-                    this._box.add(this._cpuFrequencyValue);
-                    this._box.add(this._cpuFrequencyUnit);
-                    this._box.add(this._cpuFrequencyValueBracket);
-                    this._box.add(this._cpuLoadAverageValue);
+                                this._box.add(this._cpuTemperatureValue);
+                                this._box.add(this._cpuTemperatureUnit);
+                                this._box.add(this._cpuTemperatureValueBracket);
+                                this._box.add(this._cpuFrequencyValue);
+                                this._box.add(this._cpuFrequencyUnit);
+                                this._box.add(this._cpuFrequencyValueBracket);
+                                this._box.add(this._cpuLoadAverageValue);
 
-                    this._box.add(this._ramIcon);
-                    this._box.add(this._ramValue);
-                    this._box.add(this._ramUnit);
+                                break;
 
-                    this._box.add(this._swapIcon);
-                    this._box.add(this._swapValue);
-                    this._box.add(this._swapUnit);
+                            case 'ram':
+                                this._box.add(this._ramIcon);
+                                this._box.add(this._ramValue);
+                                this._box.add(this._ramUnit);
 
-                    this._box.add(this._diskStatsIcon);
-                    this._box.add(this._diskStatsBox);
+                                break;
 
-                    this._box.add(this._diskSpaceIcon);
-                    this._box.add(this._diskSpaceBox);
+                            case 'swap':
+                                this._box.add(this._swapIcon);
+                                this._box.add(this._swapValue);
+                                this._box.add(this._swapUnit);
 
-                    this._box.add(this._ethIcon);
-                    this._box.add(this._ethValue);
-                    this._box.add(this._ethUnit);
+                                break;
 
-                    this._box.add(this._wlanIcon);
-                    this._box.add(this._wlanValue);
-                    this._box.add(this._wlanUnit);
+                            case 'stats':
+                                this._box.add(this._diskStatsIcon);
+                                this._box.add(this._diskStatsBox);
 
-                    this._box.add(this._gpuIcon);
-                    this._box.add(this._gpuBox);
+                                break;
+
+                            case 'space':
+                                this._box.add(this._diskSpaceIcon);
+                                this._box.add(this._diskSpaceBox);
+
+                                break;
+
+                            case 'eth':
+                                this._box.add(this._ethIcon);
+                                this._box.add(this._ethValue);
+                                this._box.add(this._ethUnit);
+
+                                break;
+
+                            case 'wlan':
+                                this._box.add(this._wlanIcon);
+                                this._box.add(this._wlanValue);
+                                this._box.add(this._wlanUnit);
+
+                                break;
+
+                            case 'gpu':
+                                this._box.add(this._gpuIcon);
+                                this._box.add(this._gpuBox);
+
+                                break;
+
+                            default:
+
+                                break;
+                        }
+                    });
 
                     break;
 
                 case 'right':
 
                 default:
-                    this._box.add(this._cpuValue);
-                    this._box.add(this._cpuUnit);
+                    this._itemsPosition.forEach(element => {
+                        switch (element) {
+                            case 'cpu':
+                                this._box.add(this._cpuValue);
+                                this._box.add(this._cpuUnit);
 
-                    this._box.add(this._cpuTemperatureValue);
-                    this._box.add(this._cpuTemperatureUnit);
-                    this._box.add(this._cpuTemperatureValueBracket);
-                    this._box.add(this._cpuFrequencyValue);
-                    this._box.add(this._cpuFrequencyUnit);
-                    this._box.add(this._cpuFrequencyValueBracket);
-                    this._box.add(this._cpuLoadAverageValue);
-                    this._box.add(this._cpuIcon);
+                                this._box.add(this._cpuTemperatureValue);
+                                this._box.add(this._cpuTemperatureUnit);
+                                this._box.add(this._cpuTemperatureValueBracket);
+                                this._box.add(this._cpuFrequencyValue);
+                                this._box.add(this._cpuFrequencyUnit);
+                                this._box.add(this._cpuFrequencyValueBracket);
+                                this._box.add(this._cpuLoadAverageValue);
+                                this._box.add(this._cpuIcon);
 
-                    this._box.add(this._ramValue);
-                    this._box.add(this._ramUnit);
-                    this._box.add(this._ramIcon);
+                                break;
 
-                    this._box.add(this._swapValue);
-                    this._box.add(this._swapUnit);
-                    this._box.add(this._swapIcon);
+                            case 'ram':
+                                this._box.add(this._ramValue);
+                                this._box.add(this._ramUnit);
+                                this._box.add(this._ramIcon);
 
-                    this._box.add(this._diskStatsBox);
-                    this._box.add(this._diskStatsIcon);
-                    this._box.add(this._diskSpaceBox);
-                    this._box.add(this._diskSpaceIcon);
+                                break;
 
-                    this._box.add(this._ethValue);
-                    this._box.add(this._ethUnit);
-                    this._box.add(this._ethIcon);
+                            case 'swap':
+                                this._box.add(this._swapValue);
+                                this._box.add(this._swapUnit);
+                                this._box.add(this._swapIcon);
 
-                    this._box.add(this._wlanValue);
-                    this._box.add(this._wlanUnit);
-                    this._box.add(this._wlanIcon);
+                                break;
 
-                    this._box.add(this._gpuBox);
-                    this._box.add(this._gpuIcon);
+                            case 'stats':
+                                this._box.add(this._diskStatsBox);
+                                this._box.add(this._diskStatsIcon);
+
+                                break;
+
+                            case 'space':
+                                this._box.add(this._diskSpaceBox);
+                                this._box.add(this._diskSpaceIcon);
+
+                                break;
+
+                            case 'eth':
+                                this._box.add(this._ethValue);
+                                this._box.add(this._ethUnit);
+                                this._box.add(this._ethIcon);
+
+                                break;
+
+                            case 'wlan':
+                                this._box.add(this._wlanValue);
+                                this._box.add(this._wlanUnit);
+                                this._box.add(this._wlanIcon);
+
+                                break;
+
+                            case 'gpu':
+                                this._box.add(this._gpuBox);
+                                this._box.add(this._gpuIcon);
+
+                                break;
+
+                            default:
+                                break;
+                        }
+                    });
 
                     break;
             }
@@ -425,6 +491,8 @@ const ResourceMonitor = GObject.registerClass(
 
             this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
             this._iconsPosition = this._settings.get_string(ICONS_POSITION);
+
+            this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
 
             this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
             this._cpuWidth = this._settings.get_int(CPU_WIDTH);
@@ -490,6 +558,8 @@ const ResourceMonitor = GObject.registerClass(
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_STATUS}`, this._iconsStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_POSITION}`, this._iconsPositionChanged.bind(this));
+
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ITEMS_POSITION}`, this._itemsPositionChanged.bind(this));
 
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_STATUS}`, this._cpuStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_WIDTH}`, this._cpuWidthChanged.bind(this));
@@ -688,6 +758,14 @@ const ResourceMonitor = GObject.registerClass(
 
         _iconsPositionChanged() {
             this._iconsPosition = this._settings.get_string(ICONS_POSITION);
+
+            this._box.remove_all_children();
+
+            this._buildMainGui();
+        }
+
+        _itemsPositionChanged() {
+            this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
 
             this._box.remove_all_children();
 
@@ -1137,6 +1215,8 @@ const ResourceMonitor = GObject.registerClass(
             this._iconsStatusChanged();
 
             //this._iconsPositionChanged();
+
+            //this._itemsPositionChanged();
 
             this._cpuStatusChanged();
 

@@ -43,6 +43,8 @@ const CUSTOM_LEFT_CLICK_STATUS = 'customleftclickstatus';
 const ICONS_STATUS = 'iconsstatus';
 const ICONS_POSITION = 'iconsposition';
 
+const ITEMS_POSITION = 'itemsposition';
+
 const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
@@ -188,6 +190,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._decimalsDisplay = this._builder.get_object('decimals_display');
             this._iconsDisplay = this._builder.get_object('icons_display')
             this._iconsPositionCombobox = this._builder.get_object('icons_position_combobox');
+            this._itemsPositionListbox = this._builder.get_object('items_position_listbox')
 
             this._connectSpinButton(this._settings, REFRESH_TIME, this._secondsSpinbutton);
             this._connectComboBox(this._settings, EXTENSION_POSITION, this._extensionPositionCombobox);
@@ -233,6 +236,47 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 this._settings.set_string(LEFT_CLICK_STATUS, tBuffer.text);
                 this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, tBuffer.text);
             });
+
+            // ListBox
+            let itemsPositionArray = this._settings.get_strv(ITEMS_POSITION);
+
+            for (let i = 0; i < itemsPositionArray.length; i++) {
+                const element = itemsPositionArray[i];
+
+                let row = new Gtk.ListBoxRow();
+                let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
+
+                let up = new Gtk.Button({ icon_name: 'go-up' });
+                up.connect('clicked', button => {
+                    const index = row.get_index()
+                    if (index > 0) {
+                        [itemsPositionArray[index], itemsPositionArray[index - 1]] = [itemsPositionArray[index - 1], itemsPositionArray[index]];
+                        this._itemsPositionListbox.remove(row);
+                        this._itemsPositionListbox.insert(row, index - 1);
+
+                        this._settings.set_strv(ITEMS_POSITION, itemsPositionArray);
+                    }
+                });
+                let down = new Gtk.Button({ icon_name: 'go-down' });
+                down.connect('clicked', button => {
+                    const index = row.get_index()
+                    if (index < itemsPositionArray.length) {
+                        [itemsPositionArray[index], itemsPositionArray[index + 1]] = [itemsPositionArray[index + 1], itemsPositionArray[index]];
+                        this._itemsPositionListbox.remove(row);
+                        this._itemsPositionListbox.insert(row, index + 1);
+
+                        this._settings.set_strv(ITEMS_POSITION, itemsPositionArray);
+                    }
+                });
+
+                box.append(new Gtk.Label({ label: element, hexpand: true, halign: Gtk.Align.START }));
+                box.append(up);
+                box.append(down);
+
+                row.child = box;
+
+                this._itemsPositionListbox.insert(row, i);
+            }
         }
 
         _buildCpu() {
