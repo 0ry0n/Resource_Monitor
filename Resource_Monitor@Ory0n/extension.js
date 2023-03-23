@@ -2251,19 +2251,34 @@ const ResourceMonitor = GObject.registerClass(
                     const entry = line.trim().split(/\,\s/);
 
                     const uuid = entry[0];
-                    const memoryTotal = entry[1].slice(0, -4);
-                    const memoryUsed = entry[2].slice(0, -4);
-                    const memoryFree = entry[3].slice(0, -4);
+                    let memoryTotal = entry[1].slice(0, -4);
+                    let memoryUsed = entry[2].slice(0, -4);
+                    let memoryFree = entry[3].slice(0, -4);
                     const usage = entry[4].slice(0, -1);
                     const temperature = entry[5];
+
+                    // mebibyte
+                    memoryTotal = parseInt(memoryTotal);
+                    memoryUsed = parseInt(memoryUsed);
+                    memoryFree = parseInt(memoryFree);
+
+                    // kibibyte
+                    memoryTotal *= 1024;
+                    memoryUsed *= 1024;
+                    memoryFree *= 1024;
+
+                    // kilobyte
+                    memoryTotal *= 1.024;
+                    memoryUsed *= 1.024;
+                    memoryFree *= 1.024;
 
                     this._gpuBox.update_element_value(uuid, usage, '%');
 
                     let value = 0;
-                    let unit = 'M';
+                    let unit = 'KB';
                     switch (this._gpuMemoryUnitType) {
                         case 'perc':
-                            const used = (100 * parseInt(memoryUsed)) / parseInt(memoryTotal);
+                            const used = (100 * memoryUsed) / memoryTotal;
                             unit = '%';
 
                             switch (this._gpuMemoryMonitor) {
@@ -2287,51 +2302,60 @@ const ResourceMonitor = GObject.registerClass(
                         default:
                             switch (this._gpuMemoryMonitor) {
                                 case 'free':
-                                    value = parseInt(memoryFree);
+                                    value = memoryFree;
 
                                     break;
 
                                 case 'used':
 
                                 default:
-                                    value = parseInt(memoryUsed);
+                                    value = memoryUsed;
 
                                     break;
                             }
 
                             switch (this._gpuMemoryUnitMeasure) {
                                 case 'k':
-                                    unit = 'K';
-                                    value *= 1024;
+                                    unit = 'KB';
                                     break;
 
                                 case 'm':
-                                    unit = 'M';
+                                    unit = 'MB';
+                                    value /= 1000;
+                                    
                                     break;
 
                                 case 'g':
-                                    unit = 'G';
-                                    value /= 1024;
+                                    unit = 'GB';
+                                    value /= 1000;
+                                    value /= 1000;
+
                                     break;
 
                                 case 't':
-                                    unit = 'T';
-                                    value /= 1024;
-                                    value /= 1024;
+                                    unit = 'TB';
+                                    value /= 1000;
+                                    value /= 1000;
+                                    value /= 1000;
+
                                     break;
 
                                 case 'auto':
 
                                 default:
-                                    if (value > 1024) {
-                                        unit = 'G';
-                                        value /= 1024;
-                                        if (value > 1024) {
-                                            unit = 'T';
-                                            value /= 1024;
+                                    if (value > 1000) {
+                                        unit = 'MB';
+                                        value /= 1000;
+                                        if (value > 1000) {
+                                            unit = 'GB';
+                                            value /= 1000;
+                                            if (value > 1000) {
+                                                unit = 'TB';
+                                                value /= 1000;
+                                            }
                                         }
                                     } else {
-                                        unit = 'M';
+                                        unit = 'KB';
                                     }
 
                                     break;
