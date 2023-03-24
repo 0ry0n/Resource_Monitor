@@ -823,6 +823,21 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display All Devices (only for stats)</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="disk_devices_display_all"/>
+                </child>
+              </object>
+            </child>
+            <child>
               <object class="GtkTreeView" id="disk_devices_treeview">
                 <property name="headers-clickable">False</property>
                 <property name="margin-start">8</property>

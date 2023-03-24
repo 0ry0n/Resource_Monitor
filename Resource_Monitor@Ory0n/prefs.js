@@ -78,6 +78,7 @@ const DISK_SPACE_WIDTH = 'diskspacewidth';
 const DISK_SPACE_UNIT = 'diskspaceunit';
 const DISK_SPACE_UNIT_MEASURE = 'diskspaceunitmeasure';
 const DISK_SPACE_MONITOR = 'diskspacemonitor';
+const DISK_DEVICES_DISPLAY_ALL = 'diskdevicesdisplayall';
 const DISK_DEVICES_LIST = 'diskdeviceslist';
 const DISK_DEVICES_LIST_SEPARATOR = ' ';
 
@@ -378,6 +379,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._diskSpaceUnitCombobox = this._builder.get_object('disk_space_unit_combobox');
             this._diskSpaceUnitMeasureCombobox = this._builder.get_object('disk_space_unit_measure_combobox');
             this._diskSpaceMonitorCombobox = this._builder.get_object('disk_space_monitor_combobox');
+            this._diskDevicesDisplayAll = this._builder.get_object('disk_devices_display_all');
             this._diskDevicesTreeView = this._builder.get_object('disk_devices_treeview')
 
             this._connectSwitchButton(this._settings, DISK_STATS_STATUS, this._diskStatsDisplay);
@@ -389,6 +391,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._connectComboBox(this._settings, DISK_SPACE_UNIT, this._diskSpaceUnitCombobox);
             this._connectComboBox(this._settings, DISK_SPACE_UNIT_MEASURE, this._diskSpaceUnitMeasureCombobox);
             this._connectComboBox(this._settings, DISK_SPACE_MONITOR, this._diskSpaceMonitorCombobox);
+            this._connectSwitchButton(this._settings, DISK_DEVICES_DISPLAY_ALL, this._diskDevicesDisplayAll);
 
             this._diskStatsDisplay.connect('state-set', button => {
                 this._diskStatsWidthSpinbutton.sensitive = button.active;
@@ -453,14 +456,25 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._disk_devices_model.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
+                let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
                 disksArray[row] = list.get_value(iter, 0) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3);
                 this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
             });
 
+            this._diskDevicesDisplayAll.connect('state-set', button => {
+                // Refresh
+                this._readDiskDevices(this._settings, this._disk_devices_model, button.active);
+            });
+
+            this._readDiskDevices(this._settings, this._disk_devices_model, this._diskDevicesDisplayAll.active);
+        }
+
+        _readDiskDevices(settings, model, all) {
+            model.clear();
             // Array format
             // filesystem mountPoint stats space
             // Get current disks settings
-            let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
+            let disksArray = settings.get_strv(DISK_DEVICES_LIST);
 
             this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 let lines = output.split('\n');
@@ -490,15 +504,72 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                         }
                     }
 
-                    this._disk_devices_model.set(this._disk_devices_model.append(), [0, 1, 2, 3], [filesystem, mountedOn, dStButton, dSpButton]);
+                    model.set(model.append(), [0, 1, 2, 3], [filesystem, mountedOn, dStButton, dSpButton]);
                 }
 
-                // Save new disksArray with the list of new disks (to remove old disks)
-                disksArray = [];
-                this._disk_devices_model.foreach((list, path, iter) => {
-                    disksArray.push(list.get_value(iter, 0) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
-                });
-                this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+                if (all) {
+                    this._loadFile('/proc/diskstats').then(contents => {
+                        const lines = ByteArray.toString(contents).split('\n');
+
+                        for (let i = 0; i < lines.length - 1; i++) {
+                            const line = lines[i];
+                            const entry = line.trim().split(/\s+/);
+
+                            if (entry[2].match(/loop*/)) {
+                                continue;
+                            }
+
+                            let found = false;
+                            const fs = '/dev/' + entry[2];
+                            model.foreach((list, path, iter) => {
+                                const filesystem = list.get_value(iter, 0);
+
+                                if (fs === filesystem) {
+                                    found = true;
+
+                                    return;
+                                }
+                            });
+
+                            if (found) {
+                                // nothing
+                            } else {
+                                let dStButton = false;
+                                let dSpButton = false; // slways false
+
+                                // Init gui
+                                for (let i = 0; i < disksArray.length; i++) {
+                                    let element = disksArray[i];
+
+                                    let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
+
+                                    if (fs === it[0]) {
+                                        dStButton = (it[2] === 'true');
+                                        dSpButton = (it[3] === 'true');
+
+                                        break;
+                                    }
+                                }
+
+                                model.set(model.append(), [0, 1, 2, 3], [fs, '', dStButton, dSpButton]);
+                            }
+                        }
+
+                        // Save new disksArray with the list of new disks (to remove old disks)
+                        disksArray = [];
+                        model.foreach((list, path, iter) => {
+                            disksArray.push(list.get_value(iter, 0) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
+                        });
+                        settings.set_strv(DISK_DEVICES_LIST, disksArray);
+                    });
+                } else {
+                    // Save new disksArray with the list of new disks (to remove old disks)
+                    disksArray = [];
+                    model.foreach((list, path, iter) => {
+                        disksArray.push(list.get_value(iter, 0) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + DISK_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
+                    });
+                    settings.set_strv(DISK_DEVICES_LIST, disksArray);
+                }
             });
         }
 
@@ -588,6 +659,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._thermalCpuDevicesModel.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
+                let cpuTempsArray = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
                 cpuTempsArray[row] = list.get_value(iter, 1) + THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR + list.get_value(iter, 0);
                 this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, cpuTempsArray);
             });
@@ -673,6 +745,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._thermalGpuDevicesModel.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
+                let gpuTempsArray = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
                 gpuTempsArray[row] = list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2);
                 this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
             });
@@ -834,6 +907,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
             this._gpuDevicesModel.connect('row-changed', (list, path, iter) => {
                 let row = path.get_indices()[0];
+                let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
                 gpuDevicesArray[row] = list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3);
                 this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
             });
@@ -882,11 +956,36 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             });
         }
 
+        _loadContents(file, cancellable = null) {
+            return new Promise((resolve, reject) => {
+                file.load_contents_async(cancellable, (source_object, res) => {
+                    try {
+                        const [ok, contents, etag_out] = source_object.load_contents_finish(res);
+
+                        resolve(contents);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+            });
+        }
+
+        async _loadFile(path, cancellable = null) {
+            try {
+                const file = Gio.File.new_for_path(path);
+                const contents = await this._loadContents(file, cancellable);
+
+                return contents;
+            } catch (error) {
+                log('[Resource_Monitor] Load File Error (' + error + ')');
+            }
+        }
+
         _readOutput(proc, cancellable = null) {
             return new Promise((resolve, reject) => {
                 proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
                     try {
-                        let [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
+                        const [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
 
                         if (source_object.get_successful()) {
                             resolve(stdout);
@@ -902,8 +1001,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
         async _executeCommand(command, cancellable = null) {
             try {
-                let proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-                let output = await this._readOutput(proc, cancellable);
+                const proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
+                const output = await this._readOutput(proc, cancellable);
 
                 return output;
             } catch (error) {
