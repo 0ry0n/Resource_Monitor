@@ -1822,14 +1822,14 @@ const ResourceMonitor = GObject.registerClass(
                         default:
                             switch (this._diskSpaceMonitor) {
                                 case 'free':
-                                    value = parseInt(entry[3]);
+                                    value = parseInt(entry[3].slice(0, -2));
 
                                     break;
 
                                 case 'used':
 
                                 default:
-                                    value = parseInt(entry[2]);
+                                    value = parseInt(entry[2].slice(0, -2));
 
                                     break;
                             }
@@ -2326,7 +2326,7 @@ const ResourceMonitor = GObject.registerClass(
                                 case 'm':
                                     unit = 'MB';
                                     value /= 1000;
-                                    
+
                                     break;
 
                                 case 'g':
