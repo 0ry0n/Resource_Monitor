@@ -29,8 +29,12 @@ const { Gio, GObject, Gtk, Gdk, GLib } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const ByteArray = imports.byteArray;
 const Me = ExtensionUtils.getCurrentExtension();
+const Gettext = imports.gettext;
 
-const _ = ExtensionUtils.gettext;
+const Domain = Gettext.domain(Me.metadata.uuid);
+
+const _ = Domain.gettext;
+const ngettext = Domain.ngettext;
 
 // Settings
 const REFRESH_TIME = 'refreshtime';

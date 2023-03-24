@@ -2,7 +2,7 @@
 <!-- Created with Cambalache 0.10.3 -->
 <interface>
   <!-- interface-name prefs.ui -->
-  <requires lib="gtk" version="4.6"/>
+  <requires lib="gtk" version="4.0"/>
   <object class="GtkNotebook" id="main_notebook">
     <property name="page">0</property>
     <property name="scrollable">True</property>

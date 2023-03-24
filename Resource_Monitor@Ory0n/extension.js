@@ -38,11 +38,15 @@ const Util = imports.misc.util;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const ByteArray = imports.byteArray;
-
-const _ = ExtensionUtils.gettext;
+const Gettext = imports.gettext;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const IndicatorName = Me.metadata.name;
+
+const Domain = Gettext.domain(Me.metadata.uuid);
+
+const _ = Domain.gettext;
+const ngettext = Domain.ngettext;
 
 // Settings
 const REFRESH_TIME = 'refreshtime';
