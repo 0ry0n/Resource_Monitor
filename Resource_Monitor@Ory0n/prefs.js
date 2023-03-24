@@ -209,8 +209,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._iconsPositionCombobox.sensitive = this._iconsDisplay.active;
 
             // LEFT-CLICK
-            let active = this._settings.get_string(LEFT_CLICK_STATUS, Gio.SettingsBindFlags.DEFAULT);
-            let textBufferCustom = this._settings.get_string(CUSTOM_LEFT_CLICK_STATUS, Gio.SettingsBindFlags.DEFAULT);
+            let active = this._settings.get_string(LEFT_CLICK_STATUS);
+            let textBufferCustom = this._settings.get_string(CUSTOM_LEFT_CLICK_STATUS);
 
             this._extensionLeftClickRadioButtonSM.connect('toggled', button => {
                 if (button.active) {
