@@ -2446,8 +2446,8 @@ const ResourceMonitor = GObject.registerClass(
                 const contents = await this._loadContents(file, cancellable);
 
                 return contents;
-            } catch (e) {
-                logError(e);
+            } catch (error) {
+                log('[Resource_Monitor] Load File Error (' + error + ')');
             }
         }
 
@@ -2475,8 +2475,8 @@ const ResourceMonitor = GObject.registerClass(
                 const output = await this._readOutput(proc, cancellable);
 
                 return output;
-            } catch (e) {
-                logError(e);
+            } catch (error) {
+                log('[Resource_Monitor] Execute Command Error (' + error + ')');
             }
         }
     });

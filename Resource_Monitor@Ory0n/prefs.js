@@ -906,8 +906,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 let output = await this._readOutput(proc, cancellable);
 
                 return output;
-            } catch (e) {
-                logError(e);
+            } catch (error) {
+                log('[Resource_Monitor] Execute Command Error (' + error + ')');
             }
         }
     });
