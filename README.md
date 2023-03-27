@@ -7,7 +7,7 @@ Resource_Monitor is a GNOME Shell extension that Monitor the use of system resou
 ![](/images/main.png)
 
 # GNOME Shell versions supported
-**40, 41, 42, 43**
+**40, 41, 42, 43, 44**
 - For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) branch.
 
 # How-To Install
@@ -62,10 +62,24 @@ gnome-extensions enable Resource_Monitor@Ory0n
 
 ![](/images/gpu.png)
 
+# About Units
+Units are K,M,... (powers of 1024) or KB,MB,... (powers of 1000).
+
 # Bug Reporting
 Use the GitHub [Issues](../../issues) tracker to report issues or ask for features.
 
 # Change Log
+**version 19 (Mar 27, 2023)**
+- Added support for gnome 44.
+- Fixed Cpu Frequency Unit: thanks to @giacomo-boldini.
+- Fixed Unit and scale factor.
+- Added ability to hide GPU name.
+- Added GPU icon.
+- Added ability to choose the display position of items.
+- Fixed incorrect classification of CPU thermal sensors.
+- Added ability to show all disk devices for stats monitoring.
+- Bug fixed.
+
 **version 18 (Oct 17, 2022)**
 - Added support for gnome 43.
 - Added GPU monitor (NVIDIA only).
