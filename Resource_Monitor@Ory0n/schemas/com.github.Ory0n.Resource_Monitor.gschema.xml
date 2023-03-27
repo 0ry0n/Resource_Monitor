@@ -41,6 +41,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="itemsposition" type="as">
+            <default>["cpu", "ram", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="cpustatus" type="b">
             <default>true</default>
             <summary></summary>
@@ -58,6 +63,11 @@
         </key>
         <key name="cpufrequencywidth" type="i">
             <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="cpufrequencyunitmeasure" type="s">
+            <default>"auto"</default>
             <summary></summary>
             <description></description>
         </key>
@@ -166,6 +176,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="diskdevicesdisplayall" type="b">
+            <default>false</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="diskdeviceslist" type="as">
             <default>[]</default>
             <summary></summary>
@@ -263,6 +278,11 @@
         </key>
         <key name="gpumemorymonitor" type="s">
             <default>"used"</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpudisplaydevicename" type="b">
+            <default>true</default>
             <summary></summary>
             <description></description>
         </key>

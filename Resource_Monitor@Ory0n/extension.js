@@ -2,7 +2,7 @@
 /* exported init */
 
 /*
- * Resource_Monitor is Copyright © 2018-2022 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
@@ -38,11 +38,15 @@ const Util = imports.misc.util;
 const Main = imports.ui.main;
 const PanelMenu = imports.ui.panelMenu;
 const ByteArray = imports.byteArray;
-
-const _ = ExtensionUtils.gettext;
+const Gettext = imports.gettext;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const IndicatorName = Me.metadata.name;
+
+const Domain = Gettext.domain(Me.metadata.uuid);
+
+const _ = Domain.gettext;
+const ngettext = Domain.ngettext;
 
 // Settings
 const REFRESH_TIME = 'refreshtime';
@@ -54,10 +58,13 @@ const RIGHT_CLICK_STATUS = 'rightclickstatus';
 const ICONS_STATUS = 'iconsstatus';
 const ICONS_POSITION = 'iconsposition';
 
+const ITEMS_POSITION = 'itemsposition';
+
 const CPU_STATUS = 'cpustatus';
 const CPU_WIDTH = 'cpuwidth';
 const CPU_FREQUENCY_STATUS = 'cpufrequencystatus';
 const CPU_FREQUENCY_WIDTH = 'cpufrequencywidth';
+const CPU_FREQUENCY_UNIT_MEASURE = 'cpufrequencyunitmeasure';
 const CPU_LOADAVERAGE_STATUS = 'cpuloadaveragestatus';
 const CPU_LOADAVERAGE_WIDTH = 'cpuloadaveragewidth';
 
@@ -107,6 +114,7 @@ const GPU_WIDTH = 'gpuwidth';
 const GPU_MEMORY_UNIT = 'gpumemoryunit';
 const GPU_MEMORY_UNIT_MEASURE = 'gpumemoryunitmeasure';
 const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
+const GPU_DISPLAY_DEVICE_NAME = 'gpudisplaydevicename'
 const GPU_DEVICES_LIST = 'gpudeviceslist';
 const GPU_DEVICES_LIST_SEPARATOR = ':';
 
@@ -214,7 +222,7 @@ const ResourceMonitor = GObject.registerClass(
             });
 
             this._gpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(Me.path + '/icons/gpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
@@ -227,7 +235,7 @@ const ResourceMonitor = GObject.registerClass(
 
             this._cpuFrequencyUnit = new St.Label({
                 y_align: Clutter.ActorAlign.CENTER,
-                text: 'MHz'
+                text: 'KHz'
             });
             this._cpuFrequencyUnit.set_style('padding-left: 0.125em;');
 
@@ -330,83 +338,147 @@ const ResourceMonitor = GObject.registerClass(
 
             switch (this._iconsPosition) {
                 case 'left':
-                    this._box.add(this._cpuIcon);
-                    this._box.add(this._cpuValue);
-                    this._box.add(this._cpuUnit);
+                    this._itemsPosition.forEach(element => {
+                        switch (element) {
+                            case 'cpu':
+                                this._box.add(this._cpuIcon);
+                                this._box.add(this._cpuValue);
+                                this._box.add(this._cpuUnit);
 
-                    this._box.add(this._cpuTemperatureValue);
-                    this._box.add(this._cpuTemperatureUnit);
-                    this._box.add(this._cpuTemperatureValueBracket);
-                    this._box.add(this._cpuFrequencyValue);
-                    this._box.add(this._cpuFrequencyUnit);
-                    this._box.add(this._cpuFrequencyValueBracket);
-                    this._box.add(this._cpuLoadAverageValue);
+                                this._box.add(this._cpuTemperatureValue);
+                                this._box.add(this._cpuTemperatureUnit);
+                                this._box.add(this._cpuTemperatureValueBracket);
+                                this._box.add(this._cpuFrequencyValue);
+                                this._box.add(this._cpuFrequencyUnit);
+                                this._box.add(this._cpuFrequencyValueBracket);
+                                this._box.add(this._cpuLoadAverageValue);
 
-                    this._box.add(this._ramIcon);
-                    this._box.add(this._ramValue);
-                    this._box.add(this._ramUnit);
+                                break;
 
-                    this._box.add(this._swapIcon);
-                    this._box.add(this._swapValue);
-                    this._box.add(this._swapUnit);
+                            case 'ram':
+                                this._box.add(this._ramIcon);
+                                this._box.add(this._ramValue);
+                                this._box.add(this._ramUnit);
 
-                    this._box.add(this._diskStatsIcon);
-                    this._box.add(this._diskStatsBox);
+                                break;
 
-                    this._box.add(this._diskSpaceIcon);
-                    this._box.add(this._diskSpaceBox);
+                            case 'swap':
+                                this._box.add(this._swapIcon);
+                                this._box.add(this._swapValue);
+                                this._box.add(this._swapUnit);
 
-                    this._box.add(this._ethIcon);
-                    this._box.add(this._ethValue);
-                    this._box.add(this._ethUnit);
+                                break;
 
-                    this._box.add(this._wlanIcon);
-                    this._box.add(this._wlanValue);
-                    this._box.add(this._wlanUnit);
+                            case 'stats':
+                                this._box.add(this._diskStatsIcon);
+                                this._box.add(this._diskStatsBox);
 
-                    this._box.add(this._gpuIcon);
-                    this._box.add(this._gpuBox);
+                                break;
+
+                            case 'space':
+                                this._box.add(this._diskSpaceIcon);
+                                this._box.add(this._diskSpaceBox);
+
+                                break;
+
+                            case 'eth':
+                                this._box.add(this._ethIcon);
+                                this._box.add(this._ethValue);
+                                this._box.add(this._ethUnit);
+
+                                break;
+
+                            case 'wlan':
+                                this._box.add(this._wlanIcon);
+                                this._box.add(this._wlanValue);
+                                this._box.add(this._wlanUnit);
+
+                                break;
+
+                            case 'gpu':
+                                this._box.add(this._gpuIcon);
+                                this._box.add(this._gpuBox);
+
+                                break;
+
+                            default:
+
+                                break;
+                        }
+                    });
 
                     break;
 
                 case 'right':
 
                 default:
-                    this._box.add(this._cpuValue);
-                    this._box.add(this._cpuUnit);
+                    this._itemsPosition.forEach(element => {
+                        switch (element) {
+                            case 'cpu':
+                                this._box.add(this._cpuValue);
+                                this._box.add(this._cpuUnit);
 
-                    this._box.add(this._cpuTemperatureValue);
-                    this._box.add(this._cpuTemperatureUnit);
-                    this._box.add(this._cpuTemperatureValueBracket);
-                    this._box.add(this._cpuFrequencyValue);
-                    this._box.add(this._cpuFrequencyUnit);
-                    this._box.add(this._cpuFrequencyValueBracket);
-                    this._box.add(this._cpuLoadAverageValue);
-                    this._box.add(this._cpuIcon);
+                                this._box.add(this._cpuTemperatureValue);
+                                this._box.add(this._cpuTemperatureUnit);
+                                this._box.add(this._cpuTemperatureValueBracket);
+                                this._box.add(this._cpuFrequencyValue);
+                                this._box.add(this._cpuFrequencyUnit);
+                                this._box.add(this._cpuFrequencyValueBracket);
+                                this._box.add(this._cpuLoadAverageValue);
+                                this._box.add(this._cpuIcon);
 
-                    this._box.add(this._ramValue);
-                    this._box.add(this._ramUnit);
-                    this._box.add(this._ramIcon);
+                                break;
 
-                    this._box.add(this._swapValue);
-                    this._box.add(this._swapUnit);
-                    this._box.add(this._swapIcon);
+                            case 'ram':
+                                this._box.add(this._ramValue);
+                                this._box.add(this._ramUnit);
+                                this._box.add(this._ramIcon);
 
-                    this._box.add(this._diskStatsBox);
-                    this._box.add(this._diskStatsIcon);
-                    this._box.add(this._diskSpaceBox);
-                    this._box.add(this._diskSpaceIcon);
+                                break;
 
-                    this._box.add(this._ethValue);
-                    this._box.add(this._ethUnit);
-                    this._box.add(this._ethIcon);
+                            case 'swap':
+                                this._box.add(this._swapValue);
+                                this._box.add(this._swapUnit);
+                                this._box.add(this._swapIcon);
 
-                    this._box.add(this._wlanValue);
-                    this._box.add(this._wlanUnit);
-                    this._box.add(this._wlanIcon);
+                                break;
 
-                    this._box.add(this._gpuBox);
-                    this._box.add(this._gpuIcon);
+                            case 'stats':
+                                this._box.add(this._diskStatsBox);
+                                this._box.add(this._diskStatsIcon);
+
+                                break;
+
+                            case 'space':
+                                this._box.add(this._diskSpaceBox);
+                                this._box.add(this._diskSpaceIcon);
+
+                                break;
+
+                            case 'eth':
+                                this._box.add(this._ethValue);
+                                this._box.add(this._ethUnit);
+                                this._box.add(this._ethIcon);
+
+                                break;
+
+                            case 'wlan':
+                                this._box.add(this._wlanValue);
+                                this._box.add(this._wlanUnit);
+                                this._box.add(this._wlanIcon);
+
+                                break;
+
+                            case 'gpu':
+                                this._box.add(this._gpuBox);
+                                this._box.add(this._gpuIcon);
+
+                                break;
+
+                            default:
+                                break;
+                        }
+                    });
 
                     break;
             }
@@ -424,10 +496,13 @@ const ResourceMonitor = GObject.registerClass(
             this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
             this._iconsPosition = this._settings.get_string(ICONS_POSITION);
 
+            this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
+
             this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
             this._cpuWidth = this._settings.get_int(CPU_WIDTH);
             this._cpuFrequencyStatus = this._settings.get_boolean(CPU_FREQUENCY_STATUS);
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+            this._cpuFrequencyUnitMeasure = this._settings.get_string(CPU_FREQUENCY_UNIT_MEASURE);
             this._cpuLoadAverageStatus = this._settings.get_boolean(CPU_LOADAVERAGE_STATUS);
             this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
 
@@ -475,6 +550,7 @@ const ResourceMonitor = GObject.registerClass(
             this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
             this._gpuMemoryUnitMeasure = this._settings.get_string(GPU_MEMORY_UNIT_MEASURE);
             this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
+            this._gpuDisplayDeviceName = this._settings.get_boolean(GPU_DISPLAY_DEVICE_NAME);
             this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
         }
 
@@ -487,10 +563,13 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_STATUS}`, this._iconsStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ICONS_POSITION}`, this._iconsPositionChanged.bind(this));
 
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${ITEMS_POSITION}`, this._itemsPositionChanged.bind(this));
+
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_STATUS}`, this._cpuStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_WIDTH}`, this._cpuWidthChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_STATUS}`, this._cpuFrequencyStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_WIDTH}`, this._cpuFrequencyWidthChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_FREQUENCY_UNIT_MEASURE}`, this._cpuFrequencyUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_STATUS}`, this._cpuLoadAverageStatusChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${CPU_LOADAVERAGE_WIDTH}`, this._cpuLoadAverageWidthChanged.bind(this));
 
@@ -538,6 +617,7 @@ const ResourceMonitor = GObject.registerClass(
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT}`, this._gpuMemoryUnitTypeChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_UNIT_MEASURE}`, this._gpuMemoryUnitMeasureChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_MEMORY_MONITOR}`, this._gpuMemoryMonitorChanged.bind(this));
+            this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_DISPLAY_DEVICE_NAME}`, this._gpuDisplayDeviceNameChanged.bind(this));
             this._handlerIds[this._handlerIdsCount++] = this._settings.connect(`changed::${GPU_DEVICES_LIST}`, this._gpuDevicesListChanged.bind(this));
         }
 
@@ -648,7 +728,7 @@ const ResourceMonitor = GObject.registerClass(
             this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
 
             if (this._iconsStatus) {
-                if (this._cpuStatus) {
+                if (this._cpuStatus || this._cpuFrequencyStatus || this._cpuLoadAverageStatus || this._thermalCpuTemperatureStatus) {
                     this._cpuIcon.show();
                 }
                 if (this._ramStatus) {
@@ -669,6 +749,9 @@ const ResourceMonitor = GObject.registerClass(
                 if ((this._netWlanStatus && this._nmWlanStatus) || (this._netWlanStatus && !this._netAutoHideStatus)) {
                     this._wlanIcon.show();
                 }
+                if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
+                    this._gpuIcon.show();
+                }
             } else {
                 this._cpuIcon.hide();
                 this._ramIcon.hide();
@@ -677,11 +760,20 @@ const ResourceMonitor = GObject.registerClass(
                 this._diskSpaceIcon.hide();
                 this._ethIcon.hide();
                 this._wlanIcon.hide();
+                this._gpuIcon.hide();
             }
         }
 
         _iconsPositionChanged() {
             this._iconsPosition = this._settings.get_string(ICONS_POSITION);
+
+            this._box.remove_all_children();
+
+            this._buildMainGui();
+        }
+
+        _itemsPositionChanged() {
+            this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
 
             this._box.remove_all_children();
 
@@ -710,6 +802,14 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
 
             this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+        }
+
+        _cpuFrequencyUnitMeasureChanged() {
+            this._cpuFrequencyUnitMeasure = this._settings.get_string(CPU_FREQUENCY_UNIT_MEASURE);
+
+            if (this._cpuFrequencyStatus) {
+                this._refreshCpuFrequencyValue();
+            }
         }
 
         _cpuLoadAverageStatusChanged() {
@@ -1033,6 +1133,12 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
+        _gpuDisplayDeviceNameChanged() {
+            this._gpuDisplayDeviceName = this._settings.get_boolean(GPU_DISPLAY_DEVICE_NAME);
+
+            this._gpuDevicesListChanged();
+        }
+
         _gpuDevicesListChanged() {
             this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
 
@@ -1042,7 +1148,7 @@ const ResourceMonitor = GObject.registerClass(
                 const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
                 const uuid = it[0];
-                const name = it[1];
+                const name = this._gpuDisplayDeviceName ? it[1] : null;
                 const usage = (it[2] === 'true') && this._gpuStatus;
                 const memory = (it[3] === 'true') && this._gpuStatus;
                 let thermal = false;
@@ -1118,6 +1224,8 @@ const ResourceMonitor = GObject.registerClass(
 
             //this._iconsPositionChanged();
 
+            //this._itemsPositionChanged();
+
             this._cpuStatusChanged();
 
             this._cpuWidthChanged();
@@ -1125,6 +1233,8 @@ const ResourceMonitor = GObject.registerClass(
             this._cpuFrequencyStatusChanged();
 
             this._cpuFrequencyWidthChanged();
+
+            //this._cpuFrequencyUnitMeasureChanged();
 
             this._cpuLoadAverageStatusChanged();
 
@@ -1207,6 +1317,8 @@ const ResourceMonitor = GObject.registerClass(
             //this._gpuMemoryUnitMeasureChanged();
 
             //this._gpuMemoryMonitorChanged();
+
+            //this._gpuDisplayDeviceNameChanged();
 
             this._gpuDevicesListChanged();
         }
@@ -1298,34 +1410,34 @@ const ResourceMonitor = GObject.registerClass(
 
                             case 'm':
                                 unit = 'MB';
-                                value /= 1024;
+                                value /= 1000;
                                 break;
 
                             case 'g':
                                 unit = 'GB';
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 't':
                                 unit = 'TB';
-                                value /= 1024;
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 'auto':
 
                             default:
-                                if (value > 1024) {
+                                if (value > 1000) {
                                     unit = 'MB';
-                                    value /= 1024;
-                                    if (value > 1024) {
+                                    value /= 1000;
+                                    if (value > 1000) {
                                         unit = 'GB';
-                                        value /= 1024;
-                                        if (value > 1024) {
+                                        value /= 1000;
+                                        if (value > 1000) {
                                             unit = 'TB';
-                                            value /= 1024;
+                                            value /= 1000;
                                         }
                                     }
                                 } else {
@@ -1407,34 +1519,34 @@ const ResourceMonitor = GObject.registerClass(
 
                             case 'm':
                                 unit = 'MB';
-                                value /= 1024;
+                                value /= 1000;
                                 break;
 
                             case 'g':
                                 unit = 'GB';
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 't':
                                 unit = 'TB';
-                                value /= 1024;
-                                value /= 1024;
-                                value /= 1024;
+                                value /= 1000;
+                                value /= 1000;
+                                value /= 1000;
                                 break;
 
                             case 'auto':
 
                             default:
-                                if (value > 1024) {
+                                if (value > 1000) {
                                     unit = 'MB';
-                                    value /= 1024;
-                                    if (value > 1024) {
+                                    value /= 1000;
+                                    if (value > 1000) {
                                         unit = 'GB';
-                                        value /= 1024;
-                                        if (value > 1024) {
+                                        value /= 1000;
+                                        if (value > 1000) {
                                             unit = 'TB';
-                                            value /= 1024;
+                                            value /= 1000;
                                         }
                                     }
                                 } else {
@@ -1480,6 +1592,11 @@ const ResourceMonitor = GObject.registerClass(
                             if (this._diskStatsBox.get_filesystem(entry[2])) {
                                 rwTot[0] += parseInt(entry[5]);
                                 rwTot[1] += parseInt(entry[9]);
+
+                                // sector is 512 bytes
+                                // 1 kilobyte = 2 sectors
+                                rwTot[0] /= 2;
+                                rwTot[1] /= 2;
                             }
                         }
 
@@ -1578,6 +1695,11 @@ const ResourceMonitor = GObject.registerClass(
                                 rwTot[0] += parseInt(entry[5]);
                                 rwTot[1] += parseInt(entry[9]);
 
+                                // sector is 512 bytes
+                                // 1 kilobyte = 2 sectors
+                                rwTot[0] /= 2;
+                                rwTot[1] /= 2;
+
                                 const idle = GLib.get_monotonic_time() / 1000;
                                 const delta = (idle - this._diskStatsBox.get_idle(filesystem)) / 1000;
                                 this._diskStatsBox.set_idle(filesystem, idle);
@@ -1661,7 +1783,7 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _refreshDiskSpaceValue() {
-            this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
+            this._executeCommand(['df', '-BKB', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 const lines = output.split('\n');
 
                 // Excludes the first line of output
@@ -1700,14 +1822,14 @@ const ResourceMonitor = GObject.registerClass(
                         default:
                             switch (this._diskSpaceMonitor) {
                                 case 'free':
-                                    value = parseInt(entry[3]);
+                                    value = parseInt(entry[3].slice(0, -2));
 
                                     break;
 
                                 case 'used':
 
                                 default:
-                                    value = parseInt(entry[2]);
+                                    value = parseInt(entry[2].slice(0, -2));
 
                                     break;
                             }
@@ -1719,34 +1841,34 @@ const ResourceMonitor = GObject.registerClass(
 
                                 case 'm':
                                     unit = 'MB';
-                                    value /= 1024;
+                                    value /= 1000;
                                     break;
 
                                 case 'g':
                                     unit = 'GB';
-                                    value /= 1024;
-                                    value /= 1024;
+                                    value /= 1000;
+                                    value /= 1000;
                                     break;
 
                                 case 't':
                                     unit = 'TB';
-                                    value /= 1024;
-                                    value /= 1024;
-                                    value /= 1024;
+                                    value /= 1000;
+                                    value /= 1000;
+                                    value /= 1000;
                                     break;
 
                                 case 'auto':
 
                                 default:
-                                    if (value > 1024) {
+                                    if (value > 1000) {
                                         unit = 'MB';
-                                        value /= 1024;
-                                        if (value > 1024) {
+                                        value /= 1000;
+                                        if (value > 1000) {
                                             unit = 'GB';
-                                            value /= 1024;
-                                            if (value > 1024) {
+                                            value /= 1000;
+                                            if (value > 1000) {
                                                 unit = 'TB';
-                                                value /= 1024;
+                                                value /= 1000;
                                             }
                                         }
                                     } else {
@@ -1794,7 +1916,6 @@ const ResourceMonitor = GObject.registerClass(
                 // False Bytes
                 const boolUnit = this._netUnit === 'bits';
 
-                const unit = boolUnit ? 1000 : 1024;
                 const factor = boolUnit ? 8 : 1;
 
                 if (delta > 0) {
@@ -1810,59 +1931,59 @@ const ResourceMonitor = GObject.registerClass(
 
                         case 'k':
                             this._ethUnit.text = boolUnit ? 'k' : 'K';
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'm':
                             this._ethUnit.text = boolUnit ? 'm' : 'M';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'g':
                             this._ethUnit.text = boolUnit ? 'g' : 'G';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 't':
                             this._ethUnit.text = boolUnit ? 't' : 'T';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'auto':
 
                         default:
-                            if (du[0] > unit || du[1] > unit) {
+                            if (du[0] > 1024 || du[1] > 1024) {
                                 this._ethUnit.text = boolUnit ? 'k' : 'K';
-                                du[0] /= unit;
-                                du[1] /= unit;
-                                if (du[0] > unit || du[1] > unit) {
+                                du[0] /= 1024;
+                                du[1] /= 1024;
+                                if (du[0] > 1024 || du[1] > 1024) {
                                     this._ethUnit.text = boolUnit ? 'm' : 'M';
-                                    du[0] /= unit;
-                                    du[1] /= unit;
-                                    if (du[0] > unit || du[1] > unit) {
+                                    du[0] /= 1024;
+                                    du[1] /= 1024;
+                                    if (du[0] > 1024 || du[1] > 1024) {
                                         this._ethUnit.text = boolUnit ? 'g' : 'G';
-                                        du[0] /= unit;
-                                        du[1] /= unit;
-                                        if (du[0] > unit || du[1] > unit) {
+                                        du[0] /= 1024;
+                                        du[1] /= 1024;
+                                        if (du[0] > 1024 || du[1] > 1024) {
                                             this._ethUnit.text = boolUnit ? 't' : 'T';
-                                            du[0] /= unit;
-                                            du[1] /= unit;
+                                            du[0] /= 1024;
+                                            du[1] /= 1024;
                                         }
                                     }
                                 }
@@ -1910,7 +2031,6 @@ const ResourceMonitor = GObject.registerClass(
                 // False Bytes
                 const boolUnit = this._netUnit === 'bits';
 
-                const unit = boolUnit ? 1000 : 1024;
                 const factor = boolUnit ? 8 : 1;
 
                 if (delta > 0) {
@@ -1926,59 +2046,59 @@ const ResourceMonitor = GObject.registerClass(
 
                         case 'k':
                             this._wlanUnit.text = boolUnit ? 'k' : 'K';
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'm':
                             this._wlanUnit.text = boolUnit ? 'm' : 'M';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'g':
                             this._wlanUnit.text = boolUnit ? 'g' : 'G';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 't':
                             this._wlanUnit.text = boolUnit ? 't' : 'T';
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
-                            du[0] /= unit;
-                            du[1] /= unit;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
+                            du[0] /= 1024;
+                            du[1] /= 1024;
                             break;
 
                         case 'auto':
 
                         default:
-                            if (du[0] > unit || du[1] > unit) {
+                            if (du[0] > 1024 || du[1] > 1024) {
                                 this._wlanUnit.text = boolUnit ? 'k' : 'K';
-                                du[0] /= unit;
-                                du[1] /= unit;
-                                if (du[0] > unit || du[1] > unit) {
+                                du[0] /= 1024;
+                                du[1] /= 1024;
+                                if (du[0] > 1024 || du[1] > 1024) {
                                     this._wlanUnit.text = boolUnit ? 'm' : 'M';
-                                    du[0] /= unit;
-                                    du[1] /= unit;
-                                    if (du[0] > unit || du[1] > unit) {
+                                    du[0] /= 1024;
+                                    du[1] /= 1024;
+                                    if (du[0] > 1024 || du[1] > 1024) {
                                         this._wlanUnit.text = boolUnit ? 'g' : 'G';
-                                        du[0] /= unit;
-                                        du[1] /= unit;
-                                        if (du[0] > unit || du[1] > unit) {
+                                        du[0] /= 1024;
+                                        du[1] /= 1024;
+                                        if (du[0] > 1024 || du[1] > 1024) {
                                             this._wlanUnit.text = boolUnit ? 't' : 'T';
-                                            du[0] /= unit;
-                                            du[1] /= unit;
+                                            du[0] /= 1024;
+                                            du[1] /= 1024;
                                         }
                                     }
                                 }
@@ -2004,15 +2124,42 @@ const ResourceMonitor = GObject.registerClass(
             if (GLib.file_test('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq', GLib.FileTest.EXISTS)) {
                 this._loadFile('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq').then(contents => {
                     let value = parseInt(ByteArray.toString(contents));
+                    let unit = "";
 
-                    if (value > 999999) {
-                        this._cpuFrequencyUnit.text = 'GHz';
-                        value /= 1000;
-                        value /= 1000;
-                    } else {
-                        this._cpuFrequencyUnit.text = 'MHz';
-                        value /= 1000;
+                    switch (this._cpuFrequencyUnitMeasure) {
+                        case 'k':
+                            unit = "KHz"
+                            break;
+
+                        case 'm':
+                            unit = "MHz"
+                            value /= 1000;
+                            break;
+
+                        case 'g':
+                            unit = "GHz"
+                            value /= 1000;
+                            value /= 1000;
+                            break;
+
+                        case 'auto':
+
+                        default:
+                            if (value > 1000) {
+                                unit = 'MHz';
+                                value /= 1000;
+                                if (value > 1000) {
+                                    unit = 'GHz';
+                                    value /= 1000;
+                                }
+                            } else {
+                                unit = 'KHz';
+                            }
+
+                            break;
                     }
+
+                    this._cpuFrequencyUnit.text = unit;
 
                     if (this._decimalsStatus) {
                         this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
@@ -2108,19 +2255,34 @@ const ResourceMonitor = GObject.registerClass(
                     const entry = line.trim().split(/\,\s/);
 
                     const uuid = entry[0];
-                    const memoryTotal = entry[1].slice(0, -4);
-                    const memoryUsed = entry[2].slice(0, -4);
-                    const memoryFree = entry[3].slice(0, -4);
+                    let memoryTotal = entry[1].slice(0, -4);
+                    let memoryUsed = entry[2].slice(0, -4);
+                    let memoryFree = entry[3].slice(0, -4);
                     const usage = entry[4].slice(0, -1);
                     const temperature = entry[5];
+
+                    // mebibyte
+                    memoryTotal = parseInt(memoryTotal);
+                    memoryUsed = parseInt(memoryUsed);
+                    memoryFree = parseInt(memoryFree);
+
+                    // kibibyte
+                    memoryTotal *= 1024;
+                    memoryUsed *= 1024;
+                    memoryFree *= 1024;
+
+                    // kilobyte
+                    memoryTotal *= 1.024;
+                    memoryUsed *= 1.024;
+                    memoryFree *= 1.024;
 
                     this._gpuBox.update_element_value(uuid, usage, '%');
 
                     let value = 0;
-                    let unit = 'MiB';
+                    let unit = 'KB';
                     switch (this._gpuMemoryUnitType) {
                         case 'perc':
-                            const used = (100 * parseInt(memoryUsed)) / parseInt(memoryTotal);
+                            const used = (100 * memoryUsed) / memoryTotal;
                             unit = '%';
 
                             switch (this._gpuMemoryMonitor) {
@@ -2144,51 +2306,60 @@ const ResourceMonitor = GObject.registerClass(
                         default:
                             switch (this._gpuMemoryMonitor) {
                                 case 'free':
-                                    value = parseInt(memoryFree);
+                                    value = memoryFree;
 
                                     break;
 
                                 case 'used':
 
                                 default:
-                                    value = parseInt(memoryUsed);
+                                    value = memoryUsed;
 
                                     break;
                             }
 
                             switch (this._gpuMemoryUnitMeasure) {
                                 case 'k':
-                                    unit = 'KiB';
-                                    value *= 1024;
+                                    unit = 'KB';
                                     break;
 
                                 case 'm':
-                                    unit = 'MiB';
+                                    unit = 'MB';
+                                    value /= 1000;
+
                                     break;
 
                                 case 'g':
-                                    unit = 'GiB';
-                                    value /= 1024;
+                                    unit = 'GB';
+                                    value /= 1000;
+                                    value /= 1000;
+
                                     break;
 
                                 case 't':
-                                    unit = 'TiB';
-                                    value /= 1024;
-                                    value /= 1024;
+                                    unit = 'TB';
+                                    value /= 1000;
+                                    value /= 1000;
+                                    value /= 1000;
+
                                     break;
 
                                 case 'auto':
 
                                 default:
-                                    if (value > 1024) {
-                                        unit = 'GiB';
-                                        value /= 1024;
-                                        if (value > 1024) {
-                                            unit = 'TiB';
-                                            value /= 1024;
+                                    if (value > 1000) {
+                                        unit = 'MB';
+                                        value /= 1000;
+                                        if (value > 1000) {
+                                            unit = 'GB';
+                                            value /= 1000;
+                                            if (value > 1000) {
+                                                unit = 'TB';
+                                                value /= 1000;
+                                            }
                                         }
                                     } else {
-                                        unit = 'MiB';
+                                        unit = 'KB';
                                     }
 
                                     break;
@@ -2275,8 +2446,8 @@ const ResourceMonitor = GObject.registerClass(
                 const contents = await this._loadContents(file, cancellable);
 
                 return contents;
-            } catch (e) {
-                logError(e);
+            } catch (error) {
+                log('[Resource_Monitor] Load File Error (' + error + ')');
             }
         }
 
@@ -2304,8 +2475,8 @@ const ResourceMonitor = GObject.registerClass(
                 const output = await this._readOutput(proc, cancellable);
 
                 return output;
-            } catch (e) {
-                logError(e);
+            } catch (error) {
+                log('[Resource_Monitor] Execute Command Error (' + error + ')');
             }
         }
     });
@@ -2586,11 +2757,13 @@ const GpuContainer = GObject.registerClass(
         add_element(uuid, label, usage, memory, thermal) {
             this._elementsUuid.push(uuid);
 
-            this._elementsName[uuid] = new St.Label({
-                y_align: Clutter.ActorAlign.CENTER,
-                text: ` ${label}: `
-            });
-            this.add(this._elementsName[uuid]);
+            if (label !== null) {
+                this._elementsName[uuid] = new St.Label({
+                    y_align: Clutter.ActorAlign.CENTER,
+                    text: ` ${label}: `
+                });
+                this.add(this._elementsName[uuid]);
+            }
 
             // Usage
             if (usage) {

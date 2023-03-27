@@ -2,7 +2,7 @@
 <!-- Created with Cambalache 0.10.3 -->
 <interface>
   <!-- interface-name prefs.ui -->
-  <requires lib="gtk" version="4.6"/>
+  <requires lib="gtk" version="4.0"/>
   <object class="GtkNotebook" id="main_notebook">
     <property name="page">0</property>
     <property name="scrollable">True</property>
@@ -83,35 +83,35 @@
               <object class="GtkBox">
                 <property name="margin-start">8</property>
                 <property name="orientation">vertical</property>
-                  <child>
-                    <object class="GtkCheckButton" id="extension_left_click_radiobutton_sm">
-                      <property name="label" translatable="1">Launch GNOME System Monitor</property>
-                      <property name="active">1</property>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkCheckButton" id="extension_left_click_radiobutton_u">
-                      <property name="label" translatable="1">Launch GNOME Usage</property>
-                      <property name="active">1</property>
-                      <property name="group">extension_left_click_radiobutton_sm</property>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkCheckButton" id="extension_left_click_radiobutton_custom">
-                      <property name="label" translatable="1">Custom program</property>
-                      <property name="active">1</property>
-                      <property name="group">extension_left_click_radiobutton_u</property>
-                    </object>
-                  </child>
-                  <child>
-                    <object class="GtkTextView" id="extension_left_click_textview_custom">
-                      <property name="focusable">1</property>
-                      <property name="buffer">extension_left_click_textview_textbuffer</property>
-                      <property name="accepts-tab">0</property>
-                      <property name="monospace">1</property>
-                      <property name="input-purpose">terminal</property>
-                    </object>
-                  </child>
+                <child>
+                  <object class="GtkCheckButton" id="extension_left_click_radiobutton_sm">
+                    <property name="active">1</property>
+                    <property name="label" translatable="yes">Launch GNOME System Monitor</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="extension_left_click_radiobutton_u">
+                    <property name="active">1</property>
+                    <property name="group">extension_left_click_radiobutton_sm</property>
+                    <property name="label" translatable="yes">Launch GNOME Usage</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkCheckButton" id="extension_left_click_radiobutton_custom">
+                    <property name="active">1</property>
+                    <property name="group">extension_left_click_radiobutton_u</property>
+                    <property name="label" translatable="yes">Custom program</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkTextView" id="extension_left_click_textview_custom">
+                    <property name="accepts-tab">0</property>
+                    <property name="buffer">extension_left_click_textview_textbuffer</property>
+                    <property name="focusable">1</property>
+                    <property name="input-purpose">terminal</property>
+                    <property name="monospace">1</property>
+                  </object>
+                </child>
               </object>
             </child>
             <child>
@@ -204,6 +204,20 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
+                <property name="halign">start</property>
+                <property name="label">Items position</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="items_position_listbox">
+                <property name="margin-start">8</property>
+                <property name="selection-mode">none</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>
@@ -294,6 +308,28 @@
                   <object class="GtkSpinButton" id="cpu_frequency_width_spinbutton">
                     <property name="adjustment">cpu_frequency_width_adjustment</property>
                     <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Unit of measure</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkComboBoxText" id="cpu_frequency_unit_measure_combobox">
+                    <items>
+                      <item id="auto">Auto</item>
+                      <item id="k">KHz</item>
+                      <item id="m">MHz</item>
+                      <item id="g">GHz</item>
+                    </items>
                   </object>
                 </child>
               </object>
@@ -784,6 +820,21 @@
                 <property name="halign">start</property>
                 <property name="label">Devices</property>
                 <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display All Devices (only for stats)</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="disk_devices_display_all"/>
+                </child>
               </object>
             </child>
             <child>
@@ -1297,6 +1348,21 @@
                       <item id="free">Free Memory</item>
                     </items>
                   </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Display Device name</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="gpu_display_device_name"/>
                 </child>
               </object>
             </child>
