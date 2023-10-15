@@ -31,7 +31,12 @@ import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
-import NM from 'gi://NM';
+let NM;
+try {
+    NM = (await import('gi://NM')).default;
+} catch (error) {
+    log('[Resource_Monitor] NetworkManager not found (' + error + '): The \"Auto Hide\" feature has been disabled');
+}
 
 let extension;
 
