@@ -27,10 +27,6 @@ import Gdk from 'gi://Gdk';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-let gettext_domain;
-let settings;
-let dir;
-
 // Settings
 const REFRESH_TIME = 'refreshtime';
 const EXTENSION_POSITION = 'extensionposition';
@@ -132,10 +128,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             settings.bind(settingsName, element, 'active', Gio.SettingsBindFlags.DEFAULT);
         }
 
-        _init() {
+        _init({settings, domain, dir}) {
+            this._settings = settings;
+            this._gettextDomain = domain;
+            this._dir = dir;
+
             // Gtk Css Provider
             this._provider = new Gtk.CssProvider();
-            this._provider.load_from_path(dir.get_path() + '/prefs.css');
+            this._provider.load_from_path(this._dir.get_path() + '/prefs.css');
             Gtk.StyleContext.add_provider_for_display(
                 Gdk.Display.get_default(),
                 this._provider,
@@ -144,12 +144,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Gtk Builder
             this._builder = new Gtk.Builder();
             this._builder.set_scope(new ResourceMonitorBuilderScope());
-            this._builder.set_translation_domain(gettext_domain);
-            this._builder.add_from_file(dir.get_path() + '/prefs.ui');
-
-            // Settings
-            this._settings = settings;
-            settings = null;
+            this._builder.set_translation_domain(this._gettextDomain);
+            this._builder.add_from_file(this._dir.get_path() + '/prefs.ui');
 
             // PREFS
             this.notebook = this._builder.get_object('main_notebook');
@@ -1008,17 +1004,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     });
 
 export default class ExamplePreferences extends ExtensionPreferences {
-    constructor(metadata) {
-        super(metadata);
-
-        gettext_domain = metadata["gettext-domain"]
-    }
-
     getPreferencesWidget() {
-        dir = this.dir;
-        settings = this.getSettings();
-
-        const widget = new ResourceMonitorPrefsWidget();
+        const widget = new ResourceMonitorPrefsWidget({
+            dir: this.dir,
+            settings: this.getSettings(),
+            domain: this.metadata["gettext-domain"]
+        });
 
         return widget.notebook;
     }

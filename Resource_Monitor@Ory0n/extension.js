@@ -38,8 +38,6 @@ try {
     log('[Resource_Monitor] NetworkManager not found (' + error + '): The \"Auto Hide\" feature has been disabled');
 }
 
-let extension;
-
 // Settings
 const REFRESH_TIME = 'refreshtime';
 const EXTENSION_POSITION = 'extensionposition';
@@ -112,10 +110,12 @@ const GPU_DEVICES_LIST_SEPARATOR = ':';
 
 const ResourceMonitor = GObject.registerClass(
     class ResourceMonitor extends PanelMenu.Button {
-        _init(settings) {
-            super._init(0.0, _(extension.metadata.name));
+        _init({settings, openPreferences, path, name}) {
+            super._init(0.0, _(name));
 
             this._settings = settings;
+            this._openPreferences = openPreferences;
+            this._extensionPath = path;
 
             // Variables
             this._handlerIds = [];
@@ -179,42 +179,42 @@ const ResourceMonitor = GObject.registerClass(
 
             // Icon
             this._cpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/cpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/cpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._ramIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/ram-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/ram-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._swapIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/swap-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/swap-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._diskStatsIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/disk-stats-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/disk-stats-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._diskSpaceIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/disk-space-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/disk-space-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._ethIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/eth-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/eth-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._wlanIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/wlan-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/wlan-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._gpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(extension.path + '/icons/gpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/gpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
@@ -618,7 +618,7 @@ const ResourceMonitor = GObject.registerClass(
             switch (event.get_button()) {
                 case 3: // Right Click
                     if (this._rightClickStatus) {
-                        extension.openPreferences();
+                        this._openPreferences();
                     }
 
                     break;
@@ -2860,10 +2860,14 @@ const GpuContainer = GObject.registerClass(
 
 export default class ResourceMonitorExtension extends Extension {
     enable() {
-        extension = this;
-
         this._settings = this.getSettings();
-        this._indicator = new ResourceMonitor(this._settings);
+        this._indicator = new ResourceMonitor({
+            settings: this._settings,
+            path: this.path,
+            openPreferences: ()=>{this.openPreferences()},
+            name: this.metadata.name,
+        });
+
 
         const index = {
             left: -1,
@@ -2886,10 +2890,9 @@ export default class ResourceMonitorExtension extends Extension {
     }
 
     disable() {
-        extension = null;
-
         // Disconnect Signal
         this._settings.disconnect(this._handlerId);
+        this._settings = null;
 
         this._indicator.destroy();
         this._indicator = null;
