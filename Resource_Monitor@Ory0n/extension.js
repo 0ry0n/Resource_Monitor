@@ -1,6 +1,5 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
 /* exported init */
-
 /*
  * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
  *
@@ -20,33 +19,24 @@
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
 
-'use strict';
+import GObject from 'gi://GObject';
+import St from 'gi://St';
+import Gio from 'gi://Gio';
+import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
+import Shell from 'gi://Shell';
 
-const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
-const { GObject, St, Gio, Clutter, GLib, Shell } = imports.gi;
-
-var NM;
+let NM;
 try {
-    NM = imports.gi.NM;
+    NM = (await import('gi://NM')).default;
 } catch (error) {
     log('[Resource_Monitor] NetworkManager not found (' + error + '): The \"Auto Hide\" feature has been disabled');
 }
-
-const ExtensionUtils = imports.misc.extensionUtils;
-const Util = imports.misc.util;
-const Main = imports.ui.main;
-const PanelMenu = imports.ui.panelMenu;
-const ByteArray = imports.byteArray;
-const Gettext = imports.gettext;
-
-const Me = ExtensionUtils.getCurrentExtension();
-const IndicatorName = Me.metadata.name;
-
-const Domain = Gettext.domain(Me.metadata.uuid);
-
-const _ = Domain.gettext;
-const ngettext = Domain.ngettext;
 
 // Settings
 const REFRESH_TIME = 'refreshtime';
@@ -120,10 +110,12 @@ const GPU_DEVICES_LIST_SEPARATOR = ':';
 
 const ResourceMonitor = GObject.registerClass(
     class ResourceMonitor extends PanelMenu.Button {
-        _init(settings) {
-            super._init(0.0, _(IndicatorName));
+        _init({settings, openPreferences, path, name}) {
+            super._init(0.0, _(name));
 
             this._settings = settings;
+            this._openPreferences = openPreferences;
+            this._extensionPath = path;
 
             // Variables
             this._handlerIds = [];
@@ -187,42 +179,42 @@ const ResourceMonitor = GObject.registerClass(
 
             // Icon
             this._cpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/cpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/cpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._ramIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/ram-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/ram-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._swapIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/swap-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/swap-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._diskStatsIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-stats-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/disk-stats-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._diskSpaceIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/disk-space-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/disk-space-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._ethIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/eth-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/eth-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._wlanIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/wlan-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/wlan-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._gpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(Me.path + '/icons/gpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/gpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
@@ -626,7 +618,7 @@ const ResourceMonitor = GObject.registerClass(
             switch (event.get_button()) {
                 case 3: // Right Click
                     if (this._rightClickStatus) {
-                        ExtensionUtils.openPrefs();
+                        this._openPreferences();
                     }
 
                     break;
@@ -635,7 +627,7 @@ const ResourceMonitor = GObject.registerClass(
 
                 default:
                     if (this._leftClickStatus !== "") {
-                        let app = global.log(Shell.AppSystem.get_default().lookup_app(this._leftClickStatus + '.desktop'));
+                        let app = log(Shell.AppSystem.get_default().lookup_app(this._leftClickStatus + '.desktop'));
 
                         if (app != null) {
                             app.activate();
@@ -1325,7 +1317,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshCpuValue() {
             this._loadFile('/proc/stat').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 const entry = lines[0].trim().split(/\s+/);
                 let cpuTot = 0;
@@ -1353,7 +1345,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshRamValue() {
             this._loadFile('/proc/meminfo').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 let total, available, used;
 
@@ -1462,7 +1454,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshSwapValue() {
             this._loadFile('/proc/meminfo').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 let total, available, used;
 
@@ -1571,7 +1563,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshDiskStatsValue() {
             this._loadFile('/proc/diskstats').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 switch (this._diskStatsMode) {
                     case 'single':
@@ -1892,7 +1884,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshEthValue() {
             this._loadFile('/proc/net/dev').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 let duTot = [0, 0];
                 let du = [0, 0];
@@ -2007,7 +1999,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshWlanValue() {
             this._loadFile('/proc/net/dev').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 let duTot = [0, 0];
                 let du = [0, 0];
@@ -2123,7 +2115,7 @@ const ResourceMonitor = GObject.registerClass(
         _refreshCpuFrequencyValue() {
             if (GLib.file_test('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq', GLib.FileTest.EXISTS)) {
                 this._loadFile('/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq').then(contents => {
-                    let value = parseInt(ByteArray.toString(contents));
+                    let value = parseInt(new TextDecoder().decode(contents));
                     let unit = "";
 
                     switch (this._cpuFrequencyUnitMeasure) {
@@ -2175,7 +2167,7 @@ const ResourceMonitor = GObject.registerClass(
 
         _refreshCpuLoadAverageValue() {
             this._loadFile('/proc/loadavg').then(contents => {
-                const lines = ByteArray.toString(contents).split('\n');
+                const lines = new TextDecoder().decode(contents).split('\n');
 
                 const entry = lines[0].trim().split(/\s/);
 
@@ -2202,7 +2194,7 @@ const ResourceMonitor = GObject.registerClass(
 
                     if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
                         this._loadFile(path).then(contents => {
-                            const value = parseInt(ByteArray.toString(contents));
+                            const value = parseInt(new TextDecoder().decode(contents));
 
                             this._cpuTemperatures += value / 1000;
                             this._cpuTemperaturesReads++;
@@ -2866,16 +2858,16 @@ const GpuContainer = GObject.registerClass(
         }
     });
 
-class Extension {
-    constructor(uuid) {
-        this._uuid = uuid;
-
-        ExtensionUtils.initTranslations(GETTEXT_DOMAIN);
-    }
-
+export default class ResourceMonitorExtension extends Extension {
     enable() {
-        this._settings = ExtensionUtils.getSettings();
-        this._indicator = new ResourceMonitor(this._settings);
+        this._settings = this.getSettings();
+        this._indicator = new ResourceMonitor({
+            settings: this._settings,
+            path: this.path,
+            openPreferences: ()=>{this.openPreferences()},
+            name: this.metadata.name,
+        });
+
 
         const index = {
             left: -1,
@@ -2891,21 +2883,18 @@ class Extension {
             this._indicator = null;
             this._indicator = new ResourceMonitor(this._settings);
 
-            Main.panel.addToStatusArea(this._uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
+            Main.panel.addToStatusArea(this.uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
         });
 
-        Main.panel.addToStatusArea(this._uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
+        Main.panel.addToStatusArea(this.uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
     }
 
     disable() {
         // Disconnect Signal
         this._settings.disconnect(this._handlerId);
+        this._settings = null;
 
         this._indicator.destroy();
         this._indicator = null;
     }
-}
-
-function init(meta) {
-    return new Extension(meta.uuid);
 }

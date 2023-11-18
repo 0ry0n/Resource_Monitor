@@ -5,13 +5,7 @@
   "gettext-domain": "com-github-Ory0n-Resource_Monitor",
   "name": "Resource Monitor",
   "settings-schema": "com.github.Ory0n.Resource_Monitor",
-  "shell-version": [
-    "40",
-    "41",
-    "42",
-    "43",
-    "44"
-  ],
+  "shell-version": ["45"],
   "url": "https://github.com/0ry0n/Resource_Monitor/",
   "uuid": "Resource_Monitor@Ory0n",
   "version": 19

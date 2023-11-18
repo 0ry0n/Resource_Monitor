@@ -20,21 +20,12 @@
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
 
-'use strict';
+import Gio from 'gi://Gio';
+import GObject from 'gi://GObject';
+import Gtk from 'gi://Gtk';
+import Gdk from 'gi://Gdk';
 
-const GETTEXT_DOMAIN = 'com-github-Ory0n-Resource_Monitor';
-
-const { Gio, GObject, Gtk, Gdk, GLib } = imports.gi;
-
-const ExtensionUtils = imports.misc.extensionUtils;
-const ByteArray = imports.byteArray;
-const Me = ExtensionUtils.getCurrentExtension();
-const Gettext = imports.gettext;
-
-const Domain = Gettext.domain(Me.metadata.uuid);
-
-const _ = Domain.gettext;
-const ngettext = Domain.ngettext;
+import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 // Settings
 const REFRESH_TIME = 'refreshtime';
@@ -137,10 +128,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             settings.bind(settingsName, element, 'active', Gio.SettingsBindFlags.DEFAULT);
         }
 
-        _init() {
+        _init({settings, domain, dir}) {
+            this._settings = settings;
+            this._gettextDomain = domain;
+            this._dir = dir;
+
             // Gtk Css Provider
             this._provider = new Gtk.CssProvider();
-            this._provider.load_from_path(Me.dir.get_path() + '/prefs.css');
+            this._provider.load_from_path(this._dir.get_path() + '/prefs.css');
             Gtk.StyleContext.add_provider_for_display(
                 Gdk.Display.get_default(),
                 this._provider,
@@ -149,11 +144,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Gtk Builder
             this._builder = new Gtk.Builder();
             this._builder.set_scope(new ResourceMonitorBuilderScope());
-            this._builder.set_translation_domain(GETTEXT_DOMAIN);
-            this._builder.add_from_file(Me.dir.get_path() + '/prefs.ui');
-
-            // Settings
-            this._settings = ExtensionUtils.getSettings();
+            this._builder.set_translation_domain(this._gettextDomain);
+            this._builder.add_from_file(this._dir.get_path() + '/prefs.ui');
 
             // PREFS
             this.notebook = this._builder.get_object('main_notebook');
@@ -509,7 +501,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
                 if (all) {
                     this._loadFile('/proc/diskstats').then(contents => {
-                        const lines = ByteArray.toString(contents).split('\n');
+                        const lines = new TextDecoder().decode(contents).split('\n');
 
                         for (let i = 0; i < lines.length - 1; i++) {
                             const line = lines[i];
@@ -1011,13 +1003,16 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         }
     });
 
-function init() {
-    ExtensionUtils.initTranslations(GETTEXT_DOMAIN);
+export default class ExamplePreferences extends ExtensionPreferences {
+    getPreferencesWidget() {
+        const widget = new ResourceMonitorPrefsWidget({
+            dir: this.dir,
+            settings: this.getSettings(),
+            domain: this.metadata["gettext-domain"]
+        });
+
+        return widget.notebook;
+    }
 }
 
-function buildPrefsWidget() {
-    const widget = new ResourceMonitorPrefsWidget();
-
-    return widget.notebook;
-}
 
