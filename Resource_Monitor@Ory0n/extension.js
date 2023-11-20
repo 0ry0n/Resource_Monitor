@@ -1,5 +1,4 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
-/* exported init */
 /*
  * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
  *
@@ -25,18 +24,12 @@ import Gio from 'gi://Gio';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Shell from 'gi://Shell';
+import NM from 'gi://NM';
 
-import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
-import * as Util from 'resource:///org/gnome/shell/misc/util.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
-
-let NM;
-try {
-    NM = (await import('gi://NM')).default;
-} catch (error) {
-    log('[Resource_Monitor] NetworkManager not found (' + error + '): The \"Auto Hide\" feature has been disabled');
-}
+import * as Util from 'resource:///org/gnome/shell/misc/util.js';
+import {Extension, gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 // Settings
 const REFRESH_TIME = 'refreshtime';
@@ -110,12 +103,13 @@ const GPU_DEVICES_LIST_SEPARATOR = ':';
 
 const ResourceMonitor = GObject.registerClass(
     class ResourceMonitor extends PanelMenu.Button {
-        _init({settings, openPreferences, path, name}) {
-            super._init(0.0, _(name));
+        _init({settings, openPreferences, path, metadata}) {
+            super._init(0.0, metadata.name, false);
 
             this._settings = settings;
             this._openPreferences = openPreferences;
-            this._extensionPath = path;
+            this._path = path;
+            this._metadata = metadata;
 
             // Variables
             this._handlerIds = [];
@@ -179,42 +173,42 @@ const ResourceMonitor = GObject.registerClass(
 
             // Icon
             this._cpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/cpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/cpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._ramIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/ram-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/ram-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._swapIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/swap-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/swap-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._diskStatsIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/disk-stats-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/disk-stats-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._diskSpaceIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/disk-space-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/disk-space-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._ethIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/eth-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/eth-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._wlanIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/wlan-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/wlan-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
             this._gpuIcon = new St.Icon({
-                gicon: Gio.icon_new_for_string(this._extensionPath + '/icons/gpu-symbolic.svg'),
+                gicon: Gio.icon_new_for_string(this._path + '/icons/gpu-symbolic.svg'),
                 style_class: 'system-status-icon'
             });
 
@@ -627,7 +621,7 @@ const ResourceMonitor = GObject.registerClass(
 
                 default:
                     if (this._leftClickStatus !== "") {
-                        let app = log(Shell.AppSystem.get_default().lookup_app(this._leftClickStatus + '.desktop'));
+                        let app = console.log(Shell.AppSystem.get_default().lookup_app(this._leftClickStatus + '.desktop'));
 
                         if (app != null) {
                             app.activate();
@@ -2439,7 +2433,7 @@ const ResourceMonitor = GObject.registerClass(
 
                 return contents;
             } catch (error) {
-                log('[Resource_Monitor] Load File Error (' + error + ')');
+                console.error('[Resource_Monitor] Load File Error (' + error + ')');
             }
         }
 
@@ -2468,7 +2462,7 @@ const ResourceMonitor = GObject.registerClass(
 
                 return output;
             } catch (error) {
-                log('[Resource_Monitor] Execute Command Error (' + error + ')');
+                console.error('[Resource_Monitor] Execute Command Error (' + error + ')');
             }
         }
     });
@@ -2863,11 +2857,10 @@ export default class ResourceMonitorExtension extends Extension {
         this._settings = this.getSettings();
         this._indicator = new ResourceMonitor({
             settings: this._settings,
+            openPreferences: () => {this.openPreferences()},
             path: this.path,
-            openPreferences: ()=>{this.openPreferences()},
-            name: this.metadata.name,
+            metadata: this.metadata,
         });
-
 
         const index = {
             left: -1,
@@ -2881,7 +2874,12 @@ export default class ResourceMonitorExtension extends Extension {
 
             this._indicator.destroy();
             this._indicator = null;
-            this._indicator = new ResourceMonitor(this._settings);
+            this._indicator = new ResourceMonitor({
+                settings: this._settings,
+                openPreferences: () => {this.openPreferences()},
+                path: this.path,
+                metadata: this.metadata,
+            });
 
             Main.panel.addToStatusArea(this.uuid, this._indicator, index[this._extensionPosition], this._extensionPosition);
         });

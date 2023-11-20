@@ -1,5 +1,4 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
-/* exported init, buildPrefsWidget */
 
 /*
  * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
@@ -24,6 +23,7 @@ import Gio from 'gi://Gio';
 import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 import Gdk from 'gi://Gdk';
+import Adw from 'gi://Adw';
 
 import {ExtensionPreferences, gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
@@ -128,10 +128,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             settings.bind(settingsName, element, 'active', Gio.SettingsBindFlags.DEFAULT);
         }
 
-        _init({settings, domain, dir}) {
+        _init({settings, dir, metadata}) {
             this._settings = settings;
-            this._gettextDomain = domain;
             this._dir = dir;
+            this._metadata = metadata;
 
             // Gtk Css Provider
             this._provider = new Gtk.CssProvider();
@@ -144,7 +144,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Gtk Builder
             this._builder = new Gtk.Builder();
             this._builder.set_scope(new ResourceMonitorBuilderScope());
-            this._builder.set_translation_domain(this._gettextDomain);
+            this._builder.set_translation_domain(this._metadata["gettext-domain"]);
             this._builder.add_from_file(this._dir.get_path() + '/prefs.ui');
 
             // PREFS
@@ -969,7 +969,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
                 return contents;
             } catch (error) {
-                log('[Resource_Monitor] Load File Error (' + error + ')');
+                console.error('[Resource_Monitor] Load File Error (' + error + ')');
             }
         }
 
@@ -998,21 +998,19 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
                 return output;
             } catch (error) {
-                log('[Resource_Monitor] Execute Command Error (' + error + ')');
+                console.error('[Resource_Monitor] Execute Command Error (' + error + ')');
             }
         }
     });
 
-export default class ExamplePreferences extends ExtensionPreferences {
+export default class ResourceMonitorExtensionPreferences extends ExtensionPreferences {
     getPreferencesWidget() {
         const widget = new ResourceMonitorPrefsWidget({
-            dir: this.dir,
             settings: this.getSettings(),
-            domain: this.metadata["gettext-domain"]
+            dir: this.dir,
+            metadata: this.metadata,
         });
 
         return widget.notebook;
     }
 }
-
-
