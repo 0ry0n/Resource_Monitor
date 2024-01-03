@@ -1,119 +1,64 @@
 [ego]: https://extensions.gnome.org/extension/1634/resource-monitor/
 
-# Resource_Monitor [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
-Resource_Monitor is a GNOME Shell extension that Monitor the use of system resources like cpu, ram, disk, network and display them in GNOME shell top bar.
+# Resource_Monitor GNOME Shell Extension [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://opensource.org/licenses/GPL-3.0)
 
-# Screenshots
-![](/images/main.png)
+Resource_Monitor is a GNOME Shell extension designed to monitor system resources such as CPU, RAM, disk, and network usage, displaying them in the GNOME Shell top bar.
 
-# GNOME Shell versions supported
-**40, 41, 42, 43, 44**
-- For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) branch.
+| Main View           |
+| ------------------- |
+| ![Main View](/images/main.png) |
 
-# How-To Install
-## Download
-You can get this extension:
+## GNOME Shell versions supported
+**45**
+- For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) or [gnome-40-44](../../tree/gnome-40-44) branch.
 
-- From [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/).
-- Downloading the latest [Release](../../releases/latest) released on GitHub.
-- Cloning the [master](../../tree/master) repository.
-## Install
-### Using the latest release
-1. Unzip the file `Resource_Monitor@Ory0n.zip`.
-2. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-3. Activate the extensions with Gnome Extensions.
+## How-To Install
 
-For example...
-```
-unzip Resource_Monitor@Ory0n.zip -d ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
+### From GNOME Extensions
 
-gnome-extensions enable Resource_Monitor@Ory0n
-```
+- Visit [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/) and install from there.
 
-### Cloning the master branch
-1. Clone the master branch.
-2. Open `Resource_Monitor` folder.
-3. Move `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n`.
-4. Activate the extensions with Gnome Extensions.
+### Using the Latest Release
 
-For example...
-```
-git clone https://github.com/0ry0n/Resource_Monitor
-cd Resource_Monitor
-mv Resource_Monitor@Ory0n ~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n
+1. Download the latest [Release](../../releases/latest) from GitHub.
+2. Unzip `Resource_Monitor@Ory0n.zip`.
+3. Move the `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/`.
+4. Activate the extension using GNOME Extensions.
 
-gnome-extensions enable Resource_Monitor@Ory0n
-```
+## Preferences
 
-# Preferences
-![](/images/global.png)
+| Global Preferences | CPU Preferences | RAM Preferences |
+| ------------------- | --------------- | --------------- |
+| ![Global Preferences](/images/global.png) | ![CPU Preferences](/images/cpu.png) | ![RAM Preferences](/images/ram.png) |
 
-![](/images/cpu.png)
+| SWAP Preferences | DISK Preferences | NET Preferences |
+| ------------------- | ------------------- | ------------------- |
+| ![SWAP Preferences](/images/swap.png) | ![DISK Preferences](/images/disk.png) | ![NET Preferences](/images/net.png) |
 
-![](/images/ram.png)
+| THERMAL Preferences | GPU Preferences |
+| ------------------- | ------------------- |
+| ![THERMAL Preferences](/images/thermal.png) | ![GPU Preferences](/images/gpu.png) |
 
-![](/images/swap.png)
+## About Units
 
-![](/images/disk.png)
+The units displayed in Resource_Monitor are in K, M, ... (powers of 1024), or KB, MB, ... (powers of 1000).
 
-![](/images/net.png)
+## Bug Reporting
 
-![](/images/thermal.png)
+To report issues or request features, please use the [GitHub Issues](../../issues) tracker. Include relevant details to help us understand and address the problem efficiently.
 
-![](/images/gpu.png)
+## Change Log
 
-# About Units
-Units are K,M,... (powers of 1024) or KB,MB,... (powers of 1000).
+**Version 21 (Jan 2, 2024)**
+- Added support for GNOME 45.
+- Fixed left-click custom-program functionality.
+- Other bug fixes.
 
-# Bug Reporting
-Use the GitHub [Issues](../../issues) tracker to report issues or ask for features.
+## Authors
 
-# Change Log
-**version 19 (Mar 27, 2023)**
-- Added support for gnome 44.
-- Fixed Cpu Frequency Unit: thanks to @giacomo-boldini.
-- Fixed Unit and scale factor.
-- Added ability to hide GPU name.
-- Added GPU icon.
-- Added ability to choose the display position of items.
-- Fixed incorrect classification of CPU thermal sensors.
-- Added ability to show all disk devices for stats monitoring.
-- Bug fixed.
-
-**version 18 (Oct 17, 2022)**
-- Added support for gnome 43.
-- Added GPU monitor (NVIDIA only).
-- Added Load Average monitor.
-- Added the ability to use fixed units of measure.
-- Added the ability to use a custom application to launch when left-clicking the mouse.
-- New preferences window.
-- Bug fixed.
-
-**version 17 (May 9, 2022)**
-- Added support for gnome 42.
-- Added the ability to choose to monitor the used or free ram and swap and whether to use the percentage or the size.
-- Added the ability to choose the application to start when left click.
-- Bug fixed.
-
-**version 16 (Jan 1, 2022)**
-- Added support for gnome 41.
-- Added bps network unit.
-- Added extension position.
-- Added show or not Prefs when clicking on extension (right click).
-- Added new better icons.
-- Added cpu frequency: thanks to @xtenduke.
-- Added automatic width when setting width to 0.
-- Added the ability to choose to monitor used space or free space.
-- Added the ability to monitor the temperatures of the selected devices.
-- Bug fixed.
-
-**version 15 (Apr 15, 2021)**
-- Added support for GNOME 40.
-- New preferences window.
-- Deprecated GTK elements removed from pref.js.
-
-# Authors
 - **Giuseppe Silvestro** - *Initial work* - [0ry0n](https://github.com/0ry0n)
 
-# License
+## License
+
 This project is licensed under the GNU GPL-3.0 License - see the [LICENSE.md](/LICENSE) file for details.
