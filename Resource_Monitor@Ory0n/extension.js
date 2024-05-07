@@ -344,63 +344,63 @@ const ResourceMonitor = GObject.registerClass(
           this._itemsPosition.forEach((element) => {
             switch (element) {
               case "cpu":
-                this._box.add(this._cpuIcon);
-                this._box.add(this._cpuValue);
-                this._box.add(this._cpuUnit);
+                this._box.add_child(this._cpuIcon);
+                this._box.add_child(this._cpuValue);
+                this._box.add_child(this._cpuUnit);
 
-                this._box.add(this._cpuTemperatureValue);
-                this._box.add(this._cpuTemperatureUnit);
-                this._box.add(this._cpuTemperatureValueBracket);
-                this._box.add(this._cpuFrequencyValue);
-                this._box.add(this._cpuFrequencyUnit);
-                this._box.add(this._cpuFrequencyValueBracket);
-                this._box.add(this._cpuLoadAverageValue);
+                this._box.add_child(this._cpuTemperatureValue);
+                this._box.add_child(this._cpuTemperatureUnit);
+                this._box.add_child(this._cpuTemperatureValueBracket);
+                this._box.add_child(this._cpuFrequencyValue);
+                this._box.add_child(this._cpuFrequencyUnit);
+                this._box.add_child(this._cpuFrequencyValueBracket);
+                this._box.add_child(this._cpuLoadAverageValue);
 
                 break;
 
               case "ram":
-                this._box.add(this._ramIcon);
-                this._box.add(this._ramValue);
-                this._box.add(this._ramUnit);
+                this._box.add_child(this._ramIcon);
+                this._box.add_child(this._ramValue);
+                this._box.add_child(this._ramUnit);
 
                 break;
 
               case "swap":
-                this._box.add(this._swapIcon);
-                this._box.add(this._swapValue);
-                this._box.add(this._swapUnit);
+                this._box.add_child(this._swapIcon);
+                this._box.add_child(this._swapValue);
+                this._box.add_child(this._swapUnit);
 
                 break;
 
               case "stats":
-                this._box.add(this._diskStatsIcon);
-                this._box.add(this._diskStatsBox);
+                this._box.add_child(this._diskStatsIcon);
+                this._box.add_child(this._diskStatsBox);
 
                 break;
 
               case "space":
-                this._box.add(this._diskSpaceIcon);
-                this._box.add(this._diskSpaceBox);
+                this._box.add_child(this._diskSpaceIcon);
+                this._box.add_child(this._diskSpaceBox);
 
                 break;
 
               case "eth":
-                this._box.add(this._ethIcon);
-                this._box.add(this._ethValue);
-                this._box.add(this._ethUnit);
+                this._box.add_child(this._ethIcon);
+                this._box.add_child(this._ethValue);
+                this._box.add_child(this._ethUnit);
 
                 break;
 
               case "wlan":
-                this._box.add(this._wlanIcon);
-                this._box.add(this._wlanValue);
-                this._box.add(this._wlanUnit);
+                this._box.add_child(this._wlanIcon);
+                this._box.add_child(this._wlanValue);
+                this._box.add_child(this._wlanUnit);
 
                 break;
 
               case "gpu":
-                this._box.add(this._gpuIcon);
-                this._box.add(this._gpuBox);
+                this._box.add_child(this._gpuIcon);
+                this._box.add_child(this._gpuBox);
 
                 break;
 
@@ -417,63 +417,63 @@ const ResourceMonitor = GObject.registerClass(
           this._itemsPosition.forEach((element) => {
             switch (element) {
               case "cpu":
-                this._box.add(this._cpuValue);
-                this._box.add(this._cpuUnit);
+                this._box.add_child(this._cpuValue);
+                this._box.add_child(this._cpuUnit);
 
-                this._box.add(this._cpuTemperatureValue);
-                this._box.add(this._cpuTemperatureUnit);
-                this._box.add(this._cpuTemperatureValueBracket);
-                this._box.add(this._cpuFrequencyValue);
-                this._box.add(this._cpuFrequencyUnit);
-                this._box.add(this._cpuFrequencyValueBracket);
-                this._box.add(this._cpuLoadAverageValue);
-                this._box.add(this._cpuIcon);
+                this._box.add_child(this._cpuTemperatureValue);
+                this._box.add_child(this._cpuTemperatureUnit);
+                this._box.add_child(this._cpuTemperatureValueBracket);
+                this._box.add_child(this._cpuFrequencyValue);
+                this._box.add_child(this._cpuFrequencyUnit);
+                this._box.add_child(this._cpuFrequencyValueBracket);
+                this._box.add_child(this._cpuLoadAverageValue);
+                this._box.add_child(this._cpuIcon);
 
                 break;
 
               case "ram":
-                this._box.add(this._ramValue);
-                this._box.add(this._ramUnit);
-                this._box.add(this._ramIcon);
+                this._box.add_child(this._ramValue);
+                this._box.add_child(this._ramUnit);
+                this._box.add_child(this._ramIcon);
 
                 break;
 
               case "swap":
-                this._box.add(this._swapValue);
-                this._box.add(this._swapUnit);
-                this._box.add(this._swapIcon);
+                this._box.add_child(this._swapValue);
+                this._box.add_child(this._swapUnit);
+                this._box.add_child(this._swapIcon);
 
                 break;
 
               case "stats":
-                this._box.add(this._diskStatsBox);
-                this._box.add(this._diskStatsIcon);
+                this._box.add_child(this._diskStatsBox);
+                this._box.add_child(this._diskStatsIcon);
 
                 break;
 
               case "space":
-                this._box.add(this._diskSpaceBox);
-                this._box.add(this._diskSpaceIcon);
+                this._box.add_child(this._diskSpaceBox);
+                this._box.add_child(this._diskSpaceIcon);
 
                 break;
 
               case "eth":
-                this._box.add(this._ethValue);
-                this._box.add(this._ethUnit);
-                this._box.add(this._ethIcon);
+                this._box.add_child(this._ethValue);
+                this._box.add_child(this._ethUnit);
+                this._box.add_child(this._ethIcon);
 
                 break;
 
               case "wlan":
-                this._box.add(this._wlanValue);
-                this._box.add(this._wlanUnit);
-                this._box.add(this._wlanIcon);
+                this._box.add_child(this._wlanValue);
+                this._box.add_child(this._wlanUnit);
+                this._box.add_child(this._wlanIcon);
 
                 break;
 
               case "gpu":
-                this._box.add(this._gpuBox);
-                this._box.add(this._gpuIcon);
+                this._box.add_child(this._gpuBox);
+                this._box.add_child(this._gpuIcon);
 
                 break;
 
@@ -3004,8 +3004,8 @@ const DiskContainerStats = GObject.registerClass(
       });
       this._elementsUnit["single"].set_style("padding-left: 0.125em;");
 
-      this.add(this._elementsValue["single"]);
-      this.add(this._elementsUnit["single"]);
+      this.add_child(this._elementsValue["single"]);
+      this.add_child(this._elementsUnit["single"]);
 
       this.idleOld["single"] = 0;
       this.rwTotOld["single"] = [0, 0];
@@ -3031,9 +3031,9 @@ const DiskContainerStats = GObject.registerClass(
       });
       this._elementsUnit[filesystem].set_style("padding-left: 0.125em;");
 
-      this.add(this._elementsName[filesystem]);
-      this.add(this._elementsValue[filesystem]);
-      this.add(this._elementsUnit[filesystem]);
+      this.add_child(this._elementsName[filesystem]);
+      this.add_child(this._elementsValue[filesystem]);
+      this.add_child(this._elementsUnit[filesystem]);
 
       this.idleOld[filesystem] = 0;
       this.rwTotOld[filesystem] = [0, 0];
@@ -3124,9 +3124,9 @@ const DiskContainerSpace = GObject.registerClass(
       });
       this._elementsUnit[filesystem].set_style("padding-left: 0.125em;");
 
-      this.add(this._elementsName[filesystem]);
-      this.add(this._elementsValue[filesystem]);
-      this.add(this._elementsUnit[filesystem]);
+      this.add_child(this._elementsName[filesystem]);
+      this.add_child(this._elementsValue[filesystem]);
+      this.add_child(this._elementsUnit[filesystem]);
     }
 
     update_element_value(filesystem, value, unit) {
@@ -3223,7 +3223,7 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: ` ${label}: `,
         });
-        this.add(this._elementsName[uuid]);
+        this.add_child(this._elementsName[uuid]);
       }
 
       // Usage
@@ -3240,15 +3240,15 @@ const GpuContainer = GObject.registerClass(
         });
         this._elementsUnit[uuid].set_style("padding-left: 0.125em;");
 
-        this.add(
+        this.add_child(
           new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
             text: "[",
           })
         );
-        this.add(this._elementsValue[uuid]);
-        this.add(this._elementsUnit[uuid]);
-        this.add(
+        this.add_child(this._elementsValue[uuid]);
+        this.add_child(this._elementsUnit[uuid]);
+        this.add_child(
           new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
             text: "]",
@@ -3270,15 +3270,15 @@ const GpuContainer = GObject.registerClass(
         });
         this._elementsMemoryUnit[uuid].set_style("padding-left: 0.125em;");
 
-        this.add(
+        this.add_child(
           new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
             text: "[",
           })
         );
-        this.add(this._elementsMemoryValue[uuid]);
-        this.add(this._elementsMemoryUnit[uuid]);
-        this.add(
+        this.add_child(this._elementsMemoryValue[uuid]);
+        this.add_child(this._elementsMemoryUnit[uuid]);
+        this.add_child(
           new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
             text: "]",
@@ -3300,15 +3300,15 @@ const GpuContainer = GObject.registerClass(
         });
         this._elementsThermalUnit[uuid].set_style("padding-left: 0.125em;");
 
-        this.add(
+        this.add_child(
           new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
             text: "[",
           })
         );
-        this.add(this._elementsThermalValue[uuid]);
-        this.add(this._elementsThermalUnit[uuid]);
-        this.add(
+        this.add_child(this._elementsThermalValue[uuid]);
+        this.add_child(this._elementsThermalUnit[uuid]);
+        this.add_child(
           new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
             text: "]",
