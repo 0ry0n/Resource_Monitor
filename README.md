@@ -50,6 +50,9 @@ To report issues or request features, please use the [GitHub Issues](../../issue
 
 ## Change Log
 
+**Version 22 (Jun 3, 2024)**
+- Added support for GNOME 46: thanks to @DanielusG.
+
 **Version 21 (Jan 2, 2024)**
 - Added support for GNOME 45.
 - Fixed left-click custom-program functionality.
