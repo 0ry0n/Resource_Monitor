@@ -1,7 +1,7 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
 
 /*
- * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2024 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
@@ -56,12 +56,16 @@ const RAM_WIDTH = "ramwidth";
 const RAM_UNIT = "ramunit";
 const RAM_UNIT_MEASURE = "ramunitmeasure";
 const RAM_MONITOR = "rammonitor";
+const RAM_ALERT = "ramalert";
+const RAM_ALERT_THRESHOLD = "ramalertthreshold";
 
 const SWAP_STATUS = "swapstatus";
 const SWAP_WIDTH = "swapwidth";
 const SWAP_UNIT = "swapunit";
 const SWAP_UNIT_MEASURE = "swapunitmeasure";
 const SWAP_MONITOR = "swapmonitor";
+const SWAP_ALERT = "swapalert";
+const SWAP_ALERT_THRESHOLD = "swapalertthreshold";
 
 const DISK_STATS_STATUS = "diskstatsstatus";
 const DISK_STATS_WIDTH = "diskstatswidth";
@@ -445,6 +449,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._ramMonitorCombobox = this._builder.get_object(
         "ram_monitor_combobox"
       );
+      this._ramAlert = this._builder.get_object("ram_alert");
+      this._ramAlertThresholdSpinbutton = this._builder.get_object(
+        "ram_alert_threshold_spinbutton"
+      );
 
       this._connectSwitchButton(this._settings, RAM_STATUS, this._ramDisplay);
       this._connectSpinButton(
@@ -463,17 +471,32 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         RAM_MONITOR,
         this._ramMonitorCombobox
       );
+      this._connectSwitchButton(this._settings, RAM_ALERT, this._ramAlert);
+      this._connectSpinButton(
+        this._settings,
+        RAM_ALERT_THRESHOLD,
+        this._ramAlertThresholdSpinbutton
+      );
 
       this._ramDisplay.connect("state-set", (button) => {
         this._ramWidthSpinbutton.sensitive = button.active;
         this._ramUnitCombobox.sensitive = button.active;
         this._ramUnitMeasureCombobox.sensitive = button.active;
         this._ramMonitorCombobox.sensitive = button.active;
+        this._ramAlert.sensitive = button.active;
+        this._ramAlertThresholdSpinbutton.sensitive = button.active;
       });
       this._ramWidthSpinbutton.sensitive = this._ramDisplay.active;
       this._ramUnitCombobox.sensitive = this._ramDisplay.active;
       this._ramUnitMeasureCombobox.sensitive = this._ramDisplay.active;
       this._ramMonitorCombobox.sensitive = this._ramDisplay.active;
+      this._ramAlert.sensitive = this._ramDisplay.active;
+      this._ramAlertThresholdSpinbutton.sensitive = this._ramAlert.active;
+
+      this._ramAlert.connect("state-set", (button) => {
+        this._ramAlertThresholdSpinbutton.sensitive = button.active;
+      });
+      this._ramAlertThresholdSpinbutton.sensitive = this._ramAlert.active;
     }
 
     _buildSwap() {
@@ -487,6 +510,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       this._swapMonitorCombobox = this._builder.get_object(
         "swap_monitor_combobox"
+      );
+      this._swapAlert = this._builder.get_object("swap_alert");
+      this._swapAlertThresholdSpinbutton = this._builder.get_object(
+        "swap_alert_threshold_spinbutton"
       );
 
       this._connectSwitchButton(this._settings, SWAP_STATUS, this._swapDisplay);
@@ -506,17 +533,32 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         SWAP_MONITOR,
         this._swapMonitorCombobox
       );
+      this._connectSwitchButton(this._settings, SWAP_ALERT, this._swapAlert);
+      this._connectSpinButton(
+        this._settings,
+        SWAP_ALERT_THRESHOLD,
+        this._swapAlertThresholdSpinbutton
+      );
 
       this._swapDisplay.connect("state-set", (button) => {
         this._swapWidthSpinbutton.sensitive = button.active;
         this._swapUnitCombobox.sensitive = button.active;
         this._swapUnitMeasureCombobox.sensitive = button.active;
         this._swapMonitorCombobox.sensitive = button.active;
+        this._swapAlert.sensitive = button.active;
+        this._swapAlertThresholdSpinbutton.sensitive = button.active;
       });
       this._swapWidthSpinbutton.sensitive = this._swapDisplay.active;
       this._swapUnitCombobox.sensitive = this._swapDisplay.active;
       this._swapUnitMeasureCombobox.sensitive = this._swapDisplay.active;
       this._swapMonitorCombobox.sensitive = this._swapDisplay.active;
+      this._swapAlert.sensitive = this._swapDisplay.active;
+      this._swapAlertThresholdSpinbutton.sensitive = this._swapAlert.active;
+
+      this._swapAlert.connect("state-set", (button) => {
+        this._swapAlertThresholdSpinbutton.sensitive = button.active;
+      });
+      this._swapAlertThresholdSpinbutton.sensitive = this._swapAlert.active;
     }
 
     _buildDisk() {
@@ -803,12 +845,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               model.foreach((list, path, iter) => {
                 disksArray.push(
                   list.get_value(iter, 0) +
-                    DISK_DEVICES_LIST_SEPARATOR +
-                    list.get_value(iter, 1) +
-                    DISK_DEVICES_LIST_SEPARATOR +
-                    list.get_value(iter, 2) +
-                    DISK_DEVICES_LIST_SEPARATOR +
-                    list.get_value(iter, 3)
+                  DISK_DEVICES_LIST_SEPARATOR +
+                  list.get_value(iter, 1) +
+                  DISK_DEVICES_LIST_SEPARATOR +
+                  list.get_value(iter, 2) +
+                  DISK_DEVICES_LIST_SEPARATOR +
+                  list.get_value(iter, 3)
                 );
               });
               settings.set_strv(DISK_DEVICES_LIST, disksArray);
@@ -819,12 +861,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             model.foreach((list, path, iter) => {
               disksArray.push(
                 list.get_value(iter, 0) +
-                  DISK_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 1) +
-                  DISK_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 2) +
-                  DISK_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 3)
+                DISK_DEVICES_LIST_SEPARATOR +
+                list.get_value(iter, 1) +
+                DISK_DEVICES_LIST_SEPARATOR +
+                list.get_value(iter, 2) +
+                DISK_DEVICES_LIST_SEPARATOR +
+                list.get_value(iter, 3)
               );
             });
             settings.set_strv(DISK_DEVICES_LIST, disksArray);
@@ -1064,10 +1106,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._thermalCpuDevicesModel.foreach((list, path, iter) => {
               cpuTempsArray.push(
                 list.get_value(iter, 1) +
-                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 2) +
-                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 0)
+                THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
+                list.get_value(iter, 2) +
+                THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
+                list.get_value(iter, 0)
               );
             });
             this._settings.set_strv(
@@ -1180,10 +1222,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._thermalGpuDevicesModel.foreach((list, path, iter) => {
           gpuTempsArray.push(
             list.get_value(iter, 0) +
-              GPU_DEVICES_LIST_SEPARATOR +
-              list.get_value(iter, 1) +
-              GPU_DEVICES_LIST_SEPARATOR +
-              list.get_value(iter, 2)
+            GPU_DEVICES_LIST_SEPARATOR +
+            list.get_value(iter, 1) +
+            GPU_DEVICES_LIST_SEPARATOR +
+            list.get_value(iter, 2)
           );
         });
         this._settings.set_strv(
@@ -1404,12 +1446,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._gpuDevicesModel.foreach((list, path, iter) => {
           gpuDevicesArray.push(
             list.get_value(iter, 0) +
-              GPU_DEVICES_LIST_SEPARATOR +
-              list.get_value(iter, 1) +
-              GPU_DEVICES_LIST_SEPARATOR +
-              list.get_value(iter, 2) +
-              GPU_DEVICES_LIST_SEPARATOR +
-              list.get_value(iter, 3)
+            GPU_DEVICES_LIST_SEPARATOR +
+            list.get_value(iter, 1) +
+            GPU_DEVICES_LIST_SEPARATOR +
+            list.get_value(iter, 2) +
+            GPU_DEVICES_LIST_SEPARATOR +
+            list.get_value(iter, 3)
           );
         });
         this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
@@ -1452,7 +1494,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             if (source_object.get_successful()) {
               resolve(stdout);
             } else {
-              throw new Error(stderr);
+              reject(stderr);
             }
           } catch (e) {
             reject(e);

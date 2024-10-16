@@ -1,6 +1,6 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- * Resource_Monitor is Copyright © 2018-2023 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2024 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
@@ -59,12 +59,16 @@ const RAM_WIDTH = "ramwidth";
 const RAM_UNIT = "ramunit";
 const RAM_UNIT_MEASURE = "ramunitmeasure";
 const RAM_MONITOR = "rammonitor";
+const RAM_ALERT = "ramalert";
+const RAM_ALERT_THRESHOLD = "ramalertthreshold";
 
 const SWAP_STATUS = "swapstatus";
 const SWAP_WIDTH = "swapwidth";
 const SWAP_UNIT = "swapunit";
 const SWAP_UNIT_MEASURE = "swapunitmeasure";
 const SWAP_MONITOR = "swapmonitor";
+const SWAP_ALERT = "swapalert";
+const SWAP_ALERT_THRESHOLD = "swapalertthreshold";
 
 const DISK_STATS_STATUS = "diskstatsstatus";
 const DISK_STATS_WIDTH = "diskstatswidth";
@@ -518,12 +522,16 @@ const ResourceMonitor = GObject.registerClass(
       this._ramUnitType = this._settings.get_string(RAM_UNIT);
       this._ramUnitMeasure = this._settings.get_string(RAM_UNIT_MEASURE);
       this._ramMonitor = this._settings.get_string(RAM_MONITOR);
+      this._ramAlert = this._settings.get_boolean(RAM_ALERT);
+      this._ramAlertThreshold = this._settings.get_int(RAM_ALERT_THRESHOLD);
 
       this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
       this._swapWidth = this._settings.get_int(SWAP_WIDTH);
       this._swapUnitType = this._settings.get_string(SWAP_UNIT);
       this._swapUnitMeasure = this._settings.get_string(SWAP_UNIT_MEASURE);
       this._swapMonitor = this._settings.get_string(SWAP_MONITOR);
+      this._swapAlert = this._settings.get_boolean(SWAP_ALERT);
+      this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
 
       this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
       this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
@@ -666,6 +674,14 @@ const ResourceMonitor = GObject.registerClass(
         `changed::${RAM_MONITOR}`,
         this._ramMonitorChanged.bind(this)
       );
+      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
+        `changed::${RAM_ALERT}`,
+        this._ramAlertChanged.bind(this)
+      );
+      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
+        `changed::${RAM_ALERT_THRESHOLD}`,
+        this._ramAlertThresholdChanged.bind(this)
+      );
 
       this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
         `changed::${SWAP_STATUS}`,
@@ -686,6 +702,14 @@ const ResourceMonitor = GObject.registerClass(
       this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
         `changed::${SWAP_MONITOR}`,
         this._swapMonitorChanged.bind(this)
+      );
+      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
+        `changed::${SWAP_ALERT}`,
+        this._swapAlertChanged.bind(this)
+      );
+      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
+        `changed::${SWAP_ALERT_THRESHOLD}`,
+        this._swapAlertThresholdChanged.bind(this)
       );
 
       this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
@@ -872,7 +896,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._basicItemStatus(
         (this._netEthStatus && this._nmEthStatus) ||
-          (this._netEthStatus && !this._netAutoHideStatus),
+        (this._netEthStatus && !this._netAutoHideStatus),
         true,
         this._ethIcon,
         this._ethValue,
@@ -880,7 +904,7 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._basicItemStatus(
         (this._netWlanStatus && this._nmWlanStatus) ||
-          (this._netWlanStatus && !this._netAutoHideStatus),
+        (this._netWlanStatus && !this._netAutoHideStatus),
         true,
         this._wlanIcon,
         this._wlanValue,
@@ -913,7 +937,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._basicItemStatus(
         (this._netEthStatus && this._nmEthStatus) ||
-          (this._netEthStatus && !this._netAutoHideStatus),
+        (this._netEthStatus && !this._netAutoHideStatus),
         true,
         this._ethIcon,
         this._ethValue,
@@ -921,7 +945,7 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._basicItemStatus(
         (this._netWlanStatus && this._nmWlanStatus) ||
-          (this._netWlanStatus && !this._netAutoHideStatus),
+        (this._netWlanStatus && !this._netAutoHideStatus),
         true,
         this._wlanIcon,
         this._wlanValue,
@@ -1031,8 +1055,8 @@ const ResourceMonitor = GObject.registerClass(
       this._basicItemStatus(
         this._cpuStatus,
         !this._thermalCpuTemperatureStatus &&
-          !this._cpuFrequencyStatus &&
-          !this._cpuLoadAverageStatus,
+        !this._cpuFrequencyStatus &&
+        !this._cpuLoadAverageStatus,
         this._cpuIcon,
         this._cpuValue,
         this._cpuUnit
@@ -1052,8 +1076,8 @@ const ResourceMonitor = GObject.registerClass(
       this._basicItemStatus(
         this._cpuFrequencyStatus,
         !this._cpuStatus &&
-          !this._thermalCpuTemperatureStatus &&
-          !this._cpuLoadAverageStatus,
+        !this._thermalCpuTemperatureStatus &&
+        !this._cpuLoadAverageStatus,
         this._cpuIcon,
         this._cpuFrequencyValue,
         this._cpuFrequencyUnit,
@@ -1085,8 +1109,8 @@ const ResourceMonitor = GObject.registerClass(
       this._basicItemStatus(
         this._cpuLoadAverageStatus,
         !this._cpuStatus &&
-          !this._thermalCpuTemperatureStatus &&
-          !this._cpuFrequencyStatus,
+        !this._thermalCpuTemperatureStatus &&
+        !this._cpuFrequencyStatus,
         this._cpuIcon,
         this._cpuLoadAverageValue
       );
@@ -1143,6 +1167,14 @@ const ResourceMonitor = GObject.registerClass(
       }
     }
 
+    _ramAlertChanged() {
+      this._ramAlert = this._settings.get_boolean(RAM_ALERT);
+    }
+
+    _ramAlertThresholdChanged() {
+      this._ramAlertThreshold = this._settings.get_int(RAM_ALERT_THRESHOLD);
+    }
+
     _swapStatusChanged() {
       this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
 
@@ -1183,6 +1215,14 @@ const ResourceMonitor = GObject.registerClass(
       if (this._swapStatus) {
         this._refreshSwapValue();
       }
+    }
+
+    _swapAlertChanged() {
+      this._swapAlert = this._settings.get_boolean(SWAP_ALERT);
+    }
+
+    _swapAlertThresholdChanged() {
+      this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
     }
 
     _diskStatsStatusChanged() {
@@ -1306,7 +1346,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._basicItemStatus(
         (this._netEthStatus && this._nmEthStatus) ||
-          (this._netEthStatus && !this._netAutoHideStatus),
+        (this._netEthStatus && !this._netAutoHideStatus),
         true,
         this._ethIcon,
         this._ethValue,
@@ -1314,7 +1354,7 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._basicItemStatus(
         (this._netWlanStatus && this._nmWlanStatus) ||
-          (this._netWlanStatus && !this._netAutoHideStatus),
+        (this._netWlanStatus && !this._netAutoHideStatus),
         true,
         this._wlanIcon,
         this._wlanValue,
@@ -1349,7 +1389,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._basicItemStatus(
         (this._netEthStatus && this._nmEthStatus) ||
-          (this._netEthStatus && !this._netAutoHideStatus),
+        (this._netEthStatus && !this._netAutoHideStatus),
         true,
         this._ethIcon,
         this._ethValue,
@@ -1368,7 +1408,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._basicItemStatus(
         (this._netWlanStatus && this._nmWlanStatus) ||
-          (this._netWlanStatus && !this._netAutoHideStatus),
+        (this._netWlanStatus && !this._netAutoHideStatus),
         true,
         this._wlanIcon,
         this._wlanValue,
@@ -1390,8 +1430,8 @@ const ResourceMonitor = GObject.registerClass(
       this._basicItemStatus(
         this._thermalCpuTemperatureStatus,
         !this._cpuStatus &&
-          !this._cpuFrequencyStatus &&
-          !this._cpuLoadAverageStatus,
+        !this._cpuFrequencyStatus &&
+        !this._cpuLoadAverageStatus,
         this._cpuIcon,
         this._cpuTemperatureValue,
         this._cpuTemperatureUnit,
@@ -1623,6 +1663,10 @@ const ResourceMonitor = GObject.registerClass(
 
       //this._ramMonitorChanged();
 
+      //this._ramAlertChanged();
+
+      //this._ramAlertThresholdChanged();
+
       this._swapStatusChanged();
 
       this._swapWidthChanged();
@@ -1632,6 +1676,10 @@ const ResourceMonitor = GObject.registerClass(
       //this._swapUnitMeasureChanged();
 
       //this._swapMonitorChanged();
+
+      //this._swapAlertChanged();
+
+      //this._swapAlertThresholdChanged();
 
       this._diskStatsStatusChanged();
 
@@ -1744,6 +1792,12 @@ const ResourceMonitor = GObject.registerClass(
 
         used = total - available;
 
+        if (this._ramAlert) {
+          if (((100 * available) / total).toFixed(0) < this._ramAlertThreshold) {
+            Main.notify('Resource Monitor - Low Memory Alert', `Available RAM has dropped below ${this._ramAlertThreshold}%. Please take action to free up memory.`);
+          }
+        }
+
         let value = 0;
         let unit = "KB";
         switch (this._ramMonitor) {
@@ -1852,6 +1906,12 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         used = total - available;
+
+        if (this._swapAlert) {
+          if (((100 * available) / total).toFixed(0) < this._swapAlertThreshold) {
+            Main.notify('Resource Monitor - Low Memory Alert', `Available SWAP has dropped below ${this._swapAlertThreshold}%. Please take action to free up memory.`);
+          }
+        }
 
         let value = 0;
         let unit = "KB";
@@ -2912,7 +2972,7 @@ const ResourceMonitor = GObject.registerClass(
             if (source_object.get_successful()) {
               resolve(stdout);
             } else {
-              throw new Error(stderr);
+              reject(stderr);
             }
           } catch (e) {
             reject(e);

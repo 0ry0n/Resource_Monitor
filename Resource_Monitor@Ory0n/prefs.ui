@@ -491,6 +491,47 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
+                <property name="halign">start</property>
+                <property name="label">Alert</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Enable</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="ram_alert"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Free memory lower than %</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="ram_alert_threshold_spinbutton">
+                    <property name="adjustment">ram_alert_threshold_adjustment</property>
+                    <property name="numeric">True</property>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
       </object>
@@ -603,6 +644,47 @@
                       <item id="used">Used Memory</item>
                       <item id="free">Free Memory</item>
                     </items>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkLabel">
+                <property name="css-classes">main-label</property>
+                <property name="halign">start</property>
+                <property name="label">Alert</property>
+                <property name="margin-top">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Enable</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSwitch" id="swap_alert"/>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Free memory lower than %</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkSpinButton" id="swap_alert_threshold_spinbutton">
+                    <property name="adjustment">swap_alert_threshold_adjustment</property>
+                    <property name="numeric">True</property>
                   </object>
                 </child>
               </object>
@@ -1441,10 +1523,20 @@
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>
   </object>
+  <object class="GtkAdjustment" id="ram_alert_threshold_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">100.0</property>
+  </object>
   <object class="GtkAdjustment" id="swap_width_adjustment">
     <property name="page-increment">10.0</property>
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>
+  </object>
+  <object class="GtkAdjustment" id="swap_alert_threshold_adjustment">
+    <property name="page-increment">10.0</property>
+    <property name="step-increment">1.0</property>
+    <property name="upper">100.0</property>
   </object>
   <object class="GtkAdjustment" id="disk_stats_width_adjustment">
     <property name="page-increment">10.0</property>
