@@ -2591,63 +2591,64 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _refreshCpuFrequencyValue() {
-      if (
-        GLib.file_test(
-          "/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq",
-          GLib.FileTest.EXISTS
-        )
-      ) {
-        this._loadFile(
-          "/sys/devices/system/cpu/cpu1/cpufreq/scaling_cur_freq"
-        ).then((contents) => {
-          let value = parseInt(new TextDecoder().decode(contents));
-          let unit = "";
+      this._executeCommand([
+        "cat",
+        "/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
+      ]).then((output) => {
+        const lines = output.split("\n");
 
-          switch (this._cpuFrequencyUnitMeasure) {
-            case "k":
-              unit = "KHz";
-              break;
+        let value = 0;
+        for (let i = 0; i < lines.length - 1; i++) {
+          const line = lines[i];
+          const entry = parseInt(line.trim());
 
-            case "m":
+          // max_freq
+          if (entry > value) {
+            value = entry;
+          }
+        }
+
+        switch (this._cpuFrequencyUnitMeasure) {
+          case "k":
+            unit = "KHz";
+            break;
+
+          case "m":
+            unit = "MHz";
+            value /= 1000;
+            break;
+
+          case "g":
+            unit = "GHz";
+            value /= 1000;
+            value /= 1000;
+            break;
+
+          case "auto":
+
+          default:
+            if (value > 1000) {
               unit = "MHz";
               value /= 1000;
-              break;
-
-            case "g":
-              unit = "GHz";
-              value /= 1000;
-              value /= 1000;
-              break;
-
-            case "auto":
-
-            default:
               if (value > 1000) {
-                unit = "MHz";
+                unit = "GHz";
                 value /= 1000;
-                if (value > 1000) {
-                  unit = "GHz";
-                  value /= 1000;
-                }
-              } else {
-                unit = "KHz";
               }
+            } else {
+              unit = "KHz";
+            }
 
-              break;
-          }
+            break;
+        }
 
-          this._cpuFrequencyUnit.text = unit;
+        this._cpuFrequencyUnit.text = unit;
 
-          if (this._decimalsStatus) {
-            this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
-          } else {
-            this._cpuFrequencyValue.text = `[${value.toFixed(0)}`;
-          }
-        });
-      } else {
-        this._cpuFrequencyValue.text = _("[Frequency Error");
-        this._cpuFrequencyUnit.text = "";
-      }
+        if (this._decimalsStatus) {
+          this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
+        } else {
+          this._cpuFrequencyValue.text = `[${value.toFixed(0)}`;
+        }
+      });
     }
 
     _refreshCpuLoadAverageValue() {
@@ -2678,6 +2679,8 @@ const ResourceMonitor = GObject.registerClass(
 
           const status = it[1];
           const path = it[2];
+
+          console.error(`[Resource_Monitor] Temperature: ${it} ${path}`);
 
           if (status === "false") {
             continue;
