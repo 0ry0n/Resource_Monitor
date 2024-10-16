@@ -1462,12 +1462,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return new Promise((resolve, reject) => {
         file.load_contents_async(cancellable, (source_object, res) => {
           try {
-            const [ok, contents, etag_out] =
-              source_object.load_contents_finish(res);
-
-            resolve(contents);
-          } catch (e) {
-            reject(e);
+            const [ok, contents, etag_out] = source_object.load_contents_finish(res);
+            if (ok) {
+              resolve(contents);
+            } else {
+              reject(new Error("Failed to load contents"));
+            }
+          } catch (error) {
+            reject(new Error(`Error in load_contents_finish: ${error.message}`));
           }
         });
       });
@@ -1477,10 +1479,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       try {
         const file = Gio.File.new_for_path(path);
         const contents = await this._loadContents(file, cancellable);
-
         return contents;
       } catch (error) {
-        console.error("[Resource_Monitor] Load File Error (" + error + ")");
+        console.error(`[Resource_Monitor] Load File Error: ${error.message}`);
       }
     }
 
@@ -1488,16 +1489,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return new Promise((resolve, reject) => {
         proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
           try {
-            const [ok, stdout, stderr] =
-              source_object.communicate_utf8_finish(res);
-
-            if (source_object.get_successful()) {
+            const [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
+            if (ok) {
               resolve(stdout);
             } else {
-              reject(stderr);
+              reject(new Error(`Process failed with error: ${stderr}`));
             }
-          } catch (e) {
-            reject(e);
+          } catch (error) {
+            reject(new Error(`Error in communicate_utf8_finish: ${error.message}`));
           }
         });
       });
@@ -1510,12 +1509,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
         );
         const output = await this._readOutput(proc, cancellable);
-
         return output;
       } catch (error) {
-        console.error(
-          "[Resource_Monitor] Execute Command Error (" + error + ")"
-        );
+        console.error(`[Resource_Monitor] Execute Command Error: ${error.message}`);
       }
     }
   }
