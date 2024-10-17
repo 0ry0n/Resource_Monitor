@@ -56,6 +56,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="cpucolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="cpufrequencystatus" type="b">
             <default>false</default>
             <summary></summary>
@@ -63,6 +68,11 @@
         </key>
         <key name="cpufrequencywidth" type="i">
             <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="cpufrequencycolors" type="as">
+            <default>[]</default>
             <summary></summary>
             <description></description>
         </key>
@@ -81,6 +91,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="cpuloadaveragecolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="ramstatus" type="b">
             <default>true</default>
             <summary></summary>
@@ -88,6 +103,11 @@
         </key>
         <key name="ramwidth" type="i">
             <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="ramcolors" type="as">
+            <default>[]</default>
             <summary></summary>
             <description></description>
         </key>
@@ -126,6 +146,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="swapcolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="swapunit" type="s">
             <default>"numeric"</default>
             <summary></summary>
@@ -161,6 +186,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="diskstatscolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="diskstatsmode" type="s">
             <default>"multiple"</default>
             <summary></summary>
@@ -178,6 +208,11 @@
         </key>
         <key name="diskspacewidth" type="i">
             <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="diskspacecolors" type="as">
+            <default>[]</default>
             <summary></summary>
             <description></description>
         </key>
@@ -231,6 +266,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="netethcolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="netwlanstatus" type="b">
             <default>true</default>
             <summary></summary>
@@ -238,6 +278,11 @@
         </key>
         <key name="netwlanwidth" type="i">
             <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="netwlancolors" type="as">
+            <default>[]</default>
             <summary></summary>
             <description></description>
         </key>
@@ -256,6 +301,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="thermalcpucolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="thermalcputemperaturedeviceslist" type="as">
             <default>[]</default>
             <summary></summary>
@@ -271,6 +321,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="thermalgpucolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="thermalgputemperaturedeviceslist" type="as">
             <default>[]</default>
             <summary></summary>
@@ -283,6 +338,16 @@
         </key>
         <key name="gpuwidth" type="i">
             <default>0</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpucolors" type="as">
+            <default>[]</default>
+            <summary></summary>
+            <description></description>
+        </key>
+        <key name="gpumemorycolors" type="as">
+            <default>[]</default>
             <summary></summary>
             <description></description>
         </key>

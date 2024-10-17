@@ -104,12 +104,8 @@
                   </object>
                 </child>
                 <child>
-                  <object class="GtkTextView" id="extension_left_click_textview_custom">
-                    <property name="accepts-tab">0</property>
-                    <property name="buffer">extension_left_click_textview_textbuffer</property>
-                    <property name="focusable">1</property>
+                  <object class="GtkEntry" id="extension_left_click_entry_custom">
                     <property name="input-purpose">terminal</property>
-                    <property name="monospace">1</property>
                   </object>
                 </child>
               </object>
@@ -272,6 +268,28 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="cpu_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="cpu_colors_listbox">
+                <property name="margin-start">16</property>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel">
                 <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
@@ -310,6 +328,28 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="cpu_frequency_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="cpu_frequency_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
             <child>
@@ -375,6 +415,28 @@
                 </child>
               </object>
             </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="cpu_load_average_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="cpu_load_average_colors_listbox">
+                <property name="margin-start">16</property>
+              </object>
+            </child>
           </object>
         </child>
       </object>
@@ -426,6 +488,28 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="ram_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="ram_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
             <child>
@@ -583,6 +667,28 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="swap_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="swap_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
             <child>
@@ -756,6 +862,28 @@
                   <object class="GtkLabel">
                     <property name="halign">start</property>
                     <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="disk_stats_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="disk_stats_colors_listbox">
+                <property name="margin-start">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
                     <property name="label">Mode</property>
                   </object>
                 </child>
@@ -831,6 +959,28 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="disk_space_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="disk_space_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
             <child>
@@ -1079,6 +1229,28 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="net_eth_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="net_eth_colors_listbox">
+                <property name="margin-start">16</property>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel">
                 <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
@@ -1117,6 +1289,28 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="net_wlan_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="net_wlan_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
           </object>
@@ -1207,6 +1401,28 @@
               </object>
             </child>
             <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="thermal_cpu_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="thermal_cpu_colors_listbox">
+                <property name="margin-start">16</property>
+              </object>
+            </child>
+            <child>
               <object class="GtkLabel">
                 <property name="css-classes">main-label</property>
                 <property name="halign">start</property>
@@ -1280,6 +1496,28 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="thermal_gpu_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="thermal_gpu_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
             <child>
@@ -1368,6 +1606,50 @@
                     <property name="numeric">True</property>
                   </object>
                 </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="gpu_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="gpu_colors_listbox">
+                <property name="margin-start">16</property>
+              </object>
+            </child>
+            <child>
+              <object class="GtkBox">
+                <property name="margin-start">8</property>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="halign">start</property>
+                    <property name="hexpand">True</property>
+                    <property name="label">Colors (memory)</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="gpu_memory_colors_add_button">
+                    <property name="icon-name">list-add</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkListBox" id="gpu_memory_colors_listbox">
+                <property name="margin-start">16</property>
               </object>
             </child>
             <child>
@@ -1573,5 +1855,4 @@
     <property name="step-increment">1.0</property>
     <property name="upper">500.0</property>
   </object>
-  <object class="GtkTextBuffer" id="extension_left_click_textview_textbuffer"/>
 </interface>
