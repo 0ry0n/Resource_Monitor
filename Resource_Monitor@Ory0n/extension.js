@@ -162,6 +162,50 @@ const ResourceMonitor = GObject.registerClass(
         });
       }
 
+      // Update device path
+      this._executeCommand([
+        "bash",
+        "-c",
+        'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi',
+      ]).then((output) => {
+        let result = output.split("\n")[0];
+        if (result === "EXIST") {
+          this._executeCommand([
+            "bash",
+            "-c",
+            'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done',
+          ]).then((output) => {
+            let lines = output.split("\n");
+
+            for (let i = 0; i < lines.length - 1; i++) {
+              let line = lines[i];
+              let entry = line.trim().split(/-/);
+
+              let device = entry[0];
+              let path = entry[1];
+
+              for (let i = 0; i < this._thermalCpuTemperatureDevicesList.length; i++) {
+                let element = this._thermalCpuTemperatureDevicesList[i];
+                let it = element.split(
+                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR
+                );
+
+                if (device === it[0]) {
+                  // Update device path
+                  this._thermalCpuTemperatureDevicesList[i] = it[0] +
+                    THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
+                    it[1] +
+                    THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
+                    path;
+
+                  break;
+                }
+              }
+            }
+          });
+        }
+      });
+
       this._mainTimer = GLib.timeout_add_seconds(
         GLib.PRIORITY_DEFAULT,
         this._refreshTime,
@@ -2592,12 +2636,14 @@ const ResourceMonitor = GObject.registerClass(
 
     _refreshCpuFrequencyValue() {
       this._executeCommand([
-        "cat",
-        "/sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
+        "bash",
+        "-c",
+        "cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq"
       ]).then((output) => {
         const lines = output.split("\n");
 
         let value = 0;
+        let unit = "";
         for (let i = 0; i < lines.length - 1; i++) {
           const line = lines[i];
           const entry = parseInt(line.trim());
@@ -2679,8 +2725,6 @@ const ResourceMonitor = GObject.registerClass(
 
           const status = it[1];
           const path = it[2];
-
-          console.error(`[Resource_Monitor] Temperature: ${it} ${path}`);
 
           if (status === "false") {
             continue;
