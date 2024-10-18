@@ -50,6 +50,15 @@ To report issues or request features, please use the [GitHub Issues](../../issue
 
 ## Change Log
 
+**Version 23 (Oct 18, 2024)**
+- Added support for GNOME 47.
+- Introduced memory alerts for RAM and SWAP usage to enhance monitoring capabilities.
+- Improved CPU frequency monitoring by reading all CPU core frequencies and displaying the highest value.
+- Added color coding for all items to enhance visual clarity and differentiation.
+- Integrated Zenpower thermal sensors; thanks to @mclvren for the contribution.
+- Fixed issues with CPU temperature reading.
+- Other bug fixes.
+
 **Version 22 (Jun 3, 2024)**
 - Added support for GNOME 46: thanks to @DanielusG.
 
