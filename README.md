@@ -10,7 +10,7 @@ Resource_Monitor is a GNOME Shell extension designed to monitor system resources
 | ![Main View](/images/main.png) |
 
 ## GNOME Shell versions supported
-**45**
+**45, 46, 47**
 - For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) or [gnome-40-44](../../tree/gnome-40-44) branch.
 
 ## How-To Install
@@ -49,6 +49,15 @@ The units displayed in Resource_Monitor are in K, M, ... (powers of 1024), or KB
 To report issues or request features, please use the [GitHub Issues](../../issues) tracker. Include relevant details to help us understand and address the problem efficiently.
 
 ## Change Log
+
+**Version 23 (Oct 18, 2024)**
+- Added support for GNOME 47.
+- Introduced memory alerts for RAM and SWAP usage to enhance monitoring capabilities.
+- Improved CPU frequency monitoring by reading all CPU core frequencies and displaying the highest value.
+- Added color coding for all items to enhance visual clarity and differentiation.
+- Integrated Zenpower thermal sensors; thanks to @mclvren for the contribution.
+- Fixed issues with CPU temperature reading.
+- Other bug fixes.
 
 **Version 22 (Jun 3, 2024)**
 - Added support for GNOME 46: thanks to @DanielusG.
