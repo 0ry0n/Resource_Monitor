@@ -133,6 +133,28 @@ const ResourceMonitor = GObject.registerClass(
       this._path = path;
       this._metadata = metadata;
 
+      this._themeContext = St.ThemeContext.get_for_stage(global.stage);
+      this._scaleFactor = 1;
+      this._themeContextHandlerId = this._themeContext.connect('notify::scale-factor', () => {
+        this._onScaleFactorChanged();
+
+        console.error(`Resource ${this._scaleFactor}`)
+
+        this._cpuWidthChanged();
+        this._cpuFrequencyWidthChanged();
+        this._cpuLoadAverageWidthChanged();
+        this._ramWidthChanged();
+        this._swapWidthChanged();
+        this._diskStatsWidthChanged();
+        this._diskSpaceWidthChanged();
+        this._netEthWidthChanged();
+        this._netWlanWidthChanged();
+        this._thermalCpuTemperatureWidthChanged();
+        this._thermalGpuTemperatureWidthChanged();
+        this._gpuWidthChanged()
+      });
+      this._onScaleFactorChanged();
+
       // Variables
       this._handlerIds = [];
       this._handlerIdsCount = 0;
@@ -239,6 +261,8 @@ const ResourceMonitor = GObject.registerClass(
         this._settings.disconnect(this._handlerIds[i]);
         this._handlerIds[i] = 0;
       }
+
+      this.themeContext.disconnect(this._themeContextHandlerId);
 
       super.destroy();
     }
@@ -604,11 +628,11 @@ const ResourceMonitor = GObject.registerClass(
       this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
 
       this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
-      this._cpuWidth = this._settings.get_int(CPU_WIDTH);
+      this._cpuWidth = this._settings.get_int(CPU_WIDTH) * this._scaleFactor;
       this._cpuColors = this._settings.get_strv(CPU_COLORS);
       this._cpuFrequencyStatus =
         this._settings.get_boolean(CPU_FREQUENCY_STATUS);
-      this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+      this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH) * this._scaleFactor;
       this._cpuFrequencyColors = this._settings.get_strv(CPU_FREQUENCY_COLORS);
       this._cpuFrequencyUnitMeasure = this._settings.get_string(
         CPU_FREQUENCY_UNIT_MEASURE
@@ -616,11 +640,11 @@ const ResourceMonitor = GObject.registerClass(
       this._cpuLoadAverageStatus = this._settings.get_boolean(
         CPU_LOADAVERAGE_STATUS
       );
-      this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
+      this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH) * this._scaleFactor;
       this._cpuLoadAverageColors = this._settings.get_strv(CPU_LOADAVERAGE_COLORS);
 
       this._ramStatus = this._settings.get_boolean(RAM_STATUS);
-      this._ramWidth = this._settings.get_int(RAM_WIDTH);
+      this._ramWidth = this._settings.get_int(RAM_WIDTH) * this._scaleFactor;
       this._ramColors = this._settings.get_strv(RAM_COLORS);
       this._ramUnitType = this._settings.get_string(RAM_UNIT);
       this._ramUnitMeasure = this._settings.get_string(RAM_UNIT_MEASURE);
@@ -629,7 +653,7 @@ const ResourceMonitor = GObject.registerClass(
       this._ramAlertThreshold = this._settings.get_int(RAM_ALERT_THRESHOLD);
 
       this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
-      this._swapWidth = this._settings.get_int(SWAP_WIDTH);
+      this._swapWidth = this._settings.get_int(SWAP_WIDTH) * this._scaleFactor;
       this._swapColors = this._settings.get_strv(SWAP_COLORS);
       this._swapUnitType = this._settings.get_string(SWAP_UNIT);
       this._swapUnitMeasure = this._settings.get_string(SWAP_UNIT_MEASURE);
@@ -638,14 +662,14 @@ const ResourceMonitor = GObject.registerClass(
       this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
 
       this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
-      this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
+      this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH) * this._scaleFactor;
       this._diskStatsColors = this._settings.get_strv(DISK_STATS_COLORS);
       this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
       this._diskStatsUnitMeasure = this._settings.get_string(
         DISK_STATS_UNIT_MEASURE
       );
       this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
-      this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
+      this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH) * this._scaleFactor;
       this._diskSpaceColors = this._settings.get_strv(DISK_SPACE_COLORS);
       this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
       this._diskSpaceUnitMeasure = this._settings.get_string(
@@ -660,10 +684,10 @@ const ResourceMonitor = GObject.registerClass(
       this._netUnit = this._settings.get_string(NET_UNIT);
       this._netUnitMeasure = this._settings.get_string(NET_UNIT_MEASURE);
       this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
-      this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
+      this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH) * this._scaleFactor;
       this._netEthColors = this._settings.get_strv(NET_ETH_COLORS);
       this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
-      this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
+      this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH) * this._scaleFactor;
       this._netWlanColors = this._settings.get_strv(NET_WLAN_COLORS);
 
       this._thermalTemperatureUnit = this._settings.get_string(
@@ -674,7 +698,7 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._thermalCpuTemperatureWidth = this._settings.get_int(
         THERMAL_CPU_TEMPERATURE_WIDTH
-      );
+      ) * this._scaleFactor;
       this._thermalCpuColors = this._settings.get_strv(THERMAL_CPU_COLORS);
       this._thermalCpuTemperatureDevicesList = this._settings.get_strv(
         THERMAL_CPU_TEMPERATURE_DEVICES_LIST
@@ -684,14 +708,14 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._thermalGpuTemperatureWidth = this._settings.get_int(
         THERMAL_GPU_TEMPERATURE_WIDTH
-      );
+      ) * this._scaleFactor;
       this._thermalGpuColors = this._settings.get_strv(THERMAL_GPU_COLORS);
       this._thermalGpuTemperatureDevicesList = this._settings.get_strv(
         THERMAL_GPU_TEMPERATURE_DEVICES_LIST
       );
 
       this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
-      this._gpuWidth = this._settings.get_int(GPU_WIDTH);
+      this._gpuWidth = this._settings.get_int(GPU_WIDTH) * this._scaleFactor;
       this._gpuColors = this._settings.get_strv(GPU_COLORS);
       this._gpuMemoryColors = this._settings.get_strv(GPU_MEMORY_COLORS);
       this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
@@ -1006,6 +1030,10 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     // HANDLERS
+    _onScaleFactorChanged() {
+      this._scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor
+    }
+
     _clickManager(actor, event) {
       switch (event.get_button()) {
         case 3: // Right Click
@@ -1230,7 +1258,7 @@ const ResourceMonitor = GObject.registerClass(
     _cpuWidthChanged() {
       this._cpuWidth = this._settings.get_int(CPU_WIDTH);
 
-      this._basicItemWidth(this._cpuWidth, this._cpuValue);
+      this._basicItemWidth(this._cpuWidth * this._scaleFactor, this._cpuValue);
     }
 
     _cpuColorsChanged() {
@@ -1261,7 +1289,7 @@ const ResourceMonitor = GObject.registerClass(
     _cpuFrequencyWidthChanged() {
       this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
 
-      this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+      this._basicItemWidth(this._cpuFrequencyWidth * this._scaleFactor, this._cpuFrequencyValue);
     }
 
     _cpuFrequencyColorsChanged() {
@@ -1303,7 +1331,7 @@ const ResourceMonitor = GObject.registerClass(
       this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
 
       this._basicItemWidth(
-        this._cpuLoadAverageWidth,
+        this._cpuLoadAverageWidth * this._scaleFactor,
         this._cpuLoadAverageValue
       );
     }
@@ -1331,7 +1359,7 @@ const ResourceMonitor = GObject.registerClass(
     _ramWidthChanged() {
       this._ramWidth = this._settings.get_int(RAM_WIDTH);
 
-      this._basicItemWidth(this._ramWidth, this._ramValue);
+      this._basicItemWidth(this._ramWidth * this._scaleFactor, this._ramValue);
     }
 
     _ramColorsChanged() {
@@ -1389,7 +1417,7 @@ const ResourceMonitor = GObject.registerClass(
     _swapWidthChanged() {
       this._swapWidth = this._settings.get_int(SWAP_WIDTH);
 
-      this._basicItemWidth(this._swapWidth, this._swapValue);
+      this._basicItemWidth(this._swapWidth * this._scaleFactor, this._swapValue);
     }
 
     _swapColorsChanged() {
@@ -1446,7 +1474,7 @@ const ResourceMonitor = GObject.registerClass(
     _diskStatsWidthChanged() {
       this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
 
-      this._diskStatsBox.set_element_width(this._diskStatsWidth);
+      this._diskStatsBox.set_element_width(this._diskStatsWidth * this._scaleFactor);
     }
 
     _diskStatsColorsChanged() {
@@ -1487,7 +1515,7 @@ const ResourceMonitor = GObject.registerClass(
     _diskSpaceWidthChanged() {
       this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
 
-      this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
+      this._diskSpaceBox.set_element_width(this._diskSpaceWidth * this._scaleFactor);
     }
 
     _diskSpaceColorsChanged() {
@@ -1558,8 +1586,8 @@ const ResourceMonitor = GObject.registerClass(
       this._diskStatsBox.add_single();
       this._diskStatsBox.update_mode(this._diskStatsMode);
 
-      this._diskStatsBox.set_element_width(this._diskStatsWidth);
-      this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
+      this._diskStatsBox.set_element_width(this._diskStatsWidth * this._scaleFactor);
+      this._diskSpaceBox.set_element_width(this._diskSpaceWidth * this._scaleFactor);
     }
 
     _netAutoHideStatusChanged() {
@@ -1623,7 +1651,7 @@ const ResourceMonitor = GObject.registerClass(
     _netEthWidthChanged() {
       this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
 
-      this._basicItemWidth(this._netEthWidth, this._ethValue);
+      this._basicItemWidth(this._netEthWidth * this._scaleFactor, this._ethValue);
     }
 
     _netEthColorsChanged() {
@@ -1650,7 +1678,7 @@ const ResourceMonitor = GObject.registerClass(
     _netWlanWidthChanged() {
       this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
 
-      this._basicItemWidth(this._netWlanWidth, this._wlanValue);
+      this._basicItemWidth(this._netWlanWidth * this._scaleFactor, this._wlanValue);
     }
 
     _netWlanColorsChanged() {
@@ -1685,7 +1713,7 @@ const ResourceMonitor = GObject.registerClass(
       );
 
       this._basicItemWidth(
-        this._thermalCpuTemperatureWidth,
+        this._thermalCpuTemperatureWidth * this._scaleFactor,
         this._cpuTemperatureValue
       );
     }
@@ -1737,7 +1765,7 @@ const ResourceMonitor = GObject.registerClass(
         THERMAL_GPU_TEMPERATURE_WIDTH
       );
 
-      this._gpuBox.set_element_thermal_width(this._thermalGpuTemperatureWidth);
+      this._gpuBox.set_element_thermal_width(this._thermalGpuTemperatureWidth * this._scaleFactor);
     }
 
     _thermalGpuColorsChanged() {
@@ -1771,7 +1799,7 @@ const ResourceMonitor = GObject.registerClass(
     _gpuWidthChanged() {
       this._gpuWidth = this._settings.get_int(GPU_WIDTH);
 
-      this._gpuBox.set_element_width(this._gpuWidth);
+      this._gpuBox.set_element_width(this._gpuWidth * this._scaleFactor);
     }
 
     _gpuColorsChanged() {
@@ -1851,7 +1879,7 @@ const ResourceMonitor = GObject.registerClass(
         this._gpuBox.add_element(uuid, name, usage, memory, thermal);
       });
 
-      this._gpuBox.set_element_width(this._gpuWidth);
+      this._gpuBox.set_element_width(this._gpuWidth * this._scaleFactor);
     }
 
     _refreshHandler() {
