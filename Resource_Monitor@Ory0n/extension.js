@@ -3337,7 +3337,7 @@ const ResourceMonitor = GObject.registerClass(
               const item = this._gpuMemoryColors[i];
               const values = item.split(COLOR_LIST_SEPARATOR);
 
-              if (usage <= parseFloat(values[0])) {
+              if (value <= parseFloat(values[0])) {
                 styleM = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
                 break;
               }
@@ -3352,7 +3352,7 @@ const ResourceMonitor = GObject.registerClass(
               const item = this._thermalGpuColors[i];
               const values = item.split(COLOR_LIST_SEPARATOR);
 
-              if (usage <= parseFloat(values[0])) {
+              if (valueT <= parseFloat(values[0])) {
                 styleT = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
                 break;
               }
@@ -3864,7 +3864,7 @@ const GpuContainer = GObject.registerClass(
     update_element_value(uuid, value, unit, style = "") {
       if (this._elementsValue[uuid]) {
         this._elementsValue[uuid].text = value;
-        this._elementsValue[filesystem].style = style;
+        this._elementsValue[uuid].style = style;
         this._elementsUnit[uuid].text = unit;
       }
     }
@@ -3872,7 +3872,7 @@ const GpuContainer = GObject.registerClass(
     update_element_memory_value(uuid, value, unit, style = "") {
       if (this._elementsMemoryValue[uuid]) {
         this._elementsMemoryValue[uuid].text = value;
-        this._elementsValue[filesystem].style = style;
+        this._elementsMemoryValue[uuid].style = style;
         this._elementsMemoryUnit[uuid].text = unit;
       }
     }
@@ -3880,7 +3880,7 @@ const GpuContainer = GObject.registerClass(
     update_element_thermal_value(uuid, value, unit, style = "") {
       if (this._elementsThermalValue[uuid]) {
         this._elementsThermalValue[uuid].text = value;
-        this._elementsValue[filesystem].style = style;
+        this._elementsThermalValue[uuid].style = style;
         this._elementsThermalUnit[uuid].text = unit;
       }
     }
