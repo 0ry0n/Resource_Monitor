@@ -340,19 +340,25 @@ const ResourceMonitor = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._cpuValue.set_style("text-align: right;");
+      this._cpuValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._ramValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._ramValue.set_style("text-align: right;");
+      this._ramValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._swapValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._swapValue.set_style("text-align: right;");
+      this._swapValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._diskStatsBox = new DiskContainerStats();
       this._diskSpaceBox = new DiskContainerSpace();
@@ -361,13 +367,17 @@ const ResourceMonitor = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._ethValue.set_style("text-align: right;");
+      this._ethValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._wlanValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._wlanValue.set_style("text-align: right;");
+      this._wlanValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._cpuTemperatureValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -377,7 +387,9 @@ const ResourceMonitor = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "]",
       });
-      this._cpuTemperatureValue.set_style("text-align: right;");
+      this._cpuTemperatureValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._cpuFrequencyValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -387,13 +399,17 @@ const ResourceMonitor = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "]",
       });
-      this._cpuFrequencyValue.set_style("text-align: right;");
+      this._cpuFrequencyValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._cpuLoadAverageValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "[--]",
       });
-      this._cpuLoadAverageValue.set_style("text-align: right;");
+      this._cpuLoadAverageValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._gpuBox = new GpuContainer();
     }
@@ -3538,7 +3554,9 @@ const DiskContainerStats = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._elementsValue["single"].set_style("text-align: right;");
+      this._elementsValue["single"].clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._elementsUnit["single"] = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -3565,7 +3583,9 @@ const DiskContainerStats = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._elementsValue[filesystem].set_style("text-align: right;");
+      this._elementsValue[filesystem].clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._elementsUnit[filesystem] = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -3659,7 +3679,9 @@ const DiskContainerSpace = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._elementsValue[filesystem].set_style("text-align: right;");
+      this._elementsValue[filesystem].clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._elementsUnit[filesystem] = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -3776,7 +3798,9 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: "--",
         });
-        this._elementsValue[uuid].set_style("text-align: right;");
+        this._elementsValue[uuid].clutter_text.set({
+          x_align: Clutter.ActorAlign.END,
+        });
 
         this._elementsUnit[uuid] = new St.Label({
           y_align: Clutter.ActorAlign.CENTER,
@@ -3806,7 +3830,9 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: "--",
         });
-        this._elementsMemoryValue[uuid].set_style("text-align: right;");
+        this._elementsMemoryValue[uuid].clutter_text.set({
+          x_align: Clutter.ActorAlign.END,
+        });
 
         this._elementsMemoryUnit[uuid] = new St.Label({
           y_align: Clutter.ActorAlign.CENTER,
@@ -3836,7 +3862,9 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: "--",
         });
-        this._elementsThermalValue[uuid].set_style("text-align: right;");
+        this._elementsThermalValue[uuid].clutter_text.set({
+          x_align: Clutter.ActorAlign.END,
+        });
 
         this._elementsThermalUnit[uuid] = new St.Label({
           y_align: Clutter.ActorAlign.CENTER,
