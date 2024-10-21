@@ -379,36 +379,52 @@ const ResourceMonitor = GObject.registerClass(
         x_align: Clutter.ActorAlign.END,
       });
 
+      this._cpuTemperatureBracketStart = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "[",
+      });
       this._cpuTemperatureValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
-        text: "[--",
-      });
-      this._cpuTemperatureValueBracket = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "]",
+        text: "--",
       });
       this._cpuTemperatureValue.clutter_text.set({
         x_align: Clutter.ActorAlign.END,
       });
-
-      this._cpuFrequencyValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "[--",
-      });
-      this._cpuFrequencyValueBracket = new St.Label({
+      this._cpuTemperatureBracketEnd = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "]",
+      });
+
+      this._cpuFrequencyBracketStart = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "[",
+      });
+      this._cpuFrequencyValue = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "--",
       });
       this._cpuFrequencyValue.clutter_text.set({
         x_align: Clutter.ActorAlign.END,
       });
+      this._cpuFrequencyBracketEnd = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "]",
+      });
 
+      this._cpuLoadAverageBracketStart = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "[",
+      });
       this._cpuLoadAverageValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
-        text: "[--]",
+        text: "--",
       });
       this._cpuLoadAverageValue.clutter_text.set({
         x_align: Clutter.ActorAlign.END,
+      });
+      this._cpuLoadAverageBracketEnd = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "]",
       });
 
       this._gpuBox = new GpuContainer();
@@ -427,13 +443,17 @@ const ResourceMonitor = GObject.registerClass(
                 this._box.add_child(this._cpuValue);
                 this._box.add_child(this._cpuUnit);
 
+                this._box.add_child(this._cpuTemperatureBracketStart);
                 this._box.add_child(this._cpuTemperatureValue);
                 this._box.add_child(this._cpuTemperatureUnit);
-                this._box.add_child(this._cpuTemperatureValueBracket);
+                this._box.add_child(this._cpuTemperatureBracketEnd);
+                this._box.add_child(this._cpuFrequencyBracketStart);
                 this._box.add_child(this._cpuFrequencyValue);
                 this._box.add_child(this._cpuFrequencyUnit);
-                this._box.add_child(this._cpuFrequencyValueBracket);
+                this._box.add_child(this._cpuFrequencyBracketEnd);
+                this._box.add_child(this._cpuLoadAverageBracketStart);
                 this._box.add_child(this._cpuLoadAverageValue);
+                this._box.add_child(this._cpuLoadAverageBracketEnd);
 
                 break;
 
@@ -499,13 +519,17 @@ const ResourceMonitor = GObject.registerClass(
                 this._box.add_child(this._cpuValue);
                 this._box.add_child(this._cpuUnit);
 
+                this._box.add_child(this._cpuTemperatureBracketStart);
                 this._box.add_child(this._cpuTemperatureValue);
                 this._box.add_child(this._cpuTemperatureUnit);
-                this._box.add_child(this._cpuTemperatureValueBracket);
+                this._box.add_child(this._cpuTemperatureBracketEnd);
+                this._box.add_child(this._cpuFrequencyBracketStart);
                 this._box.add_child(this._cpuFrequencyValue);
                 this._box.add_child(this._cpuFrequencyUnit);
-                this._box.add_child(this._cpuFrequencyValueBracket);
+                this._box.add_child(this._cpuFrequencyBracketEnd);
+                this._box.add_child(this._cpuLoadAverageBracketStart);
                 this._box.add_child(this._cpuLoadAverageValue);
+                this._box.add_child(this._cpuLoadAverageBracketEnd);
                 this._box.add_child(this._cpuIcon);
 
                 break;
@@ -1229,7 +1253,8 @@ const ResourceMonitor = GObject.registerClass(
         this._cpuIcon,
         this._cpuFrequencyValue,
         this._cpuFrequencyUnit,
-        this._cpuFrequencyValueBracket
+        this._cpuFrequencyBracketStart,
+        this._cpuFrequencyBracketEnd
       );
     }
 
@@ -1268,7 +1293,9 @@ const ResourceMonitor = GObject.registerClass(
         !this._thermalCpuTemperatureStatus &&
         !this._cpuFrequencyStatus,
         this._cpuIcon,
-        this._cpuLoadAverageValue
+        this._cpuLoadAverageValue,
+        this._cpuLoadAverageBracketStart,
+        this._cpuLoadAverageBracketEnd
       );
     }
 
@@ -1647,7 +1674,8 @@ const ResourceMonitor = GObject.registerClass(
         this._cpuIcon,
         this._cpuTemperatureValue,
         this._cpuTemperatureUnit,
-        this._cpuTemperatureValueBracket
+        this._cpuTemperatureBracketStart,
+        this._cpuTemperatureBracketEnd,
       );
     }
 
@@ -3068,9 +3096,9 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         if (this._decimalsStatus) {
-          this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
+          this._cpuFrequencyValue.text = `${value.toFixed(2)}`;
         } else {
-          this._cpuFrequencyValue.text = `[${value.toFixed(0)}`;
+          this._cpuFrequencyValue.text = `${value.toFixed(0)}`;
         }
       });
     }
@@ -3099,7 +3127,7 @@ const ResourceMonitor = GObject.registerClass(
           this._cpuLoadAverageValue.style = "";
         }
 
-        this._cpuLoadAverageValue.text = "[" + l0 + " " + l1 + " " + l2 + "]";
+        this._cpuLoadAverageValue.text = `${l0} ${l1} ${l2}`;
       });
     }
 
@@ -3166,11 +3194,11 @@ const ResourceMonitor = GObject.registerClass(
                 }
 
                 if (this._decimalsStatus) {
-                  this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(
+                  this._cpuTemperatureValue.text = `${this._cpuTemperatures.toFixed(
                     1
                   )}`;
                 } else {
-                  this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(
+                  this._cpuTemperatureValue.text = `${this._cpuTemperatures.toFixed(
                     0
                   )}`;
                 }
@@ -3180,12 +3208,12 @@ const ResourceMonitor = GObject.registerClass(
               }
             });
           } else {
-            this._cpuTemperatureValue.text = _("[Temperature Error");
+            this._cpuTemperatureValue.text = _("Temperature Error");
             this._cpuTemperatureUnit.text = "";
           }
         }
       } else {
-        this._cpuTemperatureValue.text = _("[--");
+        this._cpuTemperatureValue.text = _("--");
       }
     }
 
