@@ -254,6 +254,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let deviceCol = new Gtk.ColumnViewColumn({
         title: "Device",
         factory: deviceFactory,
+        resizable: true,
       });
       view.append_column(deviceCol);
 
@@ -272,13 +273,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let nameCol = new Gtk.ColumnViewColumn({
         title: "Name",
         factory: nameFactory,
+        resizable: true,
       });
       view.append_column(nameCol);
 
       // Monitor
       let monitorFactory = new Gtk.SignalListItemFactory();
       monitorFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton();
+        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       monitorFactory.connect("bind", (factory, listItem) => {
@@ -297,6 +299,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let monitorCol = new Gtk.ColumnViewColumn({
         title: "Monitor",
         factory: monitorFactory,
+        resizable: true,
       });
       view.append_column(monitorCol);
 
@@ -981,6 +984,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let displayNameCol = new Gtk.ColumnViewColumn({
         title: "Display Name",
         factory: displayNameFactory,
+        resizable: true,
       });
       this._diskDevicesColumnView.append_column(displayNameCol);
 
@@ -999,6 +1003,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let deviceCol = new Gtk.ColumnViewColumn({
         title: "Device",
         factory: deviceFactory,
+        resizable: true,
       });
       this._diskDevicesColumnView.append_column(deviceCol);
 
@@ -1017,13 +1022,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let mountPointCol = new Gtk.ColumnViewColumn({
         title: "Mount Point",
         factory: mountPointFactory,
+        resizable: true,
       });
       this._diskDevicesColumnView.append_column(mountPointCol);
 
       // Stats
       let statsFactory = new Gtk.SignalListItemFactory();
       statsFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton();
+        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       statsFactory.connect("bind", (factory, listItem) => {
@@ -1042,13 +1048,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let statsCol = new Gtk.ColumnViewColumn({
         title: "Stats",
         factory: statsFactory,
+        resizable: true,
       });
       this._diskDevicesColumnView.append_column(statsCol);
 
       // Space
       let spaceFactory = new Gtk.SignalListItemFactory();
       spaceFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton();
+        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       spaceFactory.connect("bind", (factory, listItem) => {
@@ -1067,6 +1074,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let spaceCol = new Gtk.ColumnViewColumn({
         title: "Space",
         factory: spaceFactory,
+        resizable: true,
       });
       this._diskDevicesColumnView.append_column(spaceCol);
 
@@ -1703,6 +1711,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let displayNameCol = new Gtk.ColumnViewColumn({
         title: "Display Name",
         factory: displayNameFactory,
+        resizable: true,
       });
       this._gpuDevicesColumnView.append_column(displayNameCol);
 
@@ -1721,6 +1730,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let deviceCol = new Gtk.ColumnViewColumn({
         title: "Device",
         factory: deviceFactory,
+        resizable: true,
       });
       this._gpuDevicesColumnView.append_column(deviceCol);
 
@@ -1739,13 +1749,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let nameCol = new Gtk.ColumnViewColumn({
         title: "Name",
         factory: nameFactory,
+        resizable: true,
       });
       this._gpuDevicesColumnView.append_column(nameCol);
 
       // Usage
       let usageFactory = new Gtk.SignalListItemFactory();
       usageFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton();
+        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       usageFactory.connect("bind", (factory, listItem) => {
@@ -1764,13 +1775,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let usageCol = new Gtk.ColumnViewColumn({
         title: "Usage Monitor",
         factory: usageFactory,
+        resizable: true,
       });
       this._gpuDevicesColumnView.append_column(usageCol);
 
       // Memory
       let memoryFactory = new Gtk.SignalListItemFactory();
       memoryFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton();
+        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       memoryFactory.connect("bind", (factory, listItem) => {
@@ -1789,6 +1801,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       let memoryCol = new Gtk.ColumnViewColumn({
         title: "Memory Monitor",
         factory: memoryFactory,
+        resizable: true,
       });
       this._gpuDevicesColumnView.append_column(memoryCol);
 

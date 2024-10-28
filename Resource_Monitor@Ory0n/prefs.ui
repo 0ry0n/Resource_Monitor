@@ -1089,6 +1089,8 @@
                   <object class="GtkColumnView" id="disk_devices_columnview">
                     <property name="margin-start">8</property>
                     <property name="vexpand">1</property>
+                    <property name="reorderable">0</property>
+                    <property name="show-column-separators">1</property>
                   </object>
                 </child>
               </object>
@@ -1432,6 +1434,8 @@
                   <object class="GtkColumnView" id="thermal_cpu_devices_columnview">
                     <property name="margin-start">8</property>
                     <property name="vexpand">1</property>
+                    <property name="reorderable">0</property>
+                    <property name="show-column-separators">1</property>
                   </object>
                 </child>
                 <child>
@@ -1509,6 +1513,8 @@
                   <object class="GtkColumnView" id="thermal_gpu_devices_columnview">
                     <property name="margin-start">8</property>
                     <property name="vexpand">1</property>
+                    <property name="reorderable">0</property>
+                    <property name="show-column-separators">1</property>
                   </object>
                 </child>
               </object>
@@ -1702,6 +1708,8 @@
                   <object class="GtkColumnView" id="gpu_devices_columnview">
                     <property name="margin-start">8</property>
                     <property name="vexpand">1</property>
+                    <property name="reorderable">0</property>
+                    <property name="show-column-separators">1</property>
                   </object>
                 </child>
               </object>
