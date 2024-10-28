@@ -23,7 +23,6 @@ import Gio from "gi://Gio";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk";
 import Gdk from "gi://Gdk";
-import Adw from "gi://Adw";
 
 import {
   ExtensionPreferences,
@@ -228,6 +227,89 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       element.append(row);
 
       return `${text}${COLOR_LIST_SEPARATOR}${red}${COLOR_LIST_SEPARATOR}${green}${COLOR_LIST_SEPARATOR}${blue}`;
+    }
+
+    _makeThermalColumnView(view, type) {
+      let model = new Gio.ListStore({
+        item_type: type
+      });
+      let selection = new Gtk.NoSelection({
+        model: model
+      });
+      view.set_model(selection);
+
+      // Make column for GtkColumnView
+      // Device
+      let deviceFactory = new Gtk.SignalListItemFactory();
+      deviceFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Label({ halign: Gtk.Align.START });
+        listItem.set_child(label);
+      });
+      deviceFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.device);
+      });
+
+      let deviceCol = new Gtk.ColumnViewColumn({
+        title: "Device",
+        factory: deviceFactory,
+      });
+      view.append_column(deviceCol);
+
+      // Name
+      let nameFactory = new Gtk.SignalListItemFactory();
+      nameFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Label({ halign: Gtk.Align.START });
+        listItem.set_child(label);
+      });
+      nameFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.name);
+      });
+
+      let nameCol = new Gtk.ColumnViewColumn({
+        title: "Name",
+        factory: nameFactory,
+      });
+      view.append_column(nameCol);
+
+      // Monitor
+      let monitorFactory = new Gtk.SignalListItemFactory();
+      monitorFactory.connect("setup", (factory, listItem) => {
+        let toggle = new Gtk.CheckButton();
+        listItem.set_child(toggle);
+      });
+      monitorFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let toggle = listItem.get_child();
+        toggle.set_active(item.monitor);
+        toggle.connect("toggled", (toggle) => {
+          let [found, index] = model.find(item);
+
+          item.monitor = toggle.active;
+
+          model.splice(index, 1, [item]);
+        });
+      });
+
+      let monitorCol = new Gtk.ColumnViewColumn({
+        title: "Monitor",
+        factory: monitorFactory,
+      });
+      view.append_column(monitorCol);
+
+      return model;
+    }
+
+    _saveArrayToSettings(model, settings, key) {
+      let array = [];
+      model.foreach((list, path, iter) => {
+        let element = list.get_item(iter);
+        array.push(element.getFormattedString());
+      });
+      settings.set_strv(key, array);
     }
 
     _init({ settings, dir, metadata }) {
@@ -785,8 +867,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._diskDevicesDisplayAll = this._builder.get_object(
         "disk_devices_display_all"
       );
-      this._diskDevicesTreeView = this._builder.get_object(
-        "disk_devices_treeview"
+      this._diskDevicesColumnView = this._builder.get_object(
+        "disk_devices_columnview"
       );
 
       this._connectSwitchButton(
@@ -862,84 +944,156 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._diskSpaceUnitMeasureCombobox.sensitive =
         this._diskSpaceDisplay.active;
 
-      // TreeView
-      this._disk_devices_model = new Gtk.ListStore();
-      this._disk_devices_model.set_column_types([
-        GObject.TYPE_STRING,
-        GObject.TYPE_STRING,
-        GObject.TYPE_BOOLEAN,
-        GObject.TYPE_BOOLEAN,
-      ]);
+      // ColumnView
+      this._diskDevicesModel = new Gio.ListStore({
+        item_type: DiskElement
+      });
+      let selection = new Gtk.NoSelection({
+        model: this._diskDevicesModel
+      });
+      this._diskDevicesColumnView.set_model(selection);
 
-      this._diskDevicesTreeView.set_model(this._disk_devices_model);
+      // Make column for GtkColumnView
+      // Display Name
+      let displayNameFactory = new Gtk.SignalListItemFactory();
+      displayNameFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Entry();
+        listItem.set_child(label);
+      });
+      displayNameFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.displayName);
+        label.connect("changed", (tBuffer) => {
+          let [found, index] = this._diskDevicesModel.find(item);
 
-      let deviceCol = this._diskDevicesTreeView.get_column(0);
-      let mountPointCol = this._diskDevicesTreeView.get_column(1);
-      let statsCol = this._diskDevicesTreeView.get_column(2);
-      let spaceCol = this._diskDevicesTreeView.get_column(3);
+          item.setDisplayName(tBuffer.text);
 
-      let empty = new Gtk.TreeViewColumn();
-      empty.pack_start(new Gtk.CellRendererText(), true);
-      this._diskDevicesTreeView.append_column(empty);
+          // Update if empty
+          if (item.displayName !== tBuffer.text) {
+            tBuffer.text = item.displayName;
+          }
 
-      let deviceColText = new Gtk.CellRendererText();
-      deviceCol.pack_start(deviceColText, false);
-      deviceCol.add_attribute(deviceColText, "text", 0);
-
-      let mountPointColText = new Gtk.CellRendererText();
-      mountPointCol.pack_start(mountPointColText, false);
-      mountPointCol.add_attribute(mountPointColText, "text", 1);
-
-      let statsColToggle = new Gtk.CellRendererToggle();
-      statsCol.pack_start(statsColToggle, false);
-      statsCol.add_attribute(statsColToggle, "active", 2);
-      statsColToggle.connect("toggled", (toggle, row) => {
-        let treeiter = this._disk_devices_model.get_iter_from_string(
-          row.toString()
-        ); // bool, iter
-
-        this._disk_devices_model.set_value(treeiter[1], 2, !toggle.active);
+          this._diskDevicesModel.splice(index, 1, [item]);
+        });
       });
 
-      let spaceColToggle = new Gtk.CellRendererToggle();
-      spaceColToggle.connect("toggled", (toggle, row) => {
-        let treeiter = this._disk_devices_model.get_iter_from_string(
-          row.toString()
-        ); // bool, iter
-
-        this._disk_devices_model.set_value(treeiter[1], 3, !toggle.active);
+      let displayNameCol = new Gtk.ColumnViewColumn({
+        title: "Display Name",
+        factory: displayNameFactory,
       });
-      spaceCol.pack_start(spaceColToggle, false);
-      spaceCol.add_attribute(spaceColToggle, "active", 3);
+      this._diskDevicesColumnView.append_column(displayNameCol);
 
-      this._disk_devices_model.connect("row-changed", (list, path, iter) => {
-        let row = path.get_indices()[0];
-        let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
-        disksArray[row] =
-          list.get_value(iter, 0) +
-          DISK_DEVICES_LIST_SEPARATOR +
-          list.get_value(iter, 1) +
-          DISK_DEVICES_LIST_SEPARATOR +
-          list.get_value(iter, 2) +
-          DISK_DEVICES_LIST_SEPARATOR +
-          list.get_value(iter, 3);
-        this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+      // Device
+      let deviceFactory = new Gtk.SignalListItemFactory();
+      deviceFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Label({ halign: Gtk.Align.START });
+        listItem.set_child(label);
+      });
+      deviceFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.device);
       });
 
+      let deviceCol = new Gtk.ColumnViewColumn({
+        title: "Device",
+        factory: deviceFactory,
+      });
+      this._diskDevicesColumnView.append_column(deviceCol);
+
+      // Mount Point
+      let mountPointFactory = new Gtk.SignalListItemFactory();
+      mountPointFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Label({ halign: Gtk.Align.START });
+        listItem.set_child(label);
+      });
+      mountPointFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.mountPoint);
+      });
+
+      let mountPointCol = new Gtk.ColumnViewColumn({
+        title: "Mount Point",
+        factory: mountPointFactory,
+      });
+      this._diskDevicesColumnView.append_column(mountPointCol);
+
+      // Stats
+      let statsFactory = new Gtk.SignalListItemFactory();
+      statsFactory.connect("setup", (factory, listItem) => {
+        let toggle = new Gtk.CheckButton();
+        listItem.set_child(toggle);
+      });
+      statsFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let toggle = listItem.get_child();
+        toggle.set_active(item.stats);
+        toggle.connect("toggled", (toggle) => {
+          let [found, index] = this._diskDevicesModel.find(item);
+
+          item.stats = toggle.active;
+
+          this._diskDevicesModel.splice(index, 1, [item]);
+        });
+      });
+
+      let statsCol = new Gtk.ColumnViewColumn({
+        title: "Stats",
+        factory: statsFactory,
+      });
+      this._diskDevicesColumnView.append_column(statsCol);
+
+      // Space
+      let spaceFactory = new Gtk.SignalListItemFactory();
+      spaceFactory.connect("setup", (factory, listItem) => {
+        let toggle = new Gtk.CheckButton();
+        listItem.set_child(toggle);
+      });
+      spaceFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let toggle = listItem.get_child();
+        toggle.set_active(item.space);
+        toggle.connect("toggled", (toggle) => {
+          let [found, index] = this._diskDevicesModel.find(item);
+
+          item.space = toggle.active;
+
+          this._diskDevicesModel.splice(index, 1, [item]);
+        });
+      });
+
+      let spaceCol = new Gtk.ColumnViewColumn({
+        title: "Space",
+        factory: spaceFactory,
+      });
+      this._diskDevicesColumnView.append_column(spaceCol);
+
+      // Display All
       this._diskDevicesDisplayAll.connect("state-set", (button) => {
         // Refresh
         this._readDiskDevices(
           this._settings,
-          this._disk_devices_model,
+          this._diskDevicesModel,
           button.active
         );
       });
-
       this._readDiskDevices(
         this._settings,
-        this._disk_devices_model,
+        this._diskDevicesModel,
         this._diskDevicesDisplayAll.active
       );
+
+      // Update
+      this._diskDevicesModel.connect("items-changed", (_list, position, removed, added) => {
+        let diskElement = _list.get_item(position);
+        let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
+
+        disksArray[position] = diskElement.getFormattedString();
+
+        this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+      });
 
       // Stats Colors
       let diskStatsColorsArray = this._settings.get_strv(DISK_STATS_COLORS);
@@ -975,133 +1129,101 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _readDiskDevices(settings, model, all) {
-      model.clear();
+      model.remove_all();
       // Array format
-      // filesystem mountPoint stats space
-      // Get current disks settings
+      // filesystem mountPoint stats space displayName
       let disksArray = settings.get_strv(DISK_DEVICES_LIST);
 
-      this._executeCommand(["df", "-x", "squashfs", "-x", "tmpfs"]).then(
-        (output) => {
-          let lines = output.split("\n");
+      this._executeCommand(["df", "-x", "squashfs", "-x", "tmpfs"]).then(output => {
+        let lines = output.split("\n");
 
-          // Excludes the first line of output
-          for (let i = 1; i < lines.length - 1; i++) {
-            let line = lines[i];
-            let entry = line.trim().split(/\s+/);
+        // Excludes the first line of output
+        for (let i = 1; i < lines.length - 1; i++) {
+          let line = lines[i];
+          let entry = line.trim().split(/\s+/);
 
-            let filesystem = entry[0];
-            let mountedOn = entry[5];
+          let filesystem = entry[0];
+          let mountedOn = entry[5];
 
-            let dStButton = false;
-            let dSpButton = false;
+          let dStButton = false;
+          let dSpButton = false;
 
-            // Init gui
-            for (let i = 0; i < disksArray.length; i++) {
-              let element = disksArray[i];
+          let displayName = filesystem;
 
-              let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
+          // Init gui
+          for (let i = 0; i < disksArray.length; i++) {
+            let element = disksArray[i];
+            let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
 
-              if (filesystem === it[0]) {
-                dStButton = it[2] === "true";
-                dSpButton = it[3] === "true";
+            if (filesystem === it[0]) {
+              dStButton = it[2] === "true";
+              dSpButton = it[3] === "true";
 
-                break;
+              displayName = it[4];
+
+              break;
+            }
+          }
+
+          model.append(new DiskElement(displayName, filesystem, mountedOn, dStButton, dSpButton));
+        }
+
+        if (all) {
+          this._loadFile("/proc/diskstats").then(contents => {
+            const lines = new TextDecoder().decode(contents).split("\n");
+
+            for (let i = 0; i < lines.length - 1; i++) {
+              const line = lines[i];
+              const entry = line.trim().split(/\s+/);
+
+              if (entry[2].match(/loop*/)) {
+                continue;
+              }
+
+              let found = false;
+              const fs = "/dev/" + entry[2];
+
+              model.foreach((list, path, iter) => {
+                const diskElement = list.get_item(iter);
+                if (fs === diskElement.device) {
+                  found = true;
+                  return;
+                }
+              });
+
+              if (!found) {
+                let dStButton = false;
+                let dSpButton = false;
+
+                let displayName = fs;
+
+                // Init gui
+                for (let i = 0; i < disksArray.length; i++) {
+                  let element = disksArray[i];
+                  let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
+
+                  if (fs === it[0]) {
+                    dStButton = it[2] === "true";
+                    dSpButton = it[3] === "true";
+
+                    displayName = it[4];
+
+                    break;
+                  }
+                }
+
+                model.append(new DiskElement(displayName, fs, "", dStButton, dSpButton));
               }
             }
 
-            model.set(
-              model.append(),
-              [0, 1, 2, 3],
-              [filesystem, mountedOn, dStButton, dSpButton]
-            );
-          }
-
-          if (all) {
-            this._loadFile("/proc/diskstats").then((contents) => {
-              const lines = new TextDecoder().decode(contents).split("\n");
-
-              for (let i = 0; i < lines.length - 1; i++) {
-                const line = lines[i];
-                const entry = line.trim().split(/\s+/);
-
-                if (entry[2].match(/loop*/)) {
-                  continue;
-                }
-
-                let found = false;
-                const fs = "/dev/" + entry[2];
-                model.foreach((list, path, iter) => {
-                  const filesystem = list.get_value(iter, 0);
-
-                  if (fs === filesystem) {
-                    found = true;
-
-                    return;
-                  }
-                });
-
-                if (found) {
-                  // nothing
-                } else {
-                  let dStButton = false;
-                  let dSpButton = false; // slways false
-
-                  // Init gui
-                  for (let i = 0; i < disksArray.length; i++) {
-                    let element = disksArray[i];
-
-                    let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
-
-                    if (fs === it[0]) {
-                      dStButton = it[2] === "true";
-                      dSpButton = it[3] === "true";
-
-                      break;
-                    }
-                  }
-
-                  model.set(
-                    model.append(),
-                    [0, 1, 2, 3],
-                    [fs, "", dStButton, dSpButton]
-                  );
-                }
-              }
-
-              // Save new disksArray with the list of new disks (to remove old disks)
-              disksArray = [];
-              model.foreach((list, path, iter) => {
-                disksArray.push(
-                  list.get_value(iter, 0) +
-                  DISK_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 1) +
-                  DISK_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 2) +
-                  DISK_DEVICES_LIST_SEPARATOR +
-                  list.get_value(iter, 3)
-                );
-              });
-              settings.set_strv(DISK_DEVICES_LIST, disksArray);
-            });
-          } else {
-            // Save new disksArray with the list of new disks (to remove old disks)
-            disksArray = [];
-            model.foreach((list, path, iter) => {
-              disksArray.push(
-                list.get_value(iter, 0) +
-                DISK_DEVICES_LIST_SEPARATOR +
-                list.get_value(iter, 1) +
-                DISK_DEVICES_LIST_SEPARATOR +
-                list.get_value(iter, 2) +
-                DISK_DEVICES_LIST_SEPARATOR +
-                list.get_value(iter, 3)
-              );
-            });
-            settings.set_strv(DISK_DEVICES_LIST, disksArray);
-          }
+            // Save new disksArray
+            this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+          });
+        } else {
+          // Save new disksArray
+          this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
         }
-      );
+      });
     }
 
     _buildNet() {
@@ -1220,8 +1342,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalCpuColorsListbox = this._builder.get_object(
         "thermal_cpu_colors_listbox"
       );
-      this._thermalCpuDevicesTreeView = this._builder.get_object(
-        "thermal_cpu_devices_treeview"
+      this._thermalCpuDevicesColumnView = this._builder.get_object(
+        "thermal_cpu_devices_columnview"
       );
       this._thermalGpuDisplay = this._builder.get_object("thermal_gpu_display");
       this._thermalGpuWidthSpinbutton = this._builder.get_object(
@@ -1233,8 +1355,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalGpuColorsListbox = this._builder.get_object(
         "thermal_gpu_colors_listbox"
       );
-      this._thermalGpuDevicesTreeView = this._builder.get_object(
-        "thermal_gpu_devices_treeview"
+      this._thermalGpuDevicesColumnView = this._builder.get_object(
+        "thermal_gpu_devices_columnview"
       );
 
       this._connectComboBox(
@@ -1275,73 +1397,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalGpuWidthSpinbutton.sensitive =
         this._thermalGpuDisplay.active;
 
-      // TreeView
-      this._thermalCpuDevicesModel = new Gtk.ListStore();
-      this._thermalCpuDevicesModel.set_column_types([
-        GObject.TYPE_STRING,
-        GObject.TYPE_STRING,
-        GObject.TYPE_BOOLEAN,
-      ]);
-
-      this._thermalCpuDevicesTreeView.set_model(this._thermalCpuDevicesModel);
-
-      let cpuDeviceCol = this._thermalCpuDevicesTreeView.get_column(0);
-      let cpuNameCol = this._thermalCpuDevicesTreeView.get_column(1);
-      let cpuMonitorCol = this._thermalCpuDevicesTreeView.get_column(2);
-
-      let empty = new Gtk.TreeViewColumn();
-      empty.pack_start(new Gtk.CellRendererText(), true);
-      this._thermalCpuDevicesTreeView.append_column(empty);
-
-      let deviceColText = new Gtk.CellRendererText();
-      cpuDeviceCol.pack_start(deviceColText, false);
-      cpuDeviceCol.add_attribute(deviceColText, "text", 0);
-
-      let nameColText = new Gtk.CellRendererText();
-      cpuNameCol.pack_start(nameColText, false);
-      cpuNameCol.add_attribute(nameColText, "text", 1);
-
-      let monitorColToggle = new Gtk.CellRendererToggle();
-      cpuMonitorCol.pack_start(monitorColToggle, false);
-      cpuMonitorCol.add_attribute(monitorColToggle, "active", 2);
-      monitorColToggle.connect("toggled", (toggle, row) => {
-        let treeiter = this._thermalCpuDevicesModel.get_iter_from_string(
-          row.toString()
-        ); // bool, iter
-
-        this._thermalCpuDevicesModel.set_value(treeiter[1], 2, !toggle.active);
-      });
-
-      this._thermalCpuDevicesModel.connect(
-        "row-changed",
-        (list, path, iter) => {
-          let row = path.get_indices()[0];
-          let cpuTempsArray = this._settings.get_strv(
-            THERMAL_CPU_TEMPERATURE_DEVICES_LIST
-          );
-          cpuTempsArray[row] =
-            list.get_value(iter, 1) +
-            THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 2) +
-            THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 0);
-          this._settings.set_strv(
-            THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
-            cpuTempsArray
-          );
-        }
-      );
+      // CPU
+      // ColumnView
+      this._thermalCpuDevicesModel = this._makeThermalColumnView(this._thermalCpuDevicesColumnView, ThermalCpuElement);
 
       // Array format
       // name-status-path
-      // Get current disks settings
       let cpuTempsArray = this._settings.get_strv(
         THERMAL_CPU_TEMPERATURE_DEVICES_LIST
       );
 
       // Detect sensors
       //let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
-
       this._executeCommand([
         "bash",
         "-c",
@@ -1379,30 +1446,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 }
               }
 
-              this._thermalCpuDevicesModel.set(
-                this._thermalCpuDevicesModel.append(),
-                [0, 1, 2],
-                [path, device, statusButton]
-              );
+              this._thermalCpuDevicesModel.append(new ThermalCpuElement(path, device, statusButton));
             }
 
-            // Save new cpuTempsArray with the list of new devices (to remove old devices)
-            cpuTempsArray = [];
-            this._thermalCpuDevicesModel.foreach((list, path, iter) => {
-              cpuTempsArray.push(
-                list.get_value(iter, 1) +
-                THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-                list.get_value(iter, 2) +
-                THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-                list.get_value(iter, 0)
-              );
-            });
-            this._settings.set_strv(
-              THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
-              cpuTempsArray
-            );
+            // Save new cpuTempsArray
+            this._saveArrayToSettings(this._thermalCpuDevicesModel, settings, THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
           });
         }
+      });
+
+      // Update
+      this._thermalCpuDevicesModel.connect("items-changed", (_list, position, removed, added) => {
+        let cpuTempElement = _list.get_item(position);
+        let cpuTempsArray = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
+
+        cpuTempsArray[position] = cpuTempElement.getFormattedString();
+
+        this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, cpuTempsArray);
       });
 
       // Colors
@@ -1422,65 +1482,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
 
       // GPU
-      this._thermalGpuDevicesModel = new Gtk.ListStore();
-      this._thermalGpuDevicesModel.set_column_types([
-        GObject.TYPE_STRING,
-        GObject.TYPE_STRING,
-        GObject.TYPE_BOOLEAN,
-      ]);
-
-      this._thermalGpuDevicesTreeView.set_model(this._thermalGpuDevicesModel);
-
-      let gpuDeviceCol = this._thermalGpuDevicesTreeView.get_column(0);
-      let gpuNameCol = this._thermalGpuDevicesTreeView.get_column(1);
-      let gpuMonitorCol = this._thermalGpuDevicesTreeView.get_column(2);
-
-      empty = new Gtk.TreeViewColumn();
-      empty.pack_start(new Gtk.CellRendererText(), true);
-      this._thermalGpuDevicesTreeView.append_column(empty);
-
-      let gpuDeviceColText = new Gtk.CellRendererText();
-      gpuDeviceCol.pack_start(gpuDeviceColText, false);
-      gpuDeviceCol.add_attribute(gpuDeviceColText, "text", 0);
-
-      let gpuNameColText = new Gtk.CellRendererText();
-      gpuNameCol.pack_start(gpuNameColText, false);
-      gpuNameCol.add_attribute(gpuNameColText, "text", 1);
-
-      let gpuMonitorColToggle = new Gtk.CellRendererToggle();
-      gpuMonitorCol.pack_start(gpuMonitorColToggle, false);
-      gpuMonitorCol.add_attribute(gpuMonitorColToggle, "active", 2);
-      gpuMonitorColToggle.connect("toggled", (toggle, row) => {
-        let treeiter = this._thermalGpuDevicesModel.get_iter_from_string(
-          row.toString()
-        ); // bool, iter
-
-        this._thermalGpuDevicesModel.set_value(treeiter[1], 2, !toggle.active);
-      });
-
-      this._thermalGpuDevicesModel.connect(
-        "row-changed",
-        (list, path, iter) => {
-          let row = path.get_indices()[0];
-          let gpuTempsArray = this._settings.get_strv(
-            THERMAL_GPU_TEMPERATURE_DEVICES_LIST
-          );
-          gpuTempsArray[row] =
-            list.get_value(iter, 0) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 1) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 2);
-          this._settings.set_strv(
-            THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
-            gpuTempsArray
-          );
-        }
-      );
+      // ColumnView
+      this._thermalGpuDevicesModel = this._makeThermalColumnView(this._thermalGpuDevicesColumnView, ThermalGpuElement);
 
       // Array format
       // uuid:name:status
-      // Get current disks settings
       let gpuTempsArray = this._settings.get_strv(
         THERMAL_GPU_TEMPERATURE_DEVICES_LIST
       );
@@ -1511,28 +1517,21 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }
           }
 
-          this._thermalGpuDevicesModel.set(
-            this._thermalGpuDevicesModel.append(),
-            [0, 1, 2],
-            [uuid, name, statusButton]
-          );
+          this._thermalGpuDevicesModel.append(new ThermalGpuElement(uuid, name, statusButton));
         }
 
-        // Save new gpuTempsArray with the list of new devices (to remove old devices)
-        gpuTempsArray = [];
-        this._thermalGpuDevicesModel.foreach((list, path, iter) => {
-          gpuTempsArray.push(
-            list.get_value(iter, 0) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 1) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 2)
-          );
-        });
-        this._settings.set_strv(
-          THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
-          gpuTempsArray
-        );
+        // Save new gpuTempsArray
+        this._saveArrayToSettings(this._thermalGpuDevicesModel, settings, THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+      });
+
+      // Update
+      this._thermalGpuDevicesModel.connect("items-changed", (_list, position, removed, added) => {
+        let gpuTempElement = _list.get_item(position);
+        let gpuTempsArray = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+
+        gpuTempsArray[position] = gpuTempElement.getFormattedString();
+
+        this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
       });
 
       // AMD
@@ -1623,8 +1622,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuDisplayDeviceName = this._builder.get_object(
         "gpu_display_device_name"
       );
-      this._gpuDevicesTreeView = this._builder.get_object(
-        "gpu_devices_treeview"
+      this._gpuDevicesColumnView = this._builder.get_object(
+        "gpu_devices_columnview"
       );
 
       this._connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
@@ -1667,73 +1666,134 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuMemoryMonitorCombobox.sensitive = this._gpuDisplay.active;
       this._gpuDisplayDeviceName.sensitive = this._gpuDisplay.active;
 
-      // TreeView
-      this._gpuDevicesModel = new Gtk.ListStore();
-      this._gpuDevicesModel.set_column_types([
-        GObject.TYPE_STRING,
-        GObject.TYPE_STRING,
-        GObject.TYPE_BOOLEAN,
-        GObject.TYPE_BOOLEAN,
-      ]);
+      // ColumnView
+      this._gpuDevicesModel = new Gio.ListStore({
+        item_type: GpuElement
+      });
+      let selection = new Gtk.NoSelection({
+        model: this._gpuDevicesModel
+      });
+      this._gpuDevicesColumnView.set_model(selection);
 
-      this._gpuDevicesTreeView.set_model(this._gpuDevicesModel);
+      // Make column for GtkColumnView
+      // Display Name
+      let displayNameFactory = new Gtk.SignalListItemFactory();
+      displayNameFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Entry();
+        listItem.set_child(label);
+      });
+      displayNameFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.displayName);
+        label.connect("changed", (tBuffer) => {
+          let [found, index] = this._gpuDevicesModel.find(item);
 
-      let gpuDeviceCol = this._gpuDevicesTreeView.get_column(0);
-      let gpuNameCol = this._gpuDevicesTreeView.get_column(1);
-      let gpuUsageMonitorCol = this._gpuDevicesTreeView.get_column(2);
-      let gpuMemoryMonitorCol = this._gpuDevicesTreeView.get_column(3);
+          item.setDisplayName(tBuffer.text);
 
-      let empty = new Gtk.TreeViewColumn();
-      empty.pack_start(new Gtk.CellRendererText(), true);
-      this._gpuDevicesTreeView.append_column(empty);
+          // Update if empty
+          if (item.displayName !== tBuffer.text) {
+            tBuffer.text = item.displayName;
+          }
 
-      let gpuDeviceColText = new Gtk.CellRendererText();
-      gpuDeviceCol.pack_start(gpuDeviceColText, false);
-      gpuDeviceCol.add_attribute(gpuDeviceColText, "text", 0);
-
-      let gpuNameColText = new Gtk.CellRendererText();
-      gpuNameCol.pack_start(gpuNameColText, false);
-      gpuNameCol.add_attribute(gpuNameColText, "text", 1);
-
-      let gpuUsageMonitorColToggle = new Gtk.CellRendererToggle();
-      gpuUsageMonitorCol.pack_start(gpuUsageMonitorColToggle, false);
-      gpuUsageMonitorCol.add_attribute(gpuUsageMonitorColToggle, "active", 2);
-      gpuUsageMonitorColToggle.connect("toggled", (toggle, row) => {
-        let treeiter = this._gpuDevicesModel.get_iter_from_string(
-          row.toString()
-        ); // bool, iter
-
-        this._gpuDevicesModel.set_value(treeiter[1], 2, !toggle.active);
+          this._gpuDevicesModel.splice(index, 1, [item]);
+        });
       });
 
-      let gpuMemoryMonitorColToggle = new Gtk.CellRendererToggle();
-      gpuMemoryMonitorCol.pack_start(gpuMemoryMonitorColToggle, false);
-      gpuMemoryMonitorCol.add_attribute(gpuMemoryMonitorColToggle, "active", 3);
-      gpuMemoryMonitorColToggle.connect("toggled", (toggle, row) => {
-        let treeiter = this._gpuDevicesModel.get_iter_from_string(
-          row.toString()
-        ); // bool, iter
+      let displayNameCol = new Gtk.ColumnViewColumn({
+        title: "Display Name",
+        factory: displayNameFactory,
+      });
+      this._gpuDevicesColumnView.append_column(displayNameCol);
 
-        this._gpuDevicesModel.set_value(treeiter[1], 3, !toggle.active);
+      // Device
+      let deviceFactory = new Gtk.SignalListItemFactory();
+      deviceFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Label({ halign: Gtk.Align.START });
+        listItem.set_child(label);
+      });
+      deviceFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.device);
       });
 
-      this._gpuDevicesModel.connect("row-changed", (list, path, iter) => {
-        let row = path.get_indices()[0];
-        let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
-        gpuDevicesArray[row] =
-          list.get_value(iter, 0) +
-          GPU_DEVICES_LIST_SEPARATOR +
-          list.get_value(iter, 1) +
-          GPU_DEVICES_LIST_SEPARATOR +
-          list.get_value(iter, 2) +
-          GPU_DEVICES_LIST_SEPARATOR +
-          list.get_value(iter, 3);
-        this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
+      let deviceCol = new Gtk.ColumnViewColumn({
+        title: "Device",
+        factory: deviceFactory,
       });
+      this._gpuDevicesColumnView.append_column(deviceCol);
+
+      // Name
+      let nameFactory = new Gtk.SignalListItemFactory();
+      nameFactory.connect("setup", (factory, listItem) => {
+        let label = new Gtk.Label({ halign: Gtk.Align.START });
+        listItem.set_child(label);
+      });
+      nameFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let label = listItem.get_child();
+        label.set_text(item.name);
+      });
+
+      let nameCol = new Gtk.ColumnViewColumn({
+        title: "Name",
+        factory: nameFactory,
+      });
+      this._gpuDevicesColumnView.append_column(nameCol);
+
+      // Usage
+      let usageFactory = new Gtk.SignalListItemFactory();
+      usageFactory.connect("setup", (factory, listItem) => {
+        let toggle = new Gtk.CheckButton();
+        listItem.set_child(toggle);
+      });
+      usageFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let toggle = listItem.get_child();
+        toggle.set_active(item.usage);
+        toggle.connect("toggled", (toggle) => {
+          let [found, index] = this._gpuDevicesModel.find(item);
+
+          item.usage = toggle.active;
+
+          this._gpuDevicesModel.splice(index, 1, [item]);
+        });
+      });
+
+      let usageCol = new Gtk.ColumnViewColumn({
+        title: "Usage Monitor",
+        factory: usageFactory,
+      });
+      this._gpuDevicesColumnView.append_column(usageCol);
+
+      // Memory
+      let memoryFactory = new Gtk.SignalListItemFactory();
+      memoryFactory.connect("setup", (factory, listItem) => {
+        let toggle = new Gtk.CheckButton();
+        listItem.set_child(toggle);
+      });
+      memoryFactory.connect("bind", (factory, listItem) => {
+        let item = listItem.get_item();
+        let toggle = listItem.get_child();
+        toggle.set_active(item.memory);
+        toggle.connect("toggled", (toggle) => {
+          let [found, index] = this._gpuDevicesModel.find(item);
+
+          item.memory = toggle.active;
+
+          this._gpuDevicesModel.splice(index, 1, [item]);
+        });
+      });
+
+      let memoryCol = new Gtk.ColumnViewColumn({
+        title: "Memory Monitor",
+        factory: memoryFactory,
+      });
+      this._gpuDevicesColumnView.append_column(memoryCol);
 
       // Array format
-      // uuid:name:usage:memory
-      // Get current disks settings
+      // uuid:name:usage:memory:displayName
       let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
 
       this._executeCommand(["nvidia-smi", "-L"]).then((output) => {
@@ -1750,6 +1810,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           let usageButton = false;
           let memoryButton = false;
 
+          let displayName = name;
+
           // Init gui
           for (let i = 0; i < gpuDevicesArray.length; i++) {
             let element = gpuDevicesArray[i];
@@ -1759,30 +1821,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               usageButton = it[2] === "true";
               memoryButton = it[3] === "true";
 
+              displayName = it[4];
+
               break;
             }
           }
 
-          this._gpuDevicesModel.set(
-            this._gpuDevicesModel.append(),
-            [0, 1, 2, 3],
-            [uuid, name, usageButton, memoryButton]
-          );
+          this._gpuDevicesModel.append(new GpuElement(displayName, uuid, name, usageButton, memoryButton));
         }
 
-        // Save new gpuTempsArray with the list of new devices (to remove old devices)
-        gpuDevicesArray = [];
-        this._gpuDevicesModel.foreach((list, path, iter) => {
-          gpuDevicesArray.push(
-            list.get_value(iter, 0) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 1) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 2) +
-            GPU_DEVICES_LIST_SEPARATOR +
-            list.get_value(iter, 3)
-          );
-        });
+        // Save new gpuDevicesArray
+        this._saveArrayToSettings(this._gpuDevicesModel, settings, GPU_DEVICES_LIST);
+      });
+
+      // Update
+      this._gpuDevicesModel.connect("items-changed", (_list, position, removed, added) => {
+        let gpuElement = _list.get_item(position);
+        let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
+
+        gpuDevicesArray[position] = gpuElement.getFormattedString();
+
         this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
       });
 
@@ -1874,6 +1932,89 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       } catch (error) {
         console.error(`[Resource_Monitor] Execute Command Error: ${error.message}`);
       }
+    }
+  }
+);
+
+const DiskElement = GObject.registerClass(
+  class DiskElement extends GObject.Object {
+    _init(displayName, device, mountPoint, stats, space) {
+      super._init();
+      this.device = device;
+      this.mountPoint = mountPoint;
+      this.stats = stats;
+      this.space = space;
+
+      this.setDisplayName(displayName);
+    }
+
+    setDisplayName(displayName) {
+      if (displayName) {
+        this.displayName = displayName
+      } else {
+        if (this.device.match(/(\/\w+)+/)) {
+          this.displayName = this.device.split("/").pop();
+        } else {
+          this.displayName = this.device;
+        }
+      }
+    }
+
+    getFormattedString() {
+      return `${this.device}${DISK_DEVICES_LIST_SEPARATOR}${this.mountPoint}${DISK_DEVICES_LIST_SEPARATOR}${this.stats}${DISK_DEVICES_LIST_SEPARATOR}${this.space}${DISK_DEVICES_LIST_SEPARATOR}${this.displayName}`
+    }
+  }
+);
+
+const ThermalElement = GObject.registerClass(
+  class ThermalElement extends GObject.Object {
+    _init(device, name, monitor) {
+      super._init();
+      this.device = device;
+      this.name = name;
+      this.monitor = monitor;
+    }
+
+    getFormattedString() {
+      return ""
+    }
+  }
+);
+
+const ThermalCpuElement = GObject.registerClass(
+  class ThermalCpuElement extends ThermalElement {
+    getFormattedString() {
+      return `${this.name}${THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR}${this.monitor}${THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR}${this.device}`
+    }
+  }
+);
+
+const ThermalGpuElement = GObject.registerClass(
+  class ThermalGpuElement extends ThermalElement {
+    getFormattedString() {
+      return `${this.device}${GPU_DEVICES_LIST_SEPARATOR}${this.name}${GPU_DEVICES_LIST_SEPARATOR}${this.monitor}`
+    }
+  }
+);
+
+const GpuElement = GObject.registerClass(
+  class GpuElement extends GObject.Object {
+    _init(displayName, device, name, usage, memory) {
+      super._init();
+      this.device = device;
+      this.name = name;
+      this.usage = usage;
+      this.memory = memory;
+
+      this.setDisplayName(displayName);
+    }
+
+    setDisplayName(displayName) {
+      this.displayName = displayName || this.name;
+    }
+
+    getFormattedString() {
+      return `${this.device}${GPU_DEVICES_LIST_SEPARATOR}${this.name}${GPU_DEVICES_LIST_SEPARATOR}${this.usage}${GPU_DEVICES_LIST_SEPARATOR}${this.memory}${GPU_DEVICES_LIST_SEPARATOR}${this.displayName}`
     }
   }
 );

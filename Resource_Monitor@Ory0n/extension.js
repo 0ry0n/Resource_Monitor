@@ -1565,21 +1565,14 @@ const ResourceMonitor = GObject.registerClass(
         const mountPoint = it[1];
         const stats = it[2] === "true";
         const space = it[3] === "true";
-
-        let label = "";
-
-        if (filesystem.match(/(\/\w+)+/)) {
-          label = filesystem.split("/").pop();
-        } else {
-          label = filesystem;
-        }
+        const displayName = it[4];
 
         if (stats) {
-          this._diskStatsBox.add_element(filesystem, label);
+          this._diskStatsBox.add_element(filesystem, displayName);
         }
 
         if (space) {
-          this._diskSpaceBox.add_element(filesystem, label);
+          this._diskSpaceBox.add_element(filesystem, displayName);
         }
       });
 
@@ -1861,9 +1854,10 @@ const ResourceMonitor = GObject.registerClass(
         const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
         const uuid = it[0];
-        const name = this._gpuDisplayDeviceName ? it[1] : null;
+        const name = it[1];
         const usage = it[2] === "true" && this._gpuStatus;
         const memory = it[3] === "true" && this._gpuStatus;
+        const displayName = this._gpuDisplayDeviceName ? it[4] : null
         let thermal = false;
 
         if (this._thermalGpuTemperatureStatus) {
@@ -1876,7 +1870,7 @@ const ResourceMonitor = GObject.registerClass(
           });
         }
 
-        this._gpuBox.add_element(uuid, name, usage, memory, thermal);
+        this._gpuBox.add_element(uuid, displayName, usage, memory, thermal);
       });
 
       this._gpuBox.set_element_width(this._gpuWidth * this._scaleFactor);
