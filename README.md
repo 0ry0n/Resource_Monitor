@@ -50,6 +50,13 @@ To report issues or request features, please use the [GitHub Issues](../../issue
 
 ## Change Log
 
+**Version 24 (Oct 28, 2024)**
+- Removed deprecated TreeView component.
+- Added custom peripheral name support.
+- Adjusted width with scale factor for better sizing.
+- Enhanced UI for improved user experience.
+- Other bug fixes.
+
 **Version 23 (Oct 18, 2024)**
 - Added support for GNOME 47.
 - Introduced memory alerts for RAM and SWAP usage to enhance monitoring capabilities.
