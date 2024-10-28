@@ -1076,8 +1076,10 @@ const ResourceMonitor = GObject.registerClass(
             } else {
               try {
                 Util.spawnCommandLine(this._leftClickStatus);
-              } catch (e) {
-                logError(`Error spawning ${this._leftClickStatus}: ${e}`);
+              } catch (error) {
+                console.error(
+                  `[Resource_Monitor] Error spawning ${this._leftClickStatus}: ${error}`
+                );
               }
             }
           }
