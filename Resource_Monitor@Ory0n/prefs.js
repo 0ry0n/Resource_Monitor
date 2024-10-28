@@ -166,7 +166,16 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
     }
 
-    _makeColorRow(settings, settingsName, element, text = "0.0", red = 224 / 255, green = 27 / 255, blue = 36 / 255, alpha = 1.0) {
+    _makeColorRow(
+      settings,
+      settingsName,
+      element,
+      text = "0.0",
+      red = 224 / 255,
+      green = 27 / 255,
+      blue = 36 / 255,
+      alpha = 1.0
+    ) {
       let row = new Gtk.ListBoxRow();
       let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
 
@@ -174,19 +183,21 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         new Gtk.Label({
           label: "Lower than",
           hexpand: true,
-          halign: Gtk.Align.START
+          halign: Gtk.Align.START,
         })
       );
       let entry = new Gtk.Entry({
         input_purpose: "number",
         text: text,
-        margin_end: 8
-      })
+        margin_end: 8,
+      });
       entry.connect("changed", (widget) => {
         const index = row.get_index();
         let colorsArray = settings.get_strv(settingsName);
         let values = colorsArray[index].split(COLOR_LIST_SEPARATOR);
-        colorsArray[index] = `${widget.text}${COLOR_LIST_SEPARATOR}${values[1]}${COLOR_LIST_SEPARATOR}${values[2]}${COLOR_LIST_SEPARATOR}${values[3]}`;
+        colorsArray[
+          index
+        ] = `${widget.text}${COLOR_LIST_SEPARATOR}${values[1]}${COLOR_LIST_SEPARATOR}${values[2]}${COLOR_LIST_SEPARATOR}${values[3]}`;
         settings.set_strv(settingsName, colorsArray);
       });
       box.append(entry);
@@ -196,23 +207,25 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           red: red,
           green: green,
           blue: blue,
-          alpha: alpha
+          alpha: alpha,
         }),
-        margin_end: 8
-      })
+        margin_end: 8,
+      });
       colorButton.connect("color-set", (widget) => {
         let rgba = widget.get_rgba();
         const index = row.get_index();
         let colorsArray = settings.get_strv(settingsName);
         let values = colorsArray[index].split(COLOR_LIST_SEPARATOR);
-        colorsArray[index] = `${values[0]}${COLOR_LIST_SEPARATOR}${rgba.red}${COLOR_LIST_SEPARATOR}${rgba.green}${COLOR_LIST_SEPARATOR}${rgba.blue}`;
+        colorsArray[
+          index
+        ] = `${values[0]}${COLOR_LIST_SEPARATOR}${rgba.red}${COLOR_LIST_SEPARATOR}${rgba.green}${COLOR_LIST_SEPARATOR}${rgba.blue}`;
         settings.set_strv(settingsName, colorsArray);
       });
       box.append(colorButton);
 
       let deleteButton = new Gtk.Button({
-        icon_name: "edit-delete"
-      })
+        icon_name: "edit-delete",
+      });
       deleteButton.connect("clicked", (button) => {
         const index = row.get_index();
         let colorsArray = settings.get_strv(settingsName);
@@ -231,10 +244,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _makeThermalColumnView(view, type) {
       let model = new Gio.ListStore({
-        item_type: type
+        item_type: type,
       });
       let selection = new Gtk.NoSelection({
-        model: model
+        model: model,
       });
       view.set_model(selection);
 
@@ -461,13 +474,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._extensionLeftClickRadioButtonCustom.active;
       this._extensionLeftClickEntryCustom.text = textBufferCustom;
 
-      this._extensionLeftClickEntryCustom.connect(
-        "changed",
-        (tBuffer) => {
-          this._settings.set_string(LEFT_CLICK_STATUS, tBuffer.text);
-          this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, tBuffer.text);
-        }
-      );
+      this._extensionLeftClickEntryCustom.connect("changed", (tBuffer) => {
+        this._settings.set_string(LEFT_CLICK_STATUS, tBuffer.text);
+        this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, tBuffer.text);
+      });
 
       // ListBox
       let itemsPositionArray = this._settings.get_strv(ITEMS_POSITION);
@@ -531,9 +541,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._cpuColorsAddButton = this._builder.get_object(
         "cpu_colors_add_button"
       );
-      this._cpuColorsListbox = this._builder.get_object(
-        "cpu_colors_listbox"
-      );
+      this._cpuColorsListbox = this._builder.get_object("cpu_colors_listbox");
       this._cpuFrequencyDisplay = this._builder.get_object(
         "cpu_frequency_display"
       );
@@ -621,12 +629,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = cpuColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, CPU_COLORS, this._cpuColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          CPU_COLORS,
+          this._cpuColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._cpuColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(CPU_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, CPU_COLORS, this._cpuColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(this._settings, CPU_COLORS, this._cpuColorsListbox)
+        );
         this._settings.set_strv(CPU_COLORS, colorsArray);
       });
 
@@ -637,28 +655,58 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = frequencyColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, CPU_FREQUENCY_COLORS, this._cpuFrequencyColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          CPU_FREQUENCY_COLORS,
+          this._cpuFrequencyColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._cpuFrequencyColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(CPU_FREQUENCY_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, CPU_FREQUENCY_COLORS, this._cpuFrequencyColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            CPU_FREQUENCY_COLORS,
+            this._cpuFrequencyColorsListbox
+          )
+        );
         this._settings.set_strv(CPU_FREQUENCY_COLORS, colorsArray);
       });
 
       // Load Average Colors
-      let loadAverageColorsArray = this._settings.get_strv(CPU_LOADAVERAGE_COLORS);
+      let loadAverageColorsArray = this._settings.get_strv(
+        CPU_LOADAVERAGE_COLORS
+      );
 
       for (let i = 0; i < loadAverageColorsArray.length; i++) {
         const element = loadAverageColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, CPU_LOADAVERAGE_COLORS, this._cpuLoadAverageColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          CPU_LOADAVERAGE_COLORS,
+          this._cpuLoadAverageColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._cpuLoadAverageColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(CPU_LOADAVERAGE_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, CPU_LOADAVERAGE_COLORS, this._cpuLoadAverageColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            CPU_LOADAVERAGE_COLORS,
+            this._cpuLoadAverageColorsListbox
+          )
+        );
         this._settings.set_strv(CPU_LOADAVERAGE_COLORS, colorsArray);
       });
     }
@@ -671,9 +719,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._ramColorsAddButton = this._builder.get_object(
         "ram_colors_add_button"
       );
-      this._ramColorsListbox = this._builder.get_object(
-        "ram_colors_listbox"
-      );
+      this._ramColorsListbox = this._builder.get_object("ram_colors_listbox");
       this._ramUnitCombobox = this._builder.get_object("ram_unit_combobox");
       this._ramUnitMeasureCombobox = this._builder.get_object(
         "ram_unit_measure_combobox"
@@ -737,12 +783,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = ramColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, RAM_COLORS, this._ramColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          RAM_COLORS,
+          this._ramColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._ramColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(RAM_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, RAM_COLORS, this._ramColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(this._settings, RAM_COLORS, this._ramColorsListbox)
+        );
         this._settings.set_strv(RAM_COLORS, colorsArray);
       });
     }
@@ -755,9 +811,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._swapColorsAddButton = this._builder.get_object(
         "swap_colors_add_button"
       );
-      this._swapColorsListbox = this._builder.get_object(
-        "swap_colors_listbox"
-      );
+      this._swapColorsListbox = this._builder.get_object("swap_colors_listbox");
       this._swapUnitCombobox = this._builder.get_object("swap_unit_combobox");
       this._swapUnitMeasureCombobox = this._builder.get_object(
         "swap_unit_measure_combobox"
@@ -821,12 +875,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = swapColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, SWAP_COLORS, this._swapColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          SWAP_COLORS,
+          this._swapColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._swapColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(SWAP_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, SWAP_COLORS, this._swapColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            SWAP_COLORS,
+            this._swapColorsListbox
+          )
+        );
         this._settings.set_strv(SWAP_COLORS, colorsArray);
       });
     }
@@ -949,10 +1017,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // ColumnView
       this._diskDevicesModel = new Gio.ListStore({
-        item_type: DiskElement
+        item_type: DiskElement,
       });
       let selection = new Gtk.NoSelection({
-        model: this._diskDevicesModel
+        model: this._diskDevicesModel,
       });
       this._diskDevicesColumnView.set_model(selection);
 
@@ -1094,14 +1162,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Update
-      this._diskDevicesModel.connect("items-changed", (_list, position, removed, added) => {
-        let diskElement = _list.get_item(position);
-        let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
+      this._diskDevicesModel.connect(
+        "items-changed",
+        (_list, position, removed, added) => {
+          let diskElement = _list.get_item(position);
+          let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
 
-        disksArray[position] = diskElement.getFormattedString();
+          disksArray[position] = diskElement.getFormattedString();
 
-        this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
-      });
+          this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+        }
+      );
 
       // Stats Colors
       let diskStatsColorsArray = this._settings.get_strv(DISK_STATS_COLORS);
@@ -1110,12 +1181,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = diskStatsColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, DISK_STATS_COLORS, this._diskStatsColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          DISK_STATS_COLORS,
+          this._diskStatsColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._diskStatsColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(DISK_STATS_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, DISK_STATS_COLORS, this._diskStatsColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            DISK_STATS_COLORS,
+            this._diskStatsColorsListbox
+          )
+        );
         this._settings.set_strv(DISK_STATS_COLORS, colorsArray);
       });
 
@@ -1126,12 +1211,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = diskSpaceColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, DISK_SPACE_COLORS, this._diskSpaceColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          DISK_SPACE_COLORS,
+          this._diskSpaceColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._diskSpaceColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(DISK_SPACE_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, DISK_SPACE_COLORS, this._diskSpaceColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            DISK_SPACE_COLORS,
+            this._diskSpaceColorsListbox
+          )
+        );
         this._settings.set_strv(DISK_SPACE_COLORS, colorsArray);
       });
     }
@@ -1142,96 +1241,108 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       // filesystem mountPoint stats space displayName
       let disksArray = settings.get_strv(DISK_DEVICES_LIST);
 
-      this._executeCommand(["df", "-x", "squashfs", "-x", "tmpfs"]).then(output => {
-        let lines = output.split("\n");
+      this._executeCommand(["df", "-x", "squashfs", "-x", "tmpfs"]).then(
+        (output) => {
+          let lines = output.split("\n");
 
-        // Excludes the first line of output
-        for (let i = 1; i < lines.length - 1; i++) {
-          let line = lines[i];
-          let entry = line.trim().split(/\s+/);
+          // Excludes the first line of output
+          for (let i = 1; i < lines.length - 1; i++) {
+            let line = lines[i];
+            let entry = line.trim().split(/\s+/);
 
-          let filesystem = entry[0];
-          let mountedOn = entry[5];
+            let filesystem = entry[0];
+            let mountedOn = entry[5];
 
-          let dStButton = false;
-          let dSpButton = false;
+            let dStButton = false;
+            let dSpButton = false;
 
-          let displayName = filesystem;
+            let displayName = filesystem;
 
-          // Init gui
-          for (let i = 0; i < disksArray.length; i++) {
-            let element = disksArray[i];
-            let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
+            // Init gui
+            for (let i = 0; i < disksArray.length; i++) {
+              let element = disksArray[i];
+              let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
 
-            if (filesystem === it[0]) {
-              dStButton = it[2] === "true";
-              dSpButton = it[3] === "true";
+              if (filesystem === it[0]) {
+                dStButton = it[2] === "true";
+                dSpButton = it[3] === "true";
 
-              displayName = it[4];
+                displayName = it[4];
 
-              break;
+                break;
+              }
             }
+
+            model.append(
+              new DiskElement(
+                displayName,
+                filesystem,
+                mountedOn,
+                dStButton,
+                dSpButton
+              )
+            );
           }
 
-          model.append(new DiskElement(displayName, filesystem, mountedOn, dStButton, dSpButton));
-        }
+          if (all) {
+            this._loadFile("/proc/diskstats").then((contents) => {
+              const lines = new TextDecoder().decode(contents).split("\n");
 
-        if (all) {
-          this._loadFile("/proc/diskstats").then(contents => {
-            const lines = new TextDecoder().decode(contents).split("\n");
+              for (let i = 0; i < lines.length - 1; i++) {
+                const line = lines[i];
+                const entry = line.trim().split(/\s+/);
 
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i];
-              const entry = line.trim().split(/\s+/);
-
-              if (entry[2].match(/loop*/)) {
-                continue;
-              }
-
-              let found = false;
-              const fs = "/dev/" + entry[2];
-
-              model.foreach((list, path, iter) => {
-                const diskElement = list.get_item(iter);
-                if (fs === diskElement.device) {
-                  found = true;
-                  return;
+                if (entry[2].match(/loop*/)) {
+                  continue;
                 }
-              });
 
-              if (!found) {
-                let dStButton = false;
-                let dSpButton = false;
+                let found = false;
+                const fs = "/dev/" + entry[2];
 
-                let displayName = fs;
-
-                // Init gui
-                for (let i = 0; i < disksArray.length; i++) {
-                  let element = disksArray[i];
-                  let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
-
-                  if (fs === it[0]) {
-                    dStButton = it[2] === "true";
-                    dSpButton = it[3] === "true";
-
-                    displayName = it[4];
-
-                    break;
+                model.foreach((list, path, iter) => {
+                  const diskElement = list.get_item(iter);
+                  if (fs === diskElement.device) {
+                    found = true;
+                    return;
                   }
+                });
+
+                if (!found) {
+                  let dStButton = false;
+                  let dSpButton = false;
+
+                  let displayName = fs;
+
+                  // Init gui
+                  for (let i = 0; i < disksArray.length; i++) {
+                    let element = disksArray[i];
+                    let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
+
+                    if (fs === it[0]) {
+                      dStButton = it[2] === "true";
+                      dSpButton = it[3] === "true";
+
+                      displayName = it[4];
+
+                      break;
+                    }
+                  }
+
+                  model.append(
+                    new DiskElement(displayName, fs, "", dStButton, dSpButton)
+                  );
                 }
-
-                model.append(new DiskElement(displayName, fs, "", dStButton, dSpButton));
               }
-            }
 
+              // Save new disksArray
+              this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+            });
+          } else {
             // Save new disksArray
             this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
-          });
-        } else {
-          // Save new disksArray
-          this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+          }
         }
-      });
+      );
     }
 
     _buildNet() {
@@ -1310,12 +1421,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = netEthColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, NET_ETH_COLORS, this._netEthColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          NET_ETH_COLORS,
+          this._netEthColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._netEthColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(NET_ETH_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, NET_ETH_COLORS, this._netEthColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            NET_ETH_COLORS,
+            this._netEthColorsListbox
+          )
+        );
         this._settings.set_strv(NET_ETH_COLORS, colorsArray);
       });
 
@@ -1326,12 +1451,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = netWlanColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, NET_WLAN_COLORS, this._netWlanColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          NET_WLAN_COLORS,
+          this._netWlanColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._netWlanColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(NET_WLAN_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, NET_WLAN_COLORS, this._netWlanColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            NET_WLAN_COLORS,
+            this._netWlanColorsListbox
+          )
+        );
         this._settings.set_strv(NET_WLAN_COLORS, colorsArray);
       });
     }
@@ -1407,7 +1546,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // CPU
       // ColumnView
-      this._thermalCpuDevicesModel = this._makeThermalColumnView(this._thermalCpuDevicesColumnView, ThermalCpuElement);
+      this._thermalCpuDevicesModel = this._makeThermalColumnView(
+        this._thermalCpuDevicesColumnView,
+        ThermalCpuElement
+      );
 
       // Array format
       // name-status-path
@@ -1454,24 +1596,38 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 }
               }
 
-              this._thermalCpuDevicesModel.append(new ThermalCpuElement(path, device, statusButton));
+              this._thermalCpuDevicesModel.append(
+                new ThermalCpuElement(path, device, statusButton)
+              );
             }
 
             // Save new cpuTempsArray
-            this._saveArrayToSettings(this._thermalCpuDevicesModel, settings, THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
+            this._saveArrayToSettings(
+              this._thermalCpuDevicesModel,
+              settings,
+              THERMAL_CPU_TEMPERATURE_DEVICES_LIST
+            );
           });
         }
       });
 
       // Update
-      this._thermalCpuDevicesModel.connect("items-changed", (_list, position, removed, added) => {
-        let cpuTempElement = _list.get_item(position);
-        let cpuTempsArray = this._settings.get_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST);
+      this._thermalCpuDevicesModel.connect(
+        "items-changed",
+        (_list, position, removed, added) => {
+          let cpuTempElement = _list.get_item(position);
+          let cpuTempsArray = this._settings.get_strv(
+            THERMAL_CPU_TEMPERATURE_DEVICES_LIST
+          );
 
-        cpuTempsArray[position] = cpuTempElement.getFormattedString();
+          cpuTempsArray[position] = cpuTempElement.getFormattedString();
 
-        this._settings.set_strv(THERMAL_CPU_TEMPERATURE_DEVICES_LIST, cpuTempsArray);
-      });
+          this._settings.set_strv(
+            THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
+            cpuTempsArray
+          );
+        }
+      );
 
       // Colors
       let thermalCpuColorsArray = this._settings.get_strv(THERMAL_CPU_COLORS);
@@ -1480,18 +1636,35 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = thermalCpuColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, THERMAL_CPU_COLORS, this._thermalCpuColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          THERMAL_CPU_COLORS,
+          this._thermalCpuColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._thermalCpuColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(THERMAL_CPU_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, THERMAL_CPU_COLORS, this._thermalCpuColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            THERMAL_CPU_COLORS,
+            this._thermalCpuColorsListbox
+          )
+        );
         this._settings.set_strv(THERMAL_CPU_COLORS, colorsArray);
       });
 
       // GPU
       // ColumnView
-      this._thermalGpuDevicesModel = this._makeThermalColumnView(this._thermalGpuDevicesColumnView, ThermalGpuElement);
+      this._thermalGpuDevicesModel = this._makeThermalColumnView(
+        this._thermalGpuDevicesColumnView,
+        ThermalGpuElement
+      );
 
       // Array format
       // uuid:name:status
@@ -1525,22 +1698,36 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }
           }
 
-          this._thermalGpuDevicesModel.append(new ThermalGpuElement(uuid, name, statusButton));
+          this._thermalGpuDevicesModel.append(
+            new ThermalGpuElement(uuid, name, statusButton)
+          );
         }
 
         // Save new gpuTempsArray
-        this._saveArrayToSettings(this._thermalGpuDevicesModel, settings, THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+        this._saveArrayToSettings(
+          this._thermalGpuDevicesModel,
+          settings,
+          THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+        );
       });
 
       // Update
-      this._thermalGpuDevicesModel.connect("items-changed", (_list, position, removed, added) => {
-        let gpuTempElement = _list.get_item(position);
-        let gpuTempsArray = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
+      this._thermalGpuDevicesModel.connect(
+        "items-changed",
+        (_list, position, removed, added) => {
+          let gpuTempElement = _list.get_item(position);
+          let gpuTempsArray = this._settings.get_strv(
+            THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+          );
 
-        gpuTempsArray[position] = gpuTempElement.getFormattedString();
+          gpuTempsArray[position] = gpuTempElement.getFormattedString();
 
-        this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
-      });
+          this._settings.set_strv(
+            THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
+            gpuTempsArray
+          );
+        }
+      );
 
       // AMD
       //this._executeCommand(['bash', '-c', 'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi']).then(output => {
@@ -1591,12 +1778,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = thermalGpuColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, THERMAL_GPU_COLORS, this._thermalGpuColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          THERMAL_GPU_COLORS,
+          this._thermalGpuColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._thermalGpuColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(THERMAL_GPU_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, THERMAL_GPU_COLORS, this._thermalGpuColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            THERMAL_GPU_COLORS,
+            this._thermalGpuColorsListbox
+          )
+        );
         this._settings.set_strv(THERMAL_GPU_COLORS, colorsArray);
       });
     }
@@ -1609,9 +1810,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuColorsAddButton = this._builder.get_object(
         "gpu_colors_add_button"
       );
-      this._gpuColorsListbox = this._builder.get_object(
-        "gpu_colors_listbox"
-      );
+      this._gpuColorsListbox = this._builder.get_object("gpu_colors_listbox");
       this._gpuMemoryColorsAddButton = this._builder.get_object(
         "gpu_memory_colors_add_button"
       );
@@ -1676,10 +1875,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // ColumnView
       this._gpuDevicesModel = new Gio.ListStore({
-        item_type: GpuElement
+        item_type: GpuElement,
       });
       let selection = new Gtk.NoSelection({
-        model: this._gpuDevicesModel
+        model: this._gpuDevicesModel,
       });
       this._gpuDevicesColumnView.set_model(selection);
 
@@ -1840,22 +2039,31 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }
           }
 
-          this._gpuDevicesModel.append(new GpuElement(displayName, uuid, name, usageButton, memoryButton));
+          this._gpuDevicesModel.append(
+            new GpuElement(displayName, uuid, name, usageButton, memoryButton)
+          );
         }
 
         // Save new gpuDevicesArray
-        this._saveArrayToSettings(this._gpuDevicesModel, settings, GPU_DEVICES_LIST);
+        this._saveArrayToSettings(
+          this._gpuDevicesModel,
+          settings,
+          GPU_DEVICES_LIST
+        );
       });
 
       // Update
-      this._gpuDevicesModel.connect("items-changed", (_list, position, removed, added) => {
-        let gpuElement = _list.get_item(position);
-        let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
+      this._gpuDevicesModel.connect(
+        "items-changed",
+        (_list, position, removed, added) => {
+          let gpuElement = _list.get_item(position);
+          let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
 
-        gpuDevicesArray[position] = gpuElement.getFormattedString();
+          gpuDevicesArray[position] = gpuElement.getFormattedString();
 
-        this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
-      });
+          this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
+        }
+      );
 
       // Gpu Colors
       let gpuColorsArray = this._settings.get_strv(GPU_COLORS);
@@ -1864,12 +2072,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = gpuColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, GPU_COLORS, this._gpuColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          GPU_COLORS,
+          this._gpuColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._gpuColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(GPU_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, GPU_COLORS, this._gpuColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(this._settings, GPU_COLORS, this._gpuColorsListbox)
+        );
         this._settings.set_strv(GPU_COLORS, colorsArray);
       });
 
@@ -1880,12 +2098,26 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = gpuMemoryColorsArray[i];
         const entry = element.split(COLOR_LIST_SEPARATOR);
 
-        this._makeColorRow(this._settings, GPU_MEMORY_COLORS, this._gpuMemoryColorsListbox, entry[0], parseFloat(entry[1]), parseFloat(entry[2]), parseFloat(entry[3]));
+        this._makeColorRow(
+          this._settings,
+          GPU_MEMORY_COLORS,
+          this._gpuMemoryColorsListbox,
+          entry[0],
+          parseFloat(entry[1]),
+          parseFloat(entry[2]),
+          parseFloat(entry[3])
+        );
       }
 
       this._gpuMemoryColorsAddButton.connect("clicked", (button) => {
         let colorsArray = this._settings.get_strv(GPU_MEMORY_COLORS);
-        colorsArray.push(this._makeColorRow(this._settings, GPU_MEMORY_COLORS, this._gpuMemoryColorsListbox));
+        colorsArray.push(
+          this._makeColorRow(
+            this._settings,
+            GPU_MEMORY_COLORS,
+            this._gpuMemoryColorsListbox
+          )
+        );
         this._settings.set_strv(GPU_MEMORY_COLORS, colorsArray);
       });
     }
@@ -1894,14 +2126,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return new Promise((resolve, reject) => {
         file.load_contents_async(cancellable, (source_object, res) => {
           try {
-            const [ok, contents, etag_out] = source_object.load_contents_finish(res);
+            const [ok, contents, etag_out] =
+              source_object.load_contents_finish(res);
             if (ok) {
               resolve(contents);
             } else {
               reject(new Error("Failed to load contents"));
             }
           } catch (error) {
-            reject(new Error(`Error in load_contents_finish: ${error.message}`));
+            reject(
+              new Error(`Error in load_contents_finish: ${error.message}`)
+            );
           }
         });
       });
@@ -1921,14 +2156,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return new Promise((resolve, reject) => {
         proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
           try {
-            const [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
+            const [ok, stdout, stderr] =
+              source_object.communicate_utf8_finish(res);
             if (ok) {
               resolve(stdout);
             } else {
               reject(new Error(`Process failed with error: ${stderr}`));
             }
           } catch (error) {
-            reject(new Error(`Error in communicate_utf8_finish: ${error.message}`));
+            reject(
+              new Error(`Error in communicate_utf8_finish: ${error.message}`)
+            );
           }
         });
       });
@@ -1943,7 +2181,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const output = await this._readOutput(proc, cancellable);
         return output;
       } catch (error) {
-        console.error(`[Resource_Monitor] Execute Command Error: ${error.message}`);
+        console.error(
+          `[Resource_Monitor] Execute Command Error: ${error.message}`
+        );
       }
     }
   }
@@ -1963,7 +2203,7 @@ const DiskElement = GObject.registerClass(
 
     setDisplayName(displayName) {
       if (displayName) {
-        this.displayName = displayName
+        this.displayName = displayName;
       } else {
         if (this.device.match(/(\/\w+)+/)) {
           this.displayName = this.device.split("/").pop();
@@ -1974,7 +2214,7 @@ const DiskElement = GObject.registerClass(
     }
 
     getFormattedString() {
-      return `${this.device}${DISK_DEVICES_LIST_SEPARATOR}${this.mountPoint}${DISK_DEVICES_LIST_SEPARATOR}${this.stats}${DISK_DEVICES_LIST_SEPARATOR}${this.space}${DISK_DEVICES_LIST_SEPARATOR}${this.displayName}`
+      return `${this.device}${DISK_DEVICES_LIST_SEPARATOR}${this.mountPoint}${DISK_DEVICES_LIST_SEPARATOR}${this.stats}${DISK_DEVICES_LIST_SEPARATOR}${this.space}${DISK_DEVICES_LIST_SEPARATOR}${this.displayName}`;
     }
   }
 );
@@ -1989,7 +2229,7 @@ const ThermalElement = GObject.registerClass(
     }
 
     getFormattedString() {
-      return ""
+      return "";
     }
   }
 );
@@ -1997,7 +2237,7 @@ const ThermalElement = GObject.registerClass(
 const ThermalCpuElement = GObject.registerClass(
   class ThermalCpuElement extends ThermalElement {
     getFormattedString() {
-      return `${this.name}${THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR}${this.monitor}${THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR}${this.device}`
+      return `${this.name}${THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR}${this.monitor}${THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR}${this.device}`;
     }
   }
 );
@@ -2005,7 +2245,7 @@ const ThermalCpuElement = GObject.registerClass(
 const ThermalGpuElement = GObject.registerClass(
   class ThermalGpuElement extends ThermalElement {
     getFormattedString() {
-      return `${this.device}${GPU_DEVICES_LIST_SEPARATOR}${this.name}${GPU_DEVICES_LIST_SEPARATOR}${this.monitor}`
+      return `${this.device}${GPU_DEVICES_LIST_SEPARATOR}${this.name}${GPU_DEVICES_LIST_SEPARATOR}${this.monitor}`;
     }
   }
 );
@@ -2027,7 +2267,7 @@ const GpuElement = GObject.registerClass(
     }
 
     getFormattedString() {
-      return `${this.device}${GPU_DEVICES_LIST_SEPARATOR}${this.name}${GPU_DEVICES_LIST_SEPARATOR}${this.usage}${GPU_DEVICES_LIST_SEPARATOR}${this.memory}${GPU_DEVICES_LIST_SEPARATOR}${this.displayName}`
+      return `${this.device}${GPU_DEVICES_LIST_SEPARATOR}${this.name}${GPU_DEVICES_LIST_SEPARATOR}${this.usage}${GPU_DEVICES_LIST_SEPARATOR}${this.memory}${GPU_DEVICES_LIST_SEPARATOR}${this.displayName}`;
     }
   }
 );
