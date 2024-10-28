@@ -133,6 +133,28 @@ const ResourceMonitor = GObject.registerClass(
       this._path = path;
       this._metadata = metadata;
 
+      this._themeContext = St.ThemeContext.get_for_stage(global.stage);
+      this._scaleFactor = 1;
+      this._themeContextHandlerId = this._themeContext.connect('notify::scale-factor', () => {
+        this._onScaleFactorChanged();
+
+        console.error(`Resource ${this._scaleFactor}`)
+
+        this._cpuWidthChanged();
+        this._cpuFrequencyWidthChanged();
+        this._cpuLoadAverageWidthChanged();
+        this._ramWidthChanged();
+        this._swapWidthChanged();
+        this._diskStatsWidthChanged();
+        this._diskSpaceWidthChanged();
+        this._netEthWidthChanged();
+        this._netWlanWidthChanged();
+        this._thermalCpuTemperatureWidthChanged();
+        this._thermalGpuTemperatureWidthChanged();
+        this._gpuWidthChanged()
+      });
+      this._onScaleFactorChanged();
+
       // Variables
       this._handlerIds = [];
       this._handlerIdsCount = 0;
@@ -240,6 +262,8 @@ const ResourceMonitor = GObject.registerClass(
         this._handlerIds[i] = 0;
       }
 
+      this.themeContext.disconnect(this._themeContextHandlerId);
+
       super.destroy();
     }
 
@@ -340,19 +364,25 @@ const ResourceMonitor = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._cpuValue.set_style("text-align: right;");
+      this._cpuValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._ramValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._ramValue.set_style("text-align: right;");
+      this._ramValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._swapValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._swapValue.set_style("text-align: right;");
+      this._swapValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._diskStatsBox = new DiskContainerStats();
       this._diskSpaceBox = new DiskContainerSpace();
@@ -361,39 +391,65 @@ const ResourceMonitor = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._ethValue.set_style("text-align: right;");
+      this._ethValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._wlanValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._wlanValue.set_style("text-align: right;");
+      this._wlanValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
+      this._cpuTemperatureBracketStart = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "[",
+      });
       this._cpuTemperatureValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
-        text: "[--",
+        text: "--",
       });
-      this._cpuTemperatureValueBracket = new St.Label({
+      this._cpuTemperatureValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
+      this._cpuTemperatureBracketEnd = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "]",
       });
-      this._cpuTemperatureValue.set_style("text-align: right;");
 
+      this._cpuFrequencyBracketStart = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "[",
+      });
       this._cpuFrequencyValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
-        text: "[--",
+        text: "--",
       });
-      this._cpuFrequencyValueBracket = new St.Label({
+      this._cpuFrequencyValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
+      this._cpuFrequencyBracketEnd = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
         text: "]",
       });
-      this._cpuFrequencyValue.set_style("text-align: right;");
 
+      this._cpuLoadAverageBracketStart = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "[",
+      });
       this._cpuLoadAverageValue = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
-        text: "[--]",
+        text: "--",
       });
-      this._cpuLoadAverageValue.set_style("text-align: right;");
+      this._cpuLoadAverageValue.clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
+      this._cpuLoadAverageBracketEnd = new St.Label({
+        y_align: Clutter.ActorAlign.CENTER,
+        text: "]",
+      });
 
       this._gpuBox = new GpuContainer();
     }
@@ -411,13 +467,17 @@ const ResourceMonitor = GObject.registerClass(
                 this._box.add_child(this._cpuValue);
                 this._box.add_child(this._cpuUnit);
 
+                this._box.add_child(this._cpuTemperatureBracketStart);
                 this._box.add_child(this._cpuTemperatureValue);
                 this._box.add_child(this._cpuTemperatureUnit);
-                this._box.add_child(this._cpuTemperatureValueBracket);
+                this._box.add_child(this._cpuTemperatureBracketEnd);
+                this._box.add_child(this._cpuFrequencyBracketStart);
                 this._box.add_child(this._cpuFrequencyValue);
                 this._box.add_child(this._cpuFrequencyUnit);
-                this._box.add_child(this._cpuFrequencyValueBracket);
+                this._box.add_child(this._cpuFrequencyBracketEnd);
+                this._box.add_child(this._cpuLoadAverageBracketStart);
                 this._box.add_child(this._cpuLoadAverageValue);
+                this._box.add_child(this._cpuLoadAverageBracketEnd);
 
                 break;
 
@@ -483,13 +543,17 @@ const ResourceMonitor = GObject.registerClass(
                 this._box.add_child(this._cpuValue);
                 this._box.add_child(this._cpuUnit);
 
+                this._box.add_child(this._cpuTemperatureBracketStart);
                 this._box.add_child(this._cpuTemperatureValue);
                 this._box.add_child(this._cpuTemperatureUnit);
-                this._box.add_child(this._cpuTemperatureValueBracket);
+                this._box.add_child(this._cpuTemperatureBracketEnd);
+                this._box.add_child(this._cpuFrequencyBracketStart);
                 this._box.add_child(this._cpuFrequencyValue);
                 this._box.add_child(this._cpuFrequencyUnit);
-                this._box.add_child(this._cpuFrequencyValueBracket);
+                this._box.add_child(this._cpuFrequencyBracketEnd);
+                this._box.add_child(this._cpuLoadAverageBracketStart);
                 this._box.add_child(this._cpuLoadAverageValue);
+                this._box.add_child(this._cpuLoadAverageBracketEnd);
                 this._box.add_child(this._cpuIcon);
 
                 break;
@@ -564,11 +628,11 @@ const ResourceMonitor = GObject.registerClass(
       this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
 
       this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
-      this._cpuWidth = this._settings.get_int(CPU_WIDTH);
+      this._cpuWidth = this._settings.get_int(CPU_WIDTH) * this._scaleFactor;
       this._cpuColors = this._settings.get_strv(CPU_COLORS);
       this._cpuFrequencyStatus =
         this._settings.get_boolean(CPU_FREQUENCY_STATUS);
-      this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
+      this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH) * this._scaleFactor;
       this._cpuFrequencyColors = this._settings.get_strv(CPU_FREQUENCY_COLORS);
       this._cpuFrequencyUnitMeasure = this._settings.get_string(
         CPU_FREQUENCY_UNIT_MEASURE
@@ -576,11 +640,11 @@ const ResourceMonitor = GObject.registerClass(
       this._cpuLoadAverageStatus = this._settings.get_boolean(
         CPU_LOADAVERAGE_STATUS
       );
-      this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
+      this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH) * this._scaleFactor;
       this._cpuLoadAverageColors = this._settings.get_strv(CPU_LOADAVERAGE_COLORS);
 
       this._ramStatus = this._settings.get_boolean(RAM_STATUS);
-      this._ramWidth = this._settings.get_int(RAM_WIDTH);
+      this._ramWidth = this._settings.get_int(RAM_WIDTH) * this._scaleFactor;
       this._ramColors = this._settings.get_strv(RAM_COLORS);
       this._ramUnitType = this._settings.get_string(RAM_UNIT);
       this._ramUnitMeasure = this._settings.get_string(RAM_UNIT_MEASURE);
@@ -589,7 +653,7 @@ const ResourceMonitor = GObject.registerClass(
       this._ramAlertThreshold = this._settings.get_int(RAM_ALERT_THRESHOLD);
 
       this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
-      this._swapWidth = this._settings.get_int(SWAP_WIDTH);
+      this._swapWidth = this._settings.get_int(SWAP_WIDTH) * this._scaleFactor;
       this._swapColors = this._settings.get_strv(SWAP_COLORS);
       this._swapUnitType = this._settings.get_string(SWAP_UNIT);
       this._swapUnitMeasure = this._settings.get_string(SWAP_UNIT_MEASURE);
@@ -598,14 +662,14 @@ const ResourceMonitor = GObject.registerClass(
       this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
 
       this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
-      this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
+      this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH) * this._scaleFactor;
       this._diskStatsColors = this._settings.get_strv(DISK_STATS_COLORS);
       this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
       this._diskStatsUnitMeasure = this._settings.get_string(
         DISK_STATS_UNIT_MEASURE
       );
       this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
-      this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
+      this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH) * this._scaleFactor;
       this._diskSpaceColors = this._settings.get_strv(DISK_SPACE_COLORS);
       this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
       this._diskSpaceUnitMeasure = this._settings.get_string(
@@ -620,10 +684,10 @@ const ResourceMonitor = GObject.registerClass(
       this._netUnit = this._settings.get_string(NET_UNIT);
       this._netUnitMeasure = this._settings.get_string(NET_UNIT_MEASURE);
       this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
-      this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
+      this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH) * this._scaleFactor;
       this._netEthColors = this._settings.get_strv(NET_ETH_COLORS);
       this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
-      this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
+      this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH) * this._scaleFactor;
       this._netWlanColors = this._settings.get_strv(NET_WLAN_COLORS);
 
       this._thermalTemperatureUnit = this._settings.get_string(
@@ -634,7 +698,7 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._thermalCpuTemperatureWidth = this._settings.get_int(
         THERMAL_CPU_TEMPERATURE_WIDTH
-      );
+      ) * this._scaleFactor;
       this._thermalCpuColors = this._settings.get_strv(THERMAL_CPU_COLORS);
       this._thermalCpuTemperatureDevicesList = this._settings.get_strv(
         THERMAL_CPU_TEMPERATURE_DEVICES_LIST
@@ -644,14 +708,14 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._thermalGpuTemperatureWidth = this._settings.get_int(
         THERMAL_GPU_TEMPERATURE_WIDTH
-      );
+      ) * this._scaleFactor;
       this._thermalGpuColors = this._settings.get_strv(THERMAL_GPU_COLORS);
       this._thermalGpuTemperatureDevicesList = this._settings.get_strv(
         THERMAL_GPU_TEMPERATURE_DEVICES_LIST
       );
 
       this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
-      this._gpuWidth = this._settings.get_int(GPU_WIDTH);
+      this._gpuWidth = this._settings.get_int(GPU_WIDTH) * this._scaleFactor;
       this._gpuColors = this._settings.get_strv(GPU_COLORS);
       this._gpuMemoryColors = this._settings.get_strv(GPU_MEMORY_COLORS);
       this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
@@ -966,6 +1030,10 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     // HANDLERS
+    _onScaleFactorChanged() {
+      this._scaleFactor = St.ThemeContext.get_for_stage(global.stage).scale_factor
+    }
+
     _clickManager(actor, event) {
       switch (event.get_button()) {
         case 3: // Right Click
@@ -1190,7 +1258,7 @@ const ResourceMonitor = GObject.registerClass(
     _cpuWidthChanged() {
       this._cpuWidth = this._settings.get_int(CPU_WIDTH);
 
-      this._basicItemWidth(this._cpuWidth, this._cpuValue);
+      this._basicItemWidth(this._cpuWidth * this._scaleFactor, this._cpuValue);
     }
 
     _cpuColorsChanged() {
@@ -1213,14 +1281,15 @@ const ResourceMonitor = GObject.registerClass(
         this._cpuIcon,
         this._cpuFrequencyValue,
         this._cpuFrequencyUnit,
-        this._cpuFrequencyValueBracket
+        this._cpuFrequencyBracketStart,
+        this._cpuFrequencyBracketEnd
       );
     }
 
     _cpuFrequencyWidthChanged() {
       this._cpuFrequencyWidth = this._settings.get_int(CPU_FREQUENCY_WIDTH);
 
-      this._basicItemWidth(this._cpuFrequencyWidth, this._cpuFrequencyValue);
+      this._basicItemWidth(this._cpuFrequencyWidth * this._scaleFactor, this._cpuFrequencyValue);
     }
 
     _cpuFrequencyColorsChanged() {
@@ -1252,7 +1321,9 @@ const ResourceMonitor = GObject.registerClass(
         !this._thermalCpuTemperatureStatus &&
         !this._cpuFrequencyStatus,
         this._cpuIcon,
-        this._cpuLoadAverageValue
+        this._cpuLoadAverageValue,
+        this._cpuLoadAverageBracketStart,
+        this._cpuLoadAverageBracketEnd
       );
     }
 
@@ -1260,7 +1331,7 @@ const ResourceMonitor = GObject.registerClass(
       this._cpuLoadAverageWidth = this._settings.get_int(CPU_LOADAVERAGE_WIDTH);
 
       this._basicItemWidth(
-        this._cpuLoadAverageWidth,
+        this._cpuLoadAverageWidth * this._scaleFactor,
         this._cpuLoadAverageValue
       );
     }
@@ -1288,7 +1359,7 @@ const ResourceMonitor = GObject.registerClass(
     _ramWidthChanged() {
       this._ramWidth = this._settings.get_int(RAM_WIDTH);
 
-      this._basicItemWidth(this._ramWidth, this._ramValue);
+      this._basicItemWidth(this._ramWidth * this._scaleFactor, this._ramValue);
     }
 
     _ramColorsChanged() {
@@ -1346,7 +1417,7 @@ const ResourceMonitor = GObject.registerClass(
     _swapWidthChanged() {
       this._swapWidth = this._settings.get_int(SWAP_WIDTH);
 
-      this._basicItemWidth(this._swapWidth, this._swapValue);
+      this._basicItemWidth(this._swapWidth * this._scaleFactor, this._swapValue);
     }
 
     _swapColorsChanged() {
@@ -1403,7 +1474,7 @@ const ResourceMonitor = GObject.registerClass(
     _diskStatsWidthChanged() {
       this._diskStatsWidth = this._settings.get_int(DISK_STATS_WIDTH);
 
-      this._diskStatsBox.set_element_width(this._diskStatsWidth);
+      this._diskStatsBox.set_element_width(this._diskStatsWidth * this._scaleFactor);
     }
 
     _diskStatsColorsChanged() {
@@ -1444,7 +1515,7 @@ const ResourceMonitor = GObject.registerClass(
     _diskSpaceWidthChanged() {
       this._diskSpaceWidth = this._settings.get_int(DISK_SPACE_WIDTH);
 
-      this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
+      this._diskSpaceBox.set_element_width(this._diskSpaceWidth * this._scaleFactor);
     }
 
     _diskSpaceColorsChanged() {
@@ -1494,29 +1565,22 @@ const ResourceMonitor = GObject.registerClass(
         const mountPoint = it[1];
         const stats = it[2] === "true";
         const space = it[3] === "true";
-
-        let label = "";
-
-        if (filesystem.match(/(\/\w+)+/)) {
-          label = filesystem.split("/").pop();
-        } else {
-          label = filesystem;
-        }
+        const displayName = it[4];
 
         if (stats) {
-          this._diskStatsBox.add_element(filesystem, label);
+          this._diskStatsBox.add_element(filesystem, displayName);
         }
 
         if (space) {
-          this._diskSpaceBox.add_element(filesystem, label);
+          this._diskSpaceBox.add_element(filesystem, displayName);
         }
       });
 
       this._diskStatsBox.add_single();
       this._diskStatsBox.update_mode(this._diskStatsMode);
 
-      this._diskStatsBox.set_element_width(this._diskStatsWidth);
-      this._diskSpaceBox.set_element_width(this._diskSpaceWidth);
+      this._diskStatsBox.set_element_width(this._diskStatsWidth * this._scaleFactor);
+      this._diskSpaceBox.set_element_width(this._diskSpaceWidth * this._scaleFactor);
     }
 
     _netAutoHideStatusChanged() {
@@ -1580,7 +1644,7 @@ const ResourceMonitor = GObject.registerClass(
     _netEthWidthChanged() {
       this._netEthWidth = this._settings.get_int(NET_ETH_WIDTH);
 
-      this._basicItemWidth(this._netEthWidth, this._ethValue);
+      this._basicItemWidth(this._netEthWidth * this._scaleFactor, this._ethValue);
     }
 
     _netEthColorsChanged() {
@@ -1607,7 +1671,7 @@ const ResourceMonitor = GObject.registerClass(
     _netWlanWidthChanged() {
       this._netWlanWidth = this._settings.get_int(NET_WLAN_WIDTH);
 
-      this._basicItemWidth(this._netWlanWidth, this._wlanValue);
+      this._basicItemWidth(this._netWlanWidth * this._scaleFactor, this._wlanValue);
     }
 
     _netWlanColorsChanged() {
@@ -1631,7 +1695,8 @@ const ResourceMonitor = GObject.registerClass(
         this._cpuIcon,
         this._cpuTemperatureValue,
         this._cpuTemperatureUnit,
-        this._cpuTemperatureValueBracket
+        this._cpuTemperatureBracketStart,
+        this._cpuTemperatureBracketEnd,
       );
     }
 
@@ -1641,7 +1706,7 @@ const ResourceMonitor = GObject.registerClass(
       );
 
       this._basicItemWidth(
-        this._thermalCpuTemperatureWidth,
+        this._thermalCpuTemperatureWidth * this._scaleFactor,
         this._cpuTemperatureValue
       );
     }
@@ -1693,7 +1758,7 @@ const ResourceMonitor = GObject.registerClass(
         THERMAL_GPU_TEMPERATURE_WIDTH
       );
 
-      this._gpuBox.set_element_thermal_width(this._thermalGpuTemperatureWidth);
+      this._gpuBox.set_element_thermal_width(this._thermalGpuTemperatureWidth * this._scaleFactor);
     }
 
     _thermalGpuColorsChanged() {
@@ -1727,7 +1792,7 @@ const ResourceMonitor = GObject.registerClass(
     _gpuWidthChanged() {
       this._gpuWidth = this._settings.get_int(GPU_WIDTH);
 
-      this._gpuBox.set_element_width(this._gpuWidth);
+      this._gpuBox.set_element_width(this._gpuWidth * this._scaleFactor);
     }
 
     _gpuColorsChanged() {
@@ -1789,9 +1854,10 @@ const ResourceMonitor = GObject.registerClass(
         const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
         const uuid = it[0];
-        const name = this._gpuDisplayDeviceName ? it[1] : null;
+        const name = it[1];
         const usage = it[2] === "true" && this._gpuStatus;
         const memory = it[3] === "true" && this._gpuStatus;
+        const displayName = this._gpuDisplayDeviceName ? it[4] : null
         let thermal = false;
 
         if (this._thermalGpuTemperatureStatus) {
@@ -1804,10 +1870,10 @@ const ResourceMonitor = GObject.registerClass(
           });
         }
 
-        this._gpuBox.add_element(uuid, name, usage, memory, thermal);
+        this._gpuBox.add_element(uuid, displayName, usage, memory, thermal);
       });
 
-      this._gpuBox.set_element_width(this._gpuWidth);
+      this._gpuBox.set_element_width(this._gpuWidth * this._scaleFactor);
     }
 
     _refreshHandler() {
@@ -3052,9 +3118,9 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         if (this._decimalsStatus) {
-          this._cpuFrequencyValue.text = `[${value.toFixed(2)}`;
+          this._cpuFrequencyValue.text = `${value.toFixed(2)}`;
         } else {
-          this._cpuFrequencyValue.text = `[${value.toFixed(0)}`;
+          this._cpuFrequencyValue.text = `${value.toFixed(0)}`;
         }
       });
     }
@@ -3083,7 +3149,7 @@ const ResourceMonitor = GObject.registerClass(
           this._cpuLoadAverageValue.style = "";
         }
 
-        this._cpuLoadAverageValue.text = "[" + l0 + " " + l1 + " " + l2 + "]";
+        this._cpuLoadAverageValue.text = `${l0} ${l1} ${l2}`;
       });
     }
 
@@ -3150,11 +3216,11 @@ const ResourceMonitor = GObject.registerClass(
                 }
 
                 if (this._decimalsStatus) {
-                  this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(
+                  this._cpuTemperatureValue.text = `${this._cpuTemperatures.toFixed(
                     1
                   )}`;
                 } else {
-                  this._cpuTemperatureValue.text = `[${this._cpuTemperatures.toFixed(
+                  this._cpuTemperatureValue.text = `${this._cpuTemperatures.toFixed(
                     0
                   )}`;
                 }
@@ -3164,12 +3230,12 @@ const ResourceMonitor = GObject.registerClass(
               }
             });
           } else {
-            this._cpuTemperatureValue.text = _("[Temperature Error");
+            this._cpuTemperatureValue.text = _("Temperature Error");
             this._cpuTemperatureUnit.text = "";
           }
         }
       } else {
-        this._cpuTemperatureValue.text = _("[--");
+        this._cpuTemperatureValue.text = _("--");
       }
     }
 
@@ -3337,7 +3403,7 @@ const ResourceMonitor = GObject.registerClass(
               const item = this._gpuMemoryColors[i];
               const values = item.split(COLOR_LIST_SEPARATOR);
 
-              if (usage <= parseFloat(values[0])) {
+              if (value <= parseFloat(values[0])) {
                 styleM = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
                 break;
               }
@@ -3352,7 +3418,7 @@ const ResourceMonitor = GObject.registerClass(
               const item = this._thermalGpuColors[i];
               const values = item.split(COLOR_LIST_SEPARATOR);
 
-              if (usage <= parseFloat(values[0])) {
+              if (valueT <= parseFloat(values[0])) {
                 styleT = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
                 break;
               }
@@ -3538,7 +3604,9 @@ const DiskContainerStats = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._elementsValue["single"].set_style("text-align: right;");
+      this._elementsValue["single"].clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._elementsUnit["single"] = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -3565,7 +3633,9 @@ const DiskContainerStats = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--|--",
       });
-      this._elementsValue[filesystem].set_style("text-align: right;");
+      this._elementsValue[filesystem].clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._elementsUnit[filesystem] = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -3659,7 +3729,9 @@ const DiskContainerSpace = GObject.registerClass(
         y_align: Clutter.ActorAlign.CENTER,
         text: "--",
       });
-      this._elementsValue[filesystem].set_style("text-align: right;");
+      this._elementsValue[filesystem].clutter_text.set({
+        x_align: Clutter.ActorAlign.END,
+      });
 
       this._elementsUnit[filesystem] = new St.Label({
         y_align: Clutter.ActorAlign.CENTER,
@@ -3776,7 +3848,9 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: "--",
         });
-        this._elementsValue[uuid].set_style("text-align: right;");
+        this._elementsValue[uuid].clutter_text.set({
+          x_align: Clutter.ActorAlign.END,
+        });
 
         this._elementsUnit[uuid] = new St.Label({
           y_align: Clutter.ActorAlign.CENTER,
@@ -3806,7 +3880,9 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: "--",
         });
-        this._elementsMemoryValue[uuid].set_style("text-align: right;");
+        this._elementsMemoryValue[uuid].clutter_text.set({
+          x_align: Clutter.ActorAlign.END,
+        });
 
         this._elementsMemoryUnit[uuid] = new St.Label({
           y_align: Clutter.ActorAlign.CENTER,
@@ -3836,7 +3912,9 @@ const GpuContainer = GObject.registerClass(
           y_align: Clutter.ActorAlign.CENTER,
           text: "--",
         });
-        this._elementsThermalValue[uuid].set_style("text-align: right;");
+        this._elementsThermalValue[uuid].clutter_text.set({
+          x_align: Clutter.ActorAlign.END,
+        });
 
         this._elementsThermalUnit[uuid] = new St.Label({
           y_align: Clutter.ActorAlign.CENTER,
@@ -3864,7 +3942,7 @@ const GpuContainer = GObject.registerClass(
     update_element_value(uuid, value, unit, style = "") {
       if (this._elementsValue[uuid]) {
         this._elementsValue[uuid].text = value;
-        this._elementsValue[filesystem].style = style;
+        this._elementsValue[uuid].style = style;
         this._elementsUnit[uuid].text = unit;
       }
     }
@@ -3872,7 +3950,7 @@ const GpuContainer = GObject.registerClass(
     update_element_memory_value(uuid, value, unit, style = "") {
       if (this._elementsMemoryValue[uuid]) {
         this._elementsMemoryValue[uuid].text = value;
-        this._elementsValue[filesystem].style = style;
+        this._elementsMemoryValue[uuid].style = style;
         this._elementsMemoryUnit[uuid].text = unit;
       }
     }
@@ -3880,7 +3958,7 @@ const GpuContainer = GObject.registerClass(
     update_element_thermal_value(uuid, value, unit, style = "") {
       if (this._elementsThermalValue[uuid]) {
         this._elementsThermalValue[uuid].text = value;
-        this._elementsValue[filesystem].style = style;
+        this._elementsThermalValue[uuid].style = style;
         this._elementsThermalUnit[uuid].text = unit;
       }
     }
