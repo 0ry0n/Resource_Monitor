@@ -270,7 +270,7 @@ const ResourceMonitor = GObject.registerClass(
         this._handlerIds[i] = 0;
       }
 
-      this.themeContext.disconnect(this._themeContextHandlerId);
+      this._themeContext.disconnect(this._themeContextHandlerId);
 
       super.destroy();
     }
