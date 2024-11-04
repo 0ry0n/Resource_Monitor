@@ -169,16 +169,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     _makeColorRow(
       settings,
       settingsName,
-      element,
+      listbox,
       text = "0.0",
       red = 224 / 255,
       green = 27 / 255,
       blue = 36 / 255,
       alpha = 1.0
     ) {
-      let row = new Gtk.ListBoxRow();
-      let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
+      const row = new Gtk.ListBoxRow();
+      const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
 
+      // Label for the row
       box.append(
         new Gtk.Label({
           label: "Lower than",
@@ -186,130 +187,166 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           halign: Gtk.Align.START,
         })
       );
-      let entry = new Gtk.Entry({
-        input_purpose: "number",
+
+      // Entry field for threshold value
+      const entry = new Gtk.Entry({
+        input_purpose: Gtk.InputPurpose.NUMBER,
         text: text,
         margin_end: 8,
       });
       entry.connect("changed", (widget) => {
         const index = row.get_index();
         let colorsArray = settings.get_strv(settingsName);
-        let values = colorsArray[index].split(COLOR_LIST_SEPARATOR);
-        colorsArray[
-          index
-        ] = `${widget.text}${COLOR_LIST_SEPARATOR}${values[1]}${COLOR_LIST_SEPARATOR}${values[2]}${COLOR_LIST_SEPARATOR}${values[3]}`;
-        settings.set_strv(settingsName, colorsArray);
+
+        if (index >= 0 && index < colorsArray.length) {
+          const [_, oldRed, oldGreen, oldBlue] =
+            colorsArray[index].split(COLOR_LIST_SEPARATOR);
+          colorsArray[
+            index
+          ] = `${widget.text}${COLOR_LIST_SEPARATOR}${oldRed}${COLOR_LIST_SEPARATOR}${oldGreen}${COLOR_LIST_SEPARATOR}${oldBlue}`;
+          settings.set_strv(settingsName, colorsArray);
+        }
       });
       box.append(entry);
 
-      let colorButton = new Gtk.ColorButton({
-        rgba: new Gdk.RGBA({
-          red: red,
-          green: green,
-          blue: blue,
-          alpha: alpha,
-        }),
+      // Color button for selecting color
+      const colorButton = new Gtk.ColorButton({
+        rgba: new Gdk.RGBA({ red, green, blue, alpha }),
         margin_end: 8,
       });
       colorButton.connect("color-set", (widget) => {
-        let rgba = widget.get_rgba();
         const index = row.get_index();
         let colorsArray = settings.get_strv(settingsName);
-        let values = colorsArray[index].split(COLOR_LIST_SEPARATOR);
-        colorsArray[
-          index
-        ] = `${values[0]}${COLOR_LIST_SEPARATOR}${rgba.red}${COLOR_LIST_SEPARATOR}${rgba.green}${COLOR_LIST_SEPARATOR}${rgba.blue}`;
-        settings.set_strv(settingsName, colorsArray);
+
+        if (index >= 0 && index < colorsArray.length) {
+          const rgba = widget.get_rgba();
+          const [threshold] = colorsArray[index].split(COLOR_LIST_SEPARATOR);
+          colorsArray[
+            index
+          ] = `${threshold}${COLOR_LIST_SEPARATOR}${rgba.red}${COLOR_LIST_SEPARATOR}${rgba.green}${COLOR_LIST_SEPARATOR}${rgba.blue}`;
+          settings.set_strv(settingsName, colorsArray);
+        }
       });
       box.append(colorButton);
 
-      let deleteButton = new Gtk.Button({
-        icon_name: "edit-delete",
-      });
-      deleteButton.connect("clicked", (button) => {
+      // Delete button to remove row
+      const deleteButton = new Gtk.Button({ icon_name: "edit-delete" });
+      deleteButton.connect("clicked", () => {
         const index = row.get_index();
         let colorsArray = settings.get_strv(settingsName);
-        element.remove(row);
-        colorsArray.splice(index, 1);
-        settings.set_strv(settingsName, colorsArray);
+
+        if (index >= 0 && index < colorsArray.length) {
+          listbox.remove(row);
+          colorsArray.splice(index, 1);
+          settings.set_strv(settingsName, colorsArray);
+        }
       });
       box.append(deleteButton);
 
       row.child = box;
+      listbox.append(row);
 
-      element.append(row);
-
+      // Return the formatted color string for the settings array
       return `${text}${COLOR_LIST_SEPARATOR}${red}${COLOR_LIST_SEPARATOR}${green}${COLOR_LIST_SEPARATOR}${blue}`;
     }
 
-    _makeThermalColumnView(view, type) {
-      let model = new Gio.ListStore({
-        item_type: type,
-      });
-      let selection = new Gtk.NoSelection({
-        model: model,
-      });
-      view.set_model(selection);
+    _makeColors(settings, settingsName, listBox, addButton) {
+      const colorsArray = settings.get_strv(settingsName);
 
-      // Make column for GtkColumnView
-      // Device
-      let deviceFactory = new Gtk.SignalListItemFactory();
-      deviceFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Label({ halign: Gtk.Align.START });
+      for (const element of colorsArray) {
+        const entry = element.split(COLOR_LIST_SEPARATOR);
+
+        // Destructure and parse RGB values
+        const [threshold, red, green, blue] = entry;
+        const redValue = parseFloat(red);
+        const greenValue = parseFloat(green);
+        const blueValue = parseFloat(blue);
+
+        // Create a color row with the parsed values
+        this._makeColorRow(
+          settings,
+          settingsName,
+          listBox,
+          threshold,
+          redValue,
+          greenValue,
+          blueValue
+        );
+      }
+
+      addButton.connect("clicked", (button) => {
+        let colorsArray = settings.get_strv(settingsName);
+        colorsArray.push(this._makeColorRow(settings, settingsName, listBox));
+        settings.set_strv(settingsName, colorsArray);
+      });
+    }
+
+    // Function to create a reusable label factory
+    _createLabelFactory(getTextCallback) {
+      const factory = new Gtk.SignalListItemFactory();
+
+      factory.connect("setup", (factory, listItem) => {
+        const label = new Gtk.Label({ halign: Gtk.Align.START });
         listItem.set_child(label);
       });
-      deviceFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
-        label.set_text(item.device);
+
+      factory.connect("bind", (factory, listItem) => {
+        const item = listItem.get_item();
+        const label = listItem.get_child();
+        label.set_text(getTextCallback(item));
       });
 
-      let deviceCol = new Gtk.ColumnViewColumn({
+      return factory;
+    }
+
+    _makeThermalColumnView(view, type) {
+      const model = new Gio.ListStore({ item_type: type });
+      const selection = new Gtk.NoSelection({ model: model });
+      view.set_model(selection);
+
+      // Device Column
+      const deviceFactory = this._createLabelFactory((item) => item.device);
+      const deviceCol = new Gtk.ColumnViewColumn({
         title: "Device",
         factory: deviceFactory,
         resizable: true,
       });
       view.append_column(deviceCol);
 
-      // Name
-      let nameFactory = new Gtk.SignalListItemFactory();
-      nameFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Label({ halign: Gtk.Align.START });
-        listItem.set_child(label);
-      });
-      nameFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
-        label.set_text(item.name);
-      });
-
-      let nameCol = new Gtk.ColumnViewColumn({
+      // Name Column
+      const nameFactory = this._createLabelFactory((item) => item.name);
+      const nameCol = new Gtk.ColumnViewColumn({
         title: "Name",
         factory: nameFactory,
         resizable: true,
       });
       view.append_column(nameCol);
 
-      // Monitor
-      let monitorFactory = new Gtk.SignalListItemFactory();
+      // Monitor Column
+      const monitorFactory = new Gtk.SignalListItemFactory();
       monitorFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
+        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
+
       monitorFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let toggle = listItem.get_child();
+        const item = listItem.get_item();
+        const toggle = listItem.get_child();
+
+        // Set the initial state of the toggle button
         toggle.set_active(item.monitor);
+
+        // Connect the toggled signal with the handler
         toggle.connect("toggled", (toggle) => {
-          let [found, index] = model.find(item);
-
-          item.monitor = toggle.active;
-
-          model.splice(index, 1, [item]);
+          const [found, index] = model.find(item);
+          if (found) {
+            item.monitor = toggle.active;
+            model.splice(index, 1, [item]); // Update model with new item state
+          }
         });
       });
 
-      let monitorCol = new Gtk.ColumnViewColumn({
+      const monitorCol = new Gtk.ColumnViewColumn({
         title: "Monitor",
         factory: monitorFactory,
         resizable: true,
@@ -320,11 +357,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _saveArrayToSettings(model, settings, key) {
-      let array = [];
-      model.foreach((list, path, iter) => {
-        let element = list.get_item(iter);
+      const array = [];
+      for (let iter = 0; iter < model.get_n_items(); iter++) {
+        const element = model.get_item(iter);
         array.push(element.getFormattedString());
-      });
+      }
       settings.set_strv(key, array);
     }
 
@@ -442,8 +479,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._iconsPositionCombobox.sensitive = this._iconsDisplay.active;
 
       // LEFT-CLICK
-      let active = this._settings.get_string(LEFT_CLICK_STATUS);
-      let textBufferCustom = this._settings.get_string(
+      const active = this._settings.get_string(LEFT_CLICK_STATUS);
+      const textBufferCustom = this._settings.get_string(
         CUSTOM_LEFT_CLICK_STATUS
       );
 
@@ -485,10 +522,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       for (let i = 0; i < itemsPositionArray.length; i++) {
         const element = itemsPositionArray[i];
 
-        let row = new Gtk.ListBoxRow();
-        let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
+        const row = new Gtk.ListBoxRow();
+        const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
 
-        let up = new Gtk.Button({ icon_name: "go-up" });
+        const up = new Gtk.Button({ icon_name: "go-up" });
         up.connect("clicked", (button) => {
           const index = row.get_index();
           if (index > 0) {
@@ -502,7 +539,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._settings.set_strv(ITEMS_POSITION, itemsPositionArray);
           }
         });
-        let down = new Gtk.Button({ icon_name: "go-down" });
+        const down = new Gtk.Button({ icon_name: "go-down" });
         down.connect("clicked", (button) => {
           const index = row.get_index();
           if (index < itemsPositionArray.length) {
@@ -623,92 +660,28 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._cpuLoadAverageDisplay.active;
 
       // Cpu Colors
-      let cpuColorsArray = this._settings.get_strv(CPU_COLORS);
-
-      for (let i = 0; i < cpuColorsArray.length; i++) {
-        const element = cpuColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          CPU_COLORS,
-          this._cpuColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._cpuColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(CPU_COLORS);
-        colorsArray.push(
-          this._makeColorRow(this._settings, CPU_COLORS, this._cpuColorsListbox)
-        );
-        this._settings.set_strv(CPU_COLORS, colorsArray);
-      });
-
-      // Frequency Colors
-      let frequencyColorsArray = this._settings.get_strv(CPU_FREQUENCY_COLORS);
-
-      for (let i = 0; i < frequencyColorsArray.length; i++) {
-        const element = frequencyColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          CPU_FREQUENCY_COLORS,
-          this._cpuFrequencyColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._cpuFrequencyColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(CPU_FREQUENCY_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            CPU_FREQUENCY_COLORS,
-            this._cpuFrequencyColorsListbox
-          )
-        );
-        this._settings.set_strv(CPU_FREQUENCY_COLORS, colorsArray);
-      });
-
-      // Load Average Colors
-      let loadAverageColorsArray = this._settings.get_strv(
-        CPU_LOADAVERAGE_COLORS
+      this._makeColors(
+        this._settings,
+        CPU_COLORS,
+        this._cpuColorsListbox,
+        this._cpuColorsAddButton
       );
 
-      for (let i = 0; i < loadAverageColorsArray.length; i++) {
-        const element = loadAverageColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
+      // Frequency Colors
+      this._makeColors(
+        this._settings,
+        CPU_FREQUENCY_COLORS,
+        this._cpuFrequencyColorsListbox,
+        this._cpuFrequencyColorsAddButton
+      );
 
-        this._makeColorRow(
-          this._settings,
-          CPU_LOADAVERAGE_COLORS,
-          this._cpuLoadAverageColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._cpuLoadAverageColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(CPU_LOADAVERAGE_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            CPU_LOADAVERAGE_COLORS,
-            this._cpuLoadAverageColorsListbox
-          )
-        );
-        this._settings.set_strv(CPU_LOADAVERAGE_COLORS, colorsArray);
-      });
+      // Load Average Colors
+      this._makeColors(
+        this._settings,
+        CPU_LOADAVERAGE_COLORS,
+        this._cpuLoadAverageColorsListbox,
+        this._cpuLoadAverageColorsAddButton
+      );
     }
 
     _buildRam() {
@@ -777,30 +750,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._ramAlertThresholdSpinbutton.sensitive = this._ramAlert.active;
 
       // Colors
-      let ramColorsArray = this._settings.get_strv(RAM_COLORS);
-
-      for (let i = 0; i < ramColorsArray.length; i++) {
-        const element = ramColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          RAM_COLORS,
-          this._ramColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._ramColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(RAM_COLORS);
-        colorsArray.push(
-          this._makeColorRow(this._settings, RAM_COLORS, this._ramColorsListbox)
-        );
-        this._settings.set_strv(RAM_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        RAM_COLORS,
+        this._ramColorsListbox,
+        this._ramColorsAddButton
+      );
     }
 
     _buildSwap() {
@@ -869,34 +824,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._swapAlertThresholdSpinbutton.sensitive = this._swapAlert.active;
 
       // Colors
-      let swapColorsArray = this._settings.get_strv(SWAP_COLORS);
-
-      for (let i = 0; i < swapColorsArray.length; i++) {
-        const element = swapColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          SWAP_COLORS,
-          this._swapColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._swapColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(SWAP_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            SWAP_COLORS,
-            this._swapColorsListbox
-          )
-        );
-        this._settings.set_strv(SWAP_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        SWAP_COLORS,
+        this._swapColorsListbox,
+        this._swapColorsAddButton
+      );
     }
 
     _buildDisk() {
@@ -1019,127 +952,123 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._diskDevicesModel = new Gio.ListStore({
         item_type: DiskElement,
       });
-      let selection = new Gtk.NoSelection({
+      const selection = new Gtk.NoSelection({
         model: this._diskDevicesModel,
       });
       this._diskDevicesColumnView.set_model(selection);
 
-      // Make column for GtkColumnView
-      // Display Name
-      let displayNameFactory = new Gtk.SignalListItemFactory();
+      // Display Name Column
+      const displayNameFactory = new Gtk.SignalListItemFactory();
       displayNameFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Entry();
+        const label = new Gtk.Entry();
         listItem.set_child(label);
       });
       displayNameFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
+        const item = listItem.get_item();
+        const label = listItem.get_child();
         label.set_text(item.displayName);
         label.connect("changed", (tBuffer) => {
-          let [found, index] = this._diskDevicesModel.find(item);
+          const [found, index] = this._diskDevicesModel.find(item);
 
-          item.setDisplayName(tBuffer.text);
+          if (found) {
+            item.setDisplayName(tBuffer.text);
 
-          // Update if empty
-          if (item.displayName !== tBuffer.text) {
-            tBuffer.text = item.displayName;
+            // Update if empty
+            if (item.displayName !== tBuffer.text) {
+              tBuffer.text = item.displayName;
+            }
+
+            this._diskDevicesModel.splice(index, 1, [item]);
           }
-
-          this._diskDevicesModel.splice(index, 1, [item]);
         });
       });
 
-      let displayNameCol = new Gtk.ColumnViewColumn({
+      const displayNameCol = new Gtk.ColumnViewColumn({
         title: "Display Name",
         factory: displayNameFactory,
         resizable: true,
       });
       this._diskDevicesColumnView.append_column(displayNameCol);
 
-      // Device
-      let deviceFactory = new Gtk.SignalListItemFactory();
-      deviceFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Label({ halign: Gtk.Align.START });
-        listItem.set_child(label);
-      });
-      deviceFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
-        label.set_text(item.device);
-      });
+      // Device Column
+      const deviceFactory = this._createLabelFactory((item) => item.device);
 
-      let deviceCol = new Gtk.ColumnViewColumn({
+      const deviceCol = new Gtk.ColumnViewColumn({
         title: "Device",
         factory: deviceFactory,
         resizable: true,
       });
       this._diskDevicesColumnView.append_column(deviceCol);
 
-      // Mount Point
-      let mountPointFactory = new Gtk.SignalListItemFactory();
-      mountPointFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Label({ halign: Gtk.Align.START });
-        listItem.set_child(label);
-      });
-      mountPointFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
-        label.set_text(item.mountPoint);
-      });
+      // Mount Point Column
+      const mountPointFactory = this._createLabelFactory(
+        (item) => item.mountPoint
+      );
 
-      let mountPointCol = new Gtk.ColumnViewColumn({
+      const mountPointCol = new Gtk.ColumnViewColumn({
         title: "Mount Point",
         factory: mountPointFactory,
         resizable: true,
       });
       this._diskDevicesColumnView.append_column(mountPointCol);
 
-      // Stats
-      let statsFactory = new Gtk.SignalListItemFactory();
+      // Stats Column
+      const statsFactory = new Gtk.SignalListItemFactory();
       statsFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
+        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       statsFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let toggle = listItem.get_child();
+        const item = listItem.get_item();
+        const toggle = listItem.get_child();
+
+        // Set the initial state of the toggle button
         toggle.set_active(item.stats);
+
+        // Connect the toggled signal with the handler
         toggle.connect("toggled", (toggle) => {
-          let [found, index] = this._diskDevicesModel.find(item);
-
-          item.stats = toggle.active;
-
-          this._diskDevicesModel.splice(index, 1, [item]);
+          const [found, index] = this._diskDevicesModel.find(item);
+          if (found) {
+            item.stats = toggle.active;
+            this._diskDevicesModel.splice(index, 1, [item]); // Update model with new item state
+          }
         });
       });
 
-      let statsCol = new Gtk.ColumnViewColumn({
+      const statsCol = new Gtk.ColumnViewColumn({
         title: "Stats",
         factory: statsFactory,
         resizable: true,
       });
       this._diskDevicesColumnView.append_column(statsCol);
 
-      // Space
-      let spaceFactory = new Gtk.SignalListItemFactory();
+      // Space Column
+      const spaceFactory = new Gtk.SignalListItemFactory();
       spaceFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
+        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       spaceFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let toggle = listItem.get_child();
+        const item = listItem.get_item();
+        const toggle = listItem.get_child();
+
+        // Set the initial state of the toggle button
         toggle.set_active(item.space);
+        if (item.mountPoint === "") {
+          toggle.sensitive = false;
+        }
+
+        // Connect the toggled signal with the handler
         toggle.connect("toggled", (toggle) => {
-          let [found, index] = this._diskDevicesModel.find(item);
-
-          item.space = toggle.active;
-
-          this._diskDevicesModel.splice(index, 1, [item]);
+          const [found, index] = this._diskDevicesModel.find(item);
+          if (found) {
+            item.space = toggle.active;
+            this._diskDevicesModel.splice(index, 1, [item]); // Update model with new item state
+          }
         });
       });
 
-      let spaceCol = new Gtk.ColumnViewColumn({
+      const spaceCol = new Gtk.ColumnViewColumn({
         title: "Space",
         factory: spaceFactory,
         resizable: true,
@@ -1165,184 +1094,157 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._diskDevicesModel.connect(
         "items-changed",
         (_list, position, removed, added) => {
-          let diskElement = _list.get_item(position);
-          let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
+          const diskElement = _list.get_item(position);
+          // This is necessary because model.remove_all() is used
+          if (diskElement) {
+            let disksArray = this._settings.get_strv(DISK_DEVICES_LIST);
 
-          disksArray[position] = diskElement.getFormattedString();
+            disksArray[position] = diskElement.getFormattedString();
 
-          this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+            this._settings.set_strv(DISK_DEVICES_LIST, disksArray);
+          }
         }
       );
 
       // Stats Colors
-      let diskStatsColorsArray = this._settings.get_strv(DISK_STATS_COLORS);
-
-      for (let i = 0; i < diskStatsColorsArray.length; i++) {
-        const element = diskStatsColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          DISK_STATS_COLORS,
-          this._diskStatsColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._diskStatsColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(DISK_STATS_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            DISK_STATS_COLORS,
-            this._diskStatsColorsListbox
-          )
-        );
-        this._settings.set_strv(DISK_STATS_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        DISK_STATS_COLORS,
+        this._diskStatsColorsListbox,
+        this._diskStatsColorsAddButton
+      );
 
       // Space Colors
-      let diskSpaceColorsArray = this._settings.get_strv(DISK_SPACE_COLORS);
-
-      for (let i = 0; i < diskSpaceColorsArray.length; i++) {
-        const element = diskSpaceColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          DISK_SPACE_COLORS,
-          this._diskSpaceColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._diskSpaceColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(DISK_SPACE_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            DISK_SPACE_COLORS,
-            this._diskSpaceColorsListbox
-          )
-        );
-        this._settings.set_strv(DISK_SPACE_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        DISK_SPACE_COLORS,
+        this._diskSpaceColorsListbox,
+        this._diskSpaceColorsAddButton
+      );
     }
 
-    _readDiskDevices(settings, model, all) {
-      model.remove_all();
+    _readDiskDevices(settings, model, loadAll) {
       // Array format
-      // filesystem mountPoint stats space displayName
+      // filesystem mount_point stats space display_name
+
+      model.remove_all();
+
+      // Retrieve the disk device settings
       let disksArray = settings.get_strv(DISK_DEVICES_LIST);
 
-      this._executeCommand(["df", "-x", "squashfs", "-x", "tmpfs"]).then(
-        (output) => {
-          let lines = output.split("\n");
+      // Execute 'df' command and parse the output
+      this._executeCommand(["df", "-x", "squashfs", "-x", "tmpfs"])
+        .then((output) => {
+          const lines = output.split("\n");
 
-          // Excludes the first line of output
+          // Parse each line of the command output, skipping the header line
           for (let i = 1; i < lines.length - 1; i++) {
-            let line = lines[i];
-            let entry = line.trim().split(/\s+/);
+            const entry = lines[i].trim().split(/\s+/);
+            const filesystem = entry[0];
+            const mountPoint = entry[5];
 
-            let filesystem = entry[0];
-            let mountedOn = entry[5];
-
-            let dStButton = false;
-            let dSpButton = false;
-
+            // Initialize button states and display name
+            let statsButton = false;
+            let spaceButton = false;
             let displayName = filesystem;
 
-            // Init gui
-            for (let i = 0; i < disksArray.length; i++) {
-              let element = disksArray[i];
-              let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
-
-              if (filesystem === it[0]) {
-                dStButton = it[2] === "true";
-                dSpButton = it[3] === "true";
-
-                displayName = it[4];
-
+            // Check if the device is in the settings array
+            for (const diskConfig of disksArray) {
+              const [fs, mount, stBtn, spBtn, name] = diskConfig.split(
+                DISK_DEVICES_LIST_SEPARATOR
+              );
+              if (filesystem === fs && mountPoint === mount) {
+                statsButton = stBtn === "true";
+                spaceButton = spBtn === "true";
+                displayName = name;
                 break;
               }
             }
 
+            // Append disk entry to the model
             model.append(
               new DiskElement(
                 displayName,
                 filesystem,
-                mountedOn,
-                dStButton,
-                dSpButton
+                mountPoint,
+                statsButton,
+                spaceButton
               )
             );
           }
 
-          if (all) {
-            this._loadFile("/proc/diskstats").then((contents) => {
-              const lines = new TextDecoder().decode(contents).split("\n");
+          if (loadAll) {
+            // Load additional devices from /proc/diskstats if needed
+            this._loadFile("/proc/diskstats")
+              .then((contents) => {
+                const lines = new TextDecoder().decode(contents).split("\n");
 
-              for (let i = 0; i < lines.length - 1; i++) {
-                const line = lines[i];
-                const entry = line.trim().split(/\s+/);
+                for (const line of lines) {
+                  if (!line.trim()) continue;
 
-                if (entry[2].match(/loop*/)) {
-                  continue;
-                }
+                  const entry = line.trim().split(/\s+/);
+                  const devicePath = `/dev/${entry[2]}`;
 
-                let found = false;
-                const fs = "/dev/" + entry[2];
+                  // Skip loop devices
+                  if (entry[2].match(/loop*/)) continue;
 
-                model.foreach((list, path, iter) => {
-                  const diskElement = list.get_item(iter);
-                  if (fs === diskElement.device) {
-                    found = true;
-                    return;
-                  }
-                });
-
-                if (!found) {
-                  let dStButton = false;
-                  let dSpButton = false;
-
-                  let displayName = fs;
-
-                  // Init gui
-                  for (let i = 0; i < disksArray.length; i++) {
-                    let element = disksArray[i];
-                    let it = element.split(DISK_DEVICES_LIST_SEPARATOR);
-
-                    if (fs === it[0]) {
-                      dStButton = it[2] === "true";
-                      dSpButton = it[3] === "true";
-
-                      displayName = it[4];
-
-                      break;
+                  // Check if device is already listed
+                  let isListed = false;
+                  for (let iter = 0; iter < model.get_n_items(); iter++) {
+                    if (devicePath === model.get_item(iter).device) {
+                      isListed = true;
+                      break; // Stop the for
                     }
                   }
 
-                  model.append(
-                    new DiskElement(displayName, fs, "", dStButton, dSpButton)
-                  );
-                }
-              }
+                  if (!isListed) {
+                    // Initialize button states and display name
+                    let statsButton = false;
+                    let spaceButton = false;
+                    let displayName = devicePath;
 
-              // Save new disksArray
-              this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
-            });
+                    // Check if the device is in the settings array
+                    for (const diskConfig of disksArray) {
+                      const [fs, mount, stBtn, spBtn, name] = diskConfig.split(
+                        DISK_DEVICES_LIST_SEPARATOR
+                      );
+                      if (devicePath === fs && "" === mount) {
+                        statsButton = stBtn === "true";
+                        spaceButton = spBtn === "true";
+                        displayName = name;
+                        break;
+                      }
+                    }
+
+                    model.append(
+                      new DiskElement(
+                        displayName,
+                        devicePath,
+                        "",
+                        statsButton,
+                        spaceButton
+                      )
+                    );
+                  }
+                }
+
+                // Save updated disksArray to settings
+                this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+              })
+              .catch((err) =>
+                console.error(
+                  "[Resource_Monitor] Error loading /proc/diskstats:",
+                  err
+                )
+              );
           } else {
-            // Save new disksArray
+            // Save updated disksArray to settings
             this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
           }
-        }
-      );
+        })
+        .catch((err) =>
+          console.error("[Resource_Monitor] Error executing df command:", err)
+        );
     }
 
     _buildNet() {
@@ -1415,64 +1317,20 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._netWlanWidthSpinbutton.sensitive = this._netWlanDisplay.active;
 
       // Eth Colors
-      let netEthColorsArray = this._settings.get_strv(NET_ETH_COLORS);
-
-      for (let i = 0; i < netEthColorsArray.length; i++) {
-        const element = netEthColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          NET_ETH_COLORS,
-          this._netEthColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._netEthColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(NET_ETH_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            NET_ETH_COLORS,
-            this._netEthColorsListbox
-          )
-        );
-        this._settings.set_strv(NET_ETH_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        NET_ETH_COLORS,
+        this._netEthColorsListbox,
+        this._netEthColorsAddButton
+      );
 
       // Wlan Colors
-      let netWlanColorsArray = this._settings.get_strv(NET_WLAN_COLORS);
-
-      for (let i = 0; i < netWlanColorsArray.length; i++) {
-        const element = netWlanColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          NET_WLAN_COLORS,
-          this._netWlanColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._netWlanColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(NET_WLAN_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            NET_WLAN_COLORS,
-            this._netWlanColorsListbox
-          )
-        );
-        this._settings.set_strv(NET_WLAN_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        NET_WLAN_COLORS,
+        this._netWlanColorsListbox,
+        this._netWlanColorsAddButton
+      );
     }
 
     _buildThermal() {
@@ -1558,64 +1416,76 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Detect sensors
-      //let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
+      // let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
       this._executeCommand([
         "bash",
         "-c",
         'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi',
-      ]).then((output) => {
-        let result = output.split("\n")[0];
-        if (result === "EXIST") {
-          this._executeCommand([
-            "bash",
-            "-c",
-            'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done',
-          ]).then((output) => {
-            let lines = output.split("\n");
+      ])
+        .then((output) => {
+          const result = output.trim().split("\n")[0];
 
-            for (let i = 0; i < lines.length - 1; i++) {
-              let line = lines[i];
-              let entry = line.trim().split(/-/);
+          if (result === "EXIST") {
+            // Execute command to detect relevant temperature sensors
+            this._executeCommand([
+              "bash",
+              "-c",
+              'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done',
+            ])
+              .then((inner_output) => {
+                const lines = inner_output.trim().split("\n");
 
-              let device = entry[0];
-              let path = entry[1];
+                for (const line of lines) {
+                  if (!line) continue;
 
-              let statusButton = false;
+                  const [device, path] = line.trim().split(/-/);
+                  let statusButton = false;
 
-              // Init gui
-              for (let i = 0; i < cpuTempsArray.length; i++) {
-                let element = cpuTempsArray[i];
-                let it = element.split(
-                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR
-                );
+                  // Check if this device is in the saved temperature settings
+                  for (const tempConfig of cpuTempsArray) {
+                    const [savedDevice, buttonStatus, savedPath] =
+                      tempConfig.split(
+                        THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR
+                      );
+                    if (device === savedDevice) {
+                      statusButton = buttonStatus === "true";
+                      break;
+                    }
+                  }
 
-                if (device === it[0]) {
-                  statusButton = it[1] === "true";
-
-                  break;
+                  // Append the CPU temperature data to the model
+                  this._thermalCpuDevicesModel.append(
+                    new ThermalCpuElement(path, device, statusButton)
+                  );
                 }
-              }
 
-              this._thermalCpuDevicesModel.append(
-                new ThermalCpuElement(path, device, statusButton)
+                // Save updated CPU temperature array to settings
+                this._saveArrayToSettings(
+                  this._thermalCpuDevicesModel,
+                  this._settings,
+                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST
+                );
+              })
+              .catch((error) =>
+                console.error(
+                  "[Resource_Monitor] Error fetching sensor details:",
+                  error
+                )
               );
-            }
-
-            // Save new cpuTempsArray
-            this._saveArrayToSettings(
-              this._thermalCpuDevicesModel,
-              settings,
-              THERMAL_CPU_TEMPERATURE_DEVICES_LIST
-            );
-          });
-        }
-      });
+          }
+        })
+        .catch((error) =>
+          console.error(
+            "[Resource_Monitor] Error checking for sensor existence:",
+            error
+          )
+        );
 
       // Update
       this._thermalCpuDevicesModel.connect(
         "items-changed",
         (_list, position, removed, added) => {
-          let cpuTempElement = _list.get_item(position);
+          const cpuTempElement = _list.get_item(position);
           let cpuTempsArray = this._settings.get_strv(
             THERMAL_CPU_TEMPERATURE_DEVICES_LIST
           );
@@ -1630,34 +1500,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Colors
-      let thermalCpuColorsArray = this._settings.get_strv(THERMAL_CPU_COLORS);
-
-      for (let i = 0; i < thermalCpuColorsArray.length; i++) {
-        const element = thermalCpuColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          THERMAL_CPU_COLORS,
-          this._thermalCpuColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._thermalCpuColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(THERMAL_CPU_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            THERMAL_CPU_COLORS,
-            this._thermalCpuColorsListbox
-          )
-        );
-        this._settings.set_strv(THERMAL_CPU_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        THERMAL_CPU_COLORS,
+        this._thermalCpuColorsListbox,
+        this._thermalCpuColorsAddButton
+      );
 
       // GPU
       // ColumnView
@@ -1672,50 +1520,58 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         THERMAL_GPU_TEMPERATURE_DEVICES_LIST
       );
 
-      // NVIDIA
-      this._executeCommand(["nvidia-smi", "-L"]).then((output) => {
-        let lines = output.split("\n");
+      // NVIDIA GPU detection
+      this._executeCommand(["nvidia-smi", "-L"])
+        .then((output) => {
+          const lines = output.trim().split("\n");
 
-        for (let i = 0; i < lines.length - 1; i++) {
-          let line = lines[i];
-          let entry = line.trim().split(/:/);
+          for (const line of lines) {
+            if (!line) continue;
 
-          let device = entry[0];
-          let name = entry[1].slice(1, -6);
-          let uuid = entry[2].slice(1, -1);
+            const entry = line.trim().split(":");
+            const device = entry[0].trim();
+            const name = entry[1]?.trim().slice(0, -6); // Remove trailing "(UUID)"
+            const uuid = entry[2]?.trim().slice(0, -1); // Remove trailing ")"
 
-          let statusButton = false;
+            let statusButton = false;
 
-          // Init gui
-          for (let i = 0; i < gpuTempsArray.length; i++) {
-            let element = gpuTempsArray[i];
-            let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+            // Check if the UUID is in the saved GPU temperature settings
+            for (const gpuConfig of gpuTempsArray) {
+              const [savedUuid, name, statusBtn] = gpuConfig.split(
+                GPU_DEVICES_LIST_SEPARATOR
+              );
 
-            if (uuid === it[0]) {
-              statusButton = it[2] === "true";
-
-              break;
+              if (uuid === savedUuid) {
+                statusButton = statusBtn === "true";
+                break;
+              }
             }
+
+            // Append the GPU data to the thermal model
+            this._thermalGpuDevicesModel.append(
+              new ThermalGpuElement(uuid, name, statusButton)
+            );
           }
 
-          this._thermalGpuDevicesModel.append(
-            new ThermalGpuElement(uuid, name, statusButton)
+          // Save updated GPU temperatures to settings
+          this._saveArrayToSettings(
+            this._thermalGpuDevicesModel,
+            this._settings,
+            THERMAL_GPU_TEMPERATURE_DEVICES_LIST
           );
-        }
-
-        // Save new gpuTempsArray
-        this._saveArrayToSettings(
-          this._thermalGpuDevicesModel,
-          settings,
-          THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+        })
+        .catch((error) =>
+          console.error(
+            "[Resource_Monitor] Error executing nvidia-smi command:",
+            error
+          )
         );
-      });
 
       // Update
       this._thermalGpuDevicesModel.connect(
         "items-changed",
         (_list, position, removed, added) => {
-          let gpuTempElement = _list.get_item(position);
+          const gpuTempElement = _list.get_item(position);
           let gpuTempsArray = this._settings.get_strv(
             THERMAL_GPU_TEMPERATURE_DEVICES_LIST
           );
@@ -1772,34 +1628,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             */
 
       // Colors
-      let thermalGpuColorsArray = this._settings.get_strv(THERMAL_GPU_COLORS);
-
-      for (let i = 0; i < thermalGpuColorsArray.length; i++) {
-        const element = thermalGpuColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          THERMAL_GPU_COLORS,
-          this._thermalGpuColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._thermalGpuColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(THERMAL_GPU_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            THERMAL_GPU_COLORS,
-            this._thermalGpuColorsListbox
-          )
-        );
-        this._settings.set_strv(THERMAL_GPU_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        THERMAL_GPU_COLORS,
+        this._thermalGpuColorsListbox,
+        this._thermalGpuColorsAddButton
+      );
     }
 
     _buildGpu() {
@@ -1877,127 +1711,118 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuDevicesModel = new Gio.ListStore({
         item_type: GpuElement,
       });
-      let selection = new Gtk.NoSelection({
+      const selection = new Gtk.NoSelection({
         model: this._gpuDevicesModel,
       });
       this._gpuDevicesColumnView.set_model(selection);
 
-      // Make column for GtkColumnView
-      // Display Name
-      let displayNameFactory = new Gtk.SignalListItemFactory();
+      // Display Name Column
+      const displayNameFactory = new Gtk.SignalListItemFactory();
       displayNameFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Entry();
+        const label = new Gtk.Entry();
         listItem.set_child(label);
       });
       displayNameFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
+        const item = listItem.get_item();
+        const label = listItem.get_child();
         label.set_text(item.displayName);
         label.connect("changed", (tBuffer) => {
-          let [found, index] = this._gpuDevicesModel.find(item);
+          const [found, index] = this._gpuDevicesModel.find(item);
 
-          item.setDisplayName(tBuffer.text);
+          if (found) {
+            item.setDisplayName(tBuffer.text);
 
-          // Update if empty
-          if (item.displayName !== tBuffer.text) {
-            tBuffer.text = item.displayName;
+            // Update if empty
+            if (item.displayName !== tBuffer.text) {
+              tBuffer.text = item.displayName;
+            }
+
+            this._gpuDevicesModel.splice(index, 1, [item]);
           }
-
-          this._gpuDevicesModel.splice(index, 1, [item]);
         });
       });
 
-      let displayNameCol = new Gtk.ColumnViewColumn({
+      const displayNameCol = new Gtk.ColumnViewColumn({
         title: "Display Name",
         factory: displayNameFactory,
         resizable: true,
       });
       this._gpuDevicesColumnView.append_column(displayNameCol);
 
-      // Device
-      let deviceFactory = new Gtk.SignalListItemFactory();
-      deviceFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Label({ halign: Gtk.Align.START });
-        listItem.set_child(label);
-      });
-      deviceFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
-        label.set_text(item.device);
-      });
+      // Device Column
+      const deviceFactory = this._createLabelFactory((item) => item.device);
 
-      let deviceCol = new Gtk.ColumnViewColumn({
+      const deviceCol = new Gtk.ColumnViewColumn({
         title: "Device",
         factory: deviceFactory,
         resizable: true,
       });
       this._gpuDevicesColumnView.append_column(deviceCol);
 
-      // Name
-      let nameFactory = new Gtk.SignalListItemFactory();
-      nameFactory.connect("setup", (factory, listItem) => {
-        let label = new Gtk.Label({ halign: Gtk.Align.START });
-        listItem.set_child(label);
-      });
-      nameFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let label = listItem.get_child();
-        label.set_text(item.name);
-      });
+      // Name Column
+      const nameFactory = this._createLabelFactory((item) => item.name);
 
-      let nameCol = new Gtk.ColumnViewColumn({
+      const nameCol = new Gtk.ColumnViewColumn({
         title: "Name",
         factory: nameFactory,
         resizable: true,
       });
       this._gpuDevicesColumnView.append_column(nameCol);
 
-      // Usage
-      let usageFactory = new Gtk.SignalListItemFactory();
+      // Usage Column
+      const usageFactory = new Gtk.SignalListItemFactory();
       usageFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
+        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       usageFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let toggle = listItem.get_child();
+        const item = listItem.get_item();
+        const toggle = listItem.get_child();
+
+        // Set the initial state of the toggle button
         toggle.set_active(item.usage);
+
+        // Connect the toggled signal with the handler
         toggle.connect("toggled", (toggle) => {
-          let [found, index] = this._gpuDevicesModel.find(item);
-
-          item.usage = toggle.active;
-
-          this._gpuDevicesModel.splice(index, 1, [item]);
+          const [found, index] = this._gpuDevicesModel.find(item);
+          if (found) {
+            item.usage = toggle.active;
+            this._gpuDevicesModel.splice(index, 1, [item]); // Update model with new item state
+          }
         });
       });
 
-      let usageCol = new Gtk.ColumnViewColumn({
+      const usageCol = new Gtk.ColumnViewColumn({
         title: "Usage Monitor",
         factory: usageFactory,
         resizable: true,
       });
       this._gpuDevicesColumnView.append_column(usageCol);
 
-      // Memory
-      let memoryFactory = new Gtk.SignalListItemFactory();
+      // Memory Column
+      const memoryFactory = new Gtk.SignalListItemFactory();
       memoryFactory.connect("setup", (factory, listItem) => {
-        let toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
+        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
         listItem.set_child(toggle);
       });
       memoryFactory.connect("bind", (factory, listItem) => {
-        let item = listItem.get_item();
-        let toggle = listItem.get_child();
+        const item = listItem.get_item();
+        const toggle = listItem.get_child();
+
+        // Set the initial state of the toggle button
         toggle.set_active(item.memory);
+
+        // Connect the toggled signal with the handler
         toggle.connect("toggled", (toggle) => {
-          let [found, index] = this._gpuDevicesModel.find(item);
-
-          item.memory = toggle.active;
-
-          this._gpuDevicesModel.splice(index, 1, [item]);
+          const [found, index] = this._gpuDevicesModel.find(item);
+          if (found) {
+            item.memory = toggle.active;
+            this._gpuDevicesModel.splice(index, 1, [item]); // Update model with new item state
+          }
         });
       });
 
-      let memoryCol = new Gtk.ColumnViewColumn({
+      const memoryCol = new Gtk.ColumnViewColumn({
         title: "Memory Monitor",
         factory: memoryFactory,
         resizable: true,
@@ -2008,55 +1833,66 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       // uuid:name:usage:memory:displayName
       let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
 
-      this._executeCommand(["nvidia-smi", "-L"]).then((output) => {
-        let lines = output.split("\n");
+      // NVIDIA GPU detection
+      this._executeCommand(["nvidia-smi", "-L"])
+        .then((output) => {
+          const lines = output.trim().split("\n");
 
-        for (let i = 0; i < lines.length - 1; i++) {
-          let line = lines[i];
-          let entry = line.trim().split(/:/);
+          for (const line of lines) {
+            if (!line) continue;
 
-          let device = entry[0];
-          let name = entry[1].slice(1, -6);
-          let uuid = entry[2].slice(1, -1);
+            const entry = line.trim().split(":");
+            const device = entry[0].trim();
+            const name = entry[1]?.trim().slice(0, -6); // Remove trailing "(UUID)"
+            const uuid = entry[2]?.trim().slice(0, -1); // Remove trailing ")"
 
-          let usageButton = false;
-          let memoryButton = false;
+            let usageButton = false;
+            let memoryButton = false;
+            let displayName = name;
 
-          let displayName = name;
+            // Check if the UUID is in the saved GPU settings
+            for (const gpuConfig of gpuDevicesArray) {
+              const [
+                savedUuid,
+                savedName,
+                usageStatus,
+                memoryStatus,
+                savedDisplayName,
+              ] = gpuConfig.split(GPU_DEVICES_LIST_SEPARATOR);
 
-          // Init gui
-          for (let i = 0; i < gpuDevicesArray.length; i++) {
-            let element = gpuDevicesArray[i];
-            let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
-
-            if (uuid === it[0]) {
-              usageButton = it[2] === "true";
-              memoryButton = it[3] === "true";
-
-              displayName = it[4];
-
-              break;
+              if (uuid === savedUuid) {
+                usageButton = usageStatus === "true";
+                memoryButton = memoryStatus === "true";
+                displayName = savedDisplayName;
+                break;
+              }
             }
+
+            // Append the GPU data to the model
+            this._gpuDevicesModel.append(
+              new GpuElement(displayName, uuid, name, usageButton, memoryButton)
+            );
           }
 
-          this._gpuDevicesModel.append(
-            new GpuElement(displayName, uuid, name, usageButton, memoryButton)
+          // Save updated GPU array to settings
+          this._saveArrayToSettings(
+            this._gpuDevicesModel,
+            this._settings,
+            GPU_DEVICES_LIST
           );
-        }
-
-        // Save new gpuDevicesArray
-        this._saveArrayToSettings(
-          this._gpuDevicesModel,
-          settings,
-          GPU_DEVICES_LIST
+        })
+        .catch((error) =>
+          console.error(
+            "[Resource_Monitor] Error executing nvidia-smi command:",
+            error
+          )
         );
-      });
 
       // Update
       this._gpuDevicesModel.connect(
         "items-changed",
         (_list, position, removed, added) => {
-          let gpuElement = _list.get_item(position);
+          const gpuElement = _list.get_item(position);
           let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
 
           gpuDevicesArray[position] = gpuElement.getFormattedString();
@@ -2066,60 +1902,20 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Gpu Colors
-      let gpuColorsArray = this._settings.get_strv(GPU_COLORS);
-
-      for (let i = 0; i < gpuColorsArray.length; i++) {
-        const element = gpuColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          GPU_COLORS,
-          this._gpuColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._gpuColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(GPU_COLORS);
-        colorsArray.push(
-          this._makeColorRow(this._settings, GPU_COLORS, this._gpuColorsListbox)
-        );
-        this._settings.set_strv(GPU_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        GPU_COLORS,
+        this._gpuColorsListbox,
+        this._gpuColorsAddButton
+      );
 
       // Memory Colors
-      let gpuMemoryColorsArray = this._settings.get_strv(GPU_MEMORY_COLORS);
-
-      for (let i = 0; i < gpuMemoryColorsArray.length; i++) {
-        const element = gpuMemoryColorsArray[i];
-        const entry = element.split(COLOR_LIST_SEPARATOR);
-
-        this._makeColorRow(
-          this._settings,
-          GPU_MEMORY_COLORS,
-          this._gpuMemoryColorsListbox,
-          entry[0],
-          parseFloat(entry[1]),
-          parseFloat(entry[2]),
-          parseFloat(entry[3])
-        );
-      }
-
-      this._gpuMemoryColorsAddButton.connect("clicked", (button) => {
-        let colorsArray = this._settings.get_strv(GPU_MEMORY_COLORS);
-        colorsArray.push(
-          this._makeColorRow(
-            this._settings,
-            GPU_MEMORY_COLORS,
-            this._gpuMemoryColorsListbox
-          )
-        );
-        this._settings.set_strv(GPU_MEMORY_COLORS, colorsArray);
-      });
+      this._makeColors(
+        this._settings,
+        GPU_MEMORY_COLORS,
+        this._gpuMemoryColorsListbox,
+        this._gpuMemoryColorsAddButton
+      );
     }
 
     _loadContents(file, cancellable = null) {
