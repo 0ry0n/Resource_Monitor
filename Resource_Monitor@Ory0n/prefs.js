@@ -1585,48 +1585,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         }
       );
 
-      // AMD
-      //this._executeCommand(['bash', '-c', 'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi']).then(output => {
-      //    let result = output.split('\n')[0];
-      //    if (result === 'EXIST') {
-      //        this._executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "amdgpu" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done']).then(output => {
-      /*            let lines = output.split('\n');
-
-                        for (let i = 0; i < lines.length - 1; i++) {
-                            let line = lines[i];
-                            let entry = line.trim().split(/-/);
-
-                            let device = entry[0];
-                            let path = entry[1];
-
-                            let statusButton = false;
-
-                            // Init gui
-                            for (let i = 0; i < cpuTempsArray.length; i++) {
-                                let element = cpuTempsArray[i];
-                                let it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
-
-                                if (device === it[0]) {
-                                    statusButton = (it[1] === 'true');
-
-                                    break;
-                                }
-                            }
-
-                            this._thermalGpuDevicesModel.set(this._thermalGpuDevicesModel.append(), [0, 1, 2], [uuid, device, statusButton]);
-                        }
-
-                        // Save new cpuTempsArray with the list of new devices (to remove old devices)
-                        gpuTempsArray = [];
-                        this._thermalGpuDevicesModel.foreach((list, path, iter) => {
-                            gpuTempsArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2));
-                        });
-                        this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
-                    });
-                }
-            });
-            */
-
       // Colors
       this._makeColors(
         this._settings,
