@@ -2524,7 +2524,7 @@ const ResourceMonitor = GObject.registerClass(
                 filesystem,
                 `${this._getValueFixed(value)}`,
                 unit,
-                this._getUsageColor(converted.value, this._diskSpaceColors)
+                this._getUsageColor(value, this._diskSpaceColors)
               );
             }
           }
@@ -2698,7 +2698,7 @@ const ResourceMonitor = GObject.registerClass(
 
           // Set color based on load average values
           this._cpuLoadAverageValue.style = this._getUsageColor(
-            [l0, l1, l2],
+            l0,
             this._cpuLoadAverageColors
           );
 
