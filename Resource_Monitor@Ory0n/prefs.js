@@ -501,7 +501,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       this._extensionLeftClickRadioButtonCustom.connect("toggled", (button) => {
         if (button.active) {
-          this._settings.set_string(LEFT_CLICK_STATUS, textBufferCustom);
+          const text = this._settings.get_string(CUSTOM_LEFT_CLICK_STATUS);
+          this._settings.set_string(LEFT_CLICK_STATUS, text);
         }
         this._extensionLeftClickEntryCustom.sensitive = button.active;
       });
