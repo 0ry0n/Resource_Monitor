@@ -140,8 +140,6 @@ const ResourceMonitor = GObject.registerClass(
         () => {
           this._onScaleFactorChanged();
 
-          console.error(`Resource ${this._scaleFactor}`);
-
           this._cpuWidthChanged();
           this._cpuFrequencyWidthChanged();
           this._cpuLoadAverageWidthChanged();
@@ -175,7 +173,7 @@ const ResourceMonitor = GObject.registerClass(
       this._wlanIdleOld = 0;
 
       this._cpuTemperatures = 0;
-      this._cpuTemperaturesReads = 0;
+      this._cpuTemperaturesReadings = 0;
 
       this._createMainGui();
 
@@ -2082,397 +2080,317 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDevicesListChanged();
     }
 
-    _refreshCpuValue() {
-      this._loadFile("/proc/stat").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+    // Helper function to determine the color based on usage value(s)
+    _getUsageColor(value, colors) {
+      for (const colorItem of colors) {
+        const [threshold, red, green, blue] = colorItem
+          .split(COLOR_LIST_SEPARATOR)
+          .map(parseFloat);
 
-        const entry = lines[0].trim().split(/\s+/);
-        let cpuTot = 0;
-        const idle = parseInt(entry[4]);
+        // Check if value is a single number or an array with two values
+        const meetsThreshold = Array.isArray(value)
+          ? value[0] <= threshold || value[1] <= threshold
+          : value <= threshold;
 
-        // user sys nice idle iowait
-        for (let i = 1; i < 5; i++) cpuTot += parseInt(entry[i]);
+        if (meetsThreshold) {
+          return `color: rgb(${(red * 255).toFixed(0)}, ${(green * 255).toFixed(
+            0
+          )}, ${(blue * 255).toFixed(0)});`;
+        }
+      }
+      return "";
+    }
 
-        const delta = cpuTot - this._cpuTotOld;
-        const deltaIdle = idle - this._cpuIdleOld;
+    // Helper function to set the decimal precision based on _decimalsStatus setting
+    _getValueFixed(value) {
+      return this._decimalsStatus ? value.toFixed(1) : value.toFixed(0);
+    }
 
-        const cpuCurr = (100 * (delta - deltaIdle)) / delta;
+    // Helper function to convert value to desired unit
+    _convertValueToUnit(value, unitMeasure, isHertz = false) {
+      const factor = 1000;
+      let unit = isHertz ? "KHz" : "KB"; // Default to memory or frequency
 
-        this._cpuTotOld = cpuTot;
-        this._cpuIdleOld = idle;
-
-        if (this._cpuColors.length > 0) {
-          for (let i = 0; i < this._cpuColors.length; i++) {
-            const item = this._cpuColors[i];
-            const values = item.split(COLOR_LIST_SEPARATOR);
-
-            if (cpuCurr <= parseFloat(values[0])) {
-              this._cpuValue.style = `color: rgb(${(
-                parseFloat(values[1]) * 255
-              ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                parseFloat(values[3]) * 255
-              ).toFixed(0)});`;
-              break;
+      const unitSuffixes = isHertz
+        ? { k: "KHz", m: "MHz", g: "GHz", t: "THz" }
+        : { k: "KB", m: "MB", g: "GB", t: "TB" };
+      switch (unitMeasure) {
+        case "k":
+          unit = unitSuffixes.k;
+          break;
+        case "m":
+          unit = unitSuffixes.m;
+          value /= factor;
+          break;
+        case "g":
+          unit = unitSuffixes.g;
+          value /= factor ** 2;
+          break;
+        case "t":
+          unit = unitSuffixes.t;
+          value /= factor ** 3;
+          break;
+        case "auto":
+        default:
+          if (value > factor) {
+            unit = unitSuffixes.m;
+            value /= factor;
+            if (value > factor) {
+              unit = unitSuffixes.g;
+              value /= factor;
+              if (value > factor) {
+                unit = unitSuffixes.t;
+                value /= factor;
+              }
             }
           }
-        } else {
-          this._cpuValue.style = "";
-        }
+          break;
+      }
+      return [value, unit];
+    }
 
-        if (this._decimalsStatus) {
-          this._cpuValue.text = `${cpuCurr.toFixed(1)}`;
-        } else {
-          this._cpuValue.text = `${cpuCurr.toFixed(0)}`;
-        }
-      });
+    // Helper function to convert values to the desired unit
+    _convertValuesToUnit(values, unitMeasure, isBits = false) {
+      const factor = 1024;
+      let unit = isBits ? "b" : "B"; // Default to bits or bytes
+
+      const unitSuffixes = isBits
+        ? { b: "b", k: "k", m: "m", g: "g", t: "t" }
+        : { b: "B", k: "K", m: "M", g: "G", t: "T" };
+
+      // Explicit conversions for 'b', 'k', 'm', 'g', 't'
+      switch (unitMeasure) {
+        case "b":
+          unit = unitSuffixes.b;
+          break;
+        case "k":
+          unit = unitSuffixes.k;
+          values = values.map((v) => v / factor);
+          break;
+        case "m":
+          unit = unitSuffixes.m;
+          values = values.map((v) => v / factor ** 2);
+          break;
+        case "g":
+          unit = unitSuffixes.g;
+          values = values.map((v) => v / factor ** 3);
+          break;
+        case "t":
+          unit = unitSuffixes.t;
+          values = values.map((v) => v / factor ** 4);
+          break;
+        case "auto":
+        default:
+          // Automatically determine the appropriate unit based on the values
+          for (const [suffix, exponent] of [
+            [unitSuffixes.k, 1],
+            [unitSuffixes.m, 2],
+            [unitSuffixes.g, 3],
+            [unitSuffixes.t, 4],
+          ]) {
+            if (values.some((v) => v > factor)) {
+              unit = suffix;
+              values = values.map((v) => v / factor ** exponent);
+            } else break;
+          }
+          break;
+      }
+
+      return { values, unit };
+    }
+
+    // Helper function to convert temperature based on the unit setting
+    _convertTemperature(temperature) {
+      if (this._thermalTemperatureUnit === "f") {
+        return [temperature * 1.8 + 32, "°F"];
+      }
+      return [temperature, "°C"];
+    }
+
+    _refreshCpuValue() {
+      this._loadFile("/proc/stat")
+        .then((contents) => {
+          const lines = new TextDecoder().decode(contents).split("\n");
+
+          // Parse the first line for CPU statistics
+          const entry = lines[0].trim().split(/\s+/);
+          const idle = parseInt(entry[4], 10);
+          let cpuTot = 0;
+
+          // Sum the user, nice, system, and idle times
+          for (let i = 1; i <= 4; i++) {
+            const value = parseInt(entry[i], 10);
+            if (!isNaN(value)) cpuTot += value;
+          }
+
+          const delta = cpuTot - (this._cpuTotOld || 0);
+          const deltaIdle = idle - (this._cpuIdleOld || 0);
+          const cpuCurr = delta ? (100 * (delta - deltaIdle)) / delta : 0;
+
+          // Update previous totals
+          this._cpuTotOld = cpuTot;
+          this._cpuIdleOld = idle;
+
+          // Set CPU usage color based on thresholds
+          this._cpuValue.style = this._getUsageColor(cpuCurr, this._cpuColors);
+
+          // Update CPU usage display with optional decimal precision
+          this._cpuValue.text = `${this._getValueFixed(cpuCurr)}`;
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading cpu:", error)
+        );
     }
 
     _refreshRamValue() {
-      this._loadFile("/proc/meminfo").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+      this._loadFile("/proc/meminfo")
+        .then((contents) => {
+          const lines = new TextDecoder().decode(contents).split("\n");
 
-        let total, available, used;
+          let total = 0;
+          let available = 0;
 
-        for (let i = 0; i < 3; i++) {
-          const line = lines[i];
-          let values;
-
-          if (line.match(/^MemTotal/)) {
-            values = line.match(/^MemTotal:\s*([^ ]*)\s*([^ ]*)$/);
-            total = parseInt(values[1]);
-          } else if (line.match(/^MemAvailable/)) {
-            values = line.match(/^MemAvailable:\s*([^ ]*)\s*([^ ]*)$/);
-            available = parseInt(values[1]);
+          for (const line of lines) {
+            if (line.startsWith("MemTotal")) {
+              const match = line.match(/^MemTotal:\s*(\d+)\s*kB$/);
+              if (match) total = parseInt(match[1], 10);
+            } else if (line.startsWith("MemAvailable")) {
+              const match = line.match(/^MemAvailable:\s*(\d+)\s*kB$/);
+              if (match) available = parseInt(match[1], 10);
+            }
+            if (total && available) break; // Exit loop if both values are found
           }
-        }
 
-        used = total - available;
+          const used = total - available;
 
-        if (this._ramAlert) {
+          // Trigger low memory alert if needed
           if (
-            ((100 * available) / total).toFixed(0) < this._ramAlertThreshold
+            this._ramAlert &&
+            (100 * available) / total < this._ramAlertThreshold
           ) {
             Main.notify(
               "Resource Monitor - Low Memory Alert",
               `Available RAM has dropped below ${this._ramAlertThreshold}%. Please take action to free up memory.`
             );
           }
-        }
 
-        let value = 0;
-        let unit = "KB";
-        switch (this._ramMonitor) {
-          case "free":
-            value = available;
+          let value = 0;
+          let unit = "KB";
 
-            break;
+          // Determine display value based on _ramMonitor setting
+          switch (this._ramMonitor) {
+            case "free":
+              value = available;
+              break;
+            case "used":
+            default:
+              value = used;
+              break;
+          }
 
-          case "used":
-
-          default:
-            value = used;
-
-            break;
-        }
-
-        switch (this._ramUnitType) {
-          case "perc":
-            if (this._ramColors.length > 0) {
-              for (let i = 0; i < this._ramColors.length; i++) {
-                const item = this._ramColors[i];
-                const values = item.split(COLOR_LIST_SEPARATOR);
-
-                if ((100 * value) / total <= parseFloat(values[0])) {
-                  this._ramValue.style = `color: rgb(${(
-                    parseFloat(values[1]) * 255
-                  ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(
-                    0
-                  )}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
-                  break;
-                }
-              }
-            } else {
-              this._ramValue.style = "";
-            }
-
-            if (this._decimalsStatus) {
-              this._ramValue.text = `${((100 * value) / total).toFixed(1)}`;
-            } else {
-              this._ramValue.text = `${((100 * value) / total).toFixed(0)}`;
-            }
-
+          // Apply unit conversions or percentage formatting
+          if (this._ramUnitType === "perc") {
+            const percentValue = (100 * value) / total;
+            this._ramValue.style = this._getUsageColor(value, this._ramColors);
+            this._ramValue.text = `${this._getValueFixed(percentValue)}`;
             this._ramUnit.text = "%";
-
-            break;
-
-          case "numeric":
-
-          default:
-            switch (this._ramUnitMeasure) {
-              case "k":
-                unit = "KB";
-                break;
-
-              case "m":
-                unit = "MB";
-                value /= 1000;
-                break;
-
-              case "g":
-                unit = "GB";
-                value /= 1000;
-                value /= 1000;
-                break;
-
-              case "t":
-                unit = "TB";
-                value /= 1000;
-                value /= 1000;
-                value /= 1000;
-                break;
-
-              case "auto":
-
-              default:
-                if (value > 1000) {
-                  unit = "MB";
-                  value /= 1000;
-                  if (value > 1000) {
-                    unit = "GB";
-                    value /= 1000;
-                    if (value > 1000) {
-                      unit = "TB";
-                      value /= 1000;
-                    }
-                  }
-                } else {
-                  unit = "KB";
-                }
-
-                break;
-            }
-
-            if (this._ramColors.length > 0) {
-              for (let i = 0; i < this._ramColors.length; i++) {
-                const item = this._ramColors[i];
-                const values = item.split(COLOR_LIST_SEPARATOR);
-
-                if (value <= parseFloat(values[0])) {
-                  this._ramValue.style = `color: rgb(${(
-                    parseFloat(values[1]) * 255
-                  ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(
-                    0
-                  )}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
-                  break;
-                }
-              }
-            } else {
-              this._ramValue.style = "";
-            }
-
-            if (this._decimalsStatus) {
-              this._ramValue.text = `${value.toFixed(1)}`;
-            } else {
-              this._ramValue.text = `${value.toFixed(0)}`;
-            }
-
+          } else {
+            [value, unit] = this._convertValueToUnit(
+              value,
+              this._ramUnitMeasure
+            );
+            this._ramValue.style = this._getUsageColor(value, this._ramColors);
+            this._ramValue.text = `${this._getValueFixed(value)}`;
             this._ramUnit.text = unit;
-
-            break;
-        }
-      });
+          }
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading ram:", error)
+        );
     }
 
     _refreshSwapValue() {
-      this._loadFile("/proc/meminfo").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+      this._loadFile("/proc/meminfo")
+        .then((contents) => {
+          const lines = new TextDecoder().decode(contents).split("\n");
 
-        let total, available, used;
+          let total = 0;
+          let available = 0;
 
-        for (let i = 0; i < 16; i++) {
-          const line = lines[i];
-          let values;
-
-          if (line.match(/^SwapTotal/)) {
-            values = line.match(/^SwapTotal:\s*([^ ]*)\s*([^ ]*)$/);
-            total = parseInt(values[1]);
-          } else if (line.match(/^SwapFree/)) {
-            values = line.match(/^SwapFree:\s*([^ ]*)\s*([^ ]*)$/);
-            available = parseInt(values[1]);
+          for (const line of lines) {
+            if (line.startsWith("SwapTotal")) {
+              const match = line.match(/^SwapTotal:\s*(\d+)\s*kB$/);
+              if (match) total = parseInt(match[1], 10);
+            } else if (line.startsWith("SwapFree")) {
+              const match = line.match(/^SwapFree:\s*(\d+)\s*kB$/);
+              if (match) available = parseInt(match[1], 10);
+            }
+            if (total && available) break; // Exit loop if both values are found
           }
-        }
 
-        used = total - available;
+          const used = total - available;
 
-        if (this._swapAlert) {
+          // Trigger low memory alert if needed
           if (
-            ((100 * available) / total).toFixed(0) < this._swapAlertThreshold
+            this._swapAlert &&
+            (100 * available) / total < this._swapAlertThreshold
           ) {
             Main.notify(
               "Resource Monitor - Low Memory Alert",
               `Available SWAP has dropped below ${this._swapAlertThreshold}%. Please take action to free up memory.`
             );
           }
-        }
 
-        let value = 0;
-        let unit = "KB";
-        switch (this._swapMonitor) {
-          case "free":
-            value = available;
+          let value = 0;
+          let unit = "KB";
 
-            break;
+          // Determine display value based on _swapMonitor setting
+          switch (this._swapMonitor) {
+            case "free":
+              value = available;
+              break;
+            case "used":
+            default:
+              value = used;
+              break;
+          }
 
-          case "used":
-
-          default:
-            value = used;
-
-            break;
-        }
-
-        switch (this._swapUnitType) {
-          case "perc":
-            if (this._swapColors.length > 0) {
-              for (let i = 0; i < this._swapColors.length; i++) {
-                const item = this._swapColors[i];
-                const values = item.split(COLOR_LIST_SEPARATOR);
-
-                if ((100 * value) / total <= parseFloat(values[0])) {
-                  this._swapValue.style = `color: rgb(${(
-                    parseFloat(values[1]) * 255
-                  ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(
-                    0
-                  )}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
-                  break;
-                }
-              }
-            } else {
-              this._swapValue.style = "";
-            }
-
-            if (this._decimalsStatus) {
-              this._swapValue.text = `${((100 * value) / total).toFixed(1)}`;
-            } else {
-              this._swapValue.text = `${((100 * value) / total).toFixed(0)}`;
-            }
-
+          // Apply unit conversions or percentage formatting
+          if (this._swapUnitType === "perc") {
+            const percentValue = (100 * value) / total;
+            this._swapValue.style = this._getUsageColor(
+              value,
+              this._swapColors
+            );
+            this._swapValue.text = `${this._getValueFixed(percentValue)}`;
             this._swapUnit.text = "%";
-
-            break;
-
-          case "numeric":
-
-          default:
-            switch (this._swapUnitMeasure) {
-              case "k":
-                unit = "KB";
-                break;
-
-              case "m":
-                unit = "MB";
-                value /= 1000;
-                break;
-
-              case "g":
-                unit = "GB";
-                value /= 1000;
-                value /= 1000;
-                break;
-
-              case "t":
-                unit = "TB";
-                value /= 1000;
-                value /= 1000;
-                value /= 1000;
-                break;
-
-              case "auto":
-
-              default:
-                if (value > 1000) {
-                  unit = "MB";
-                  value /= 1000;
-                  if (value > 1000) {
-                    unit = "GB";
-                    value /= 1000;
-                    if (value > 1000) {
-                      unit = "TB";
-                      value /= 1000;
-                    }
-                  }
-                } else {
-                  unit = "KB";
-                }
-
-                break;
-            }
-
-            if (this._swapColors.length > 0) {
-              for (let i = 0; i < this._swapColors.length; i++) {
-                const item = this._swapColors[i];
-                const values = item.split(COLOR_LIST_SEPARATOR);
-
-                if (value <= parseFloat(values[0])) {
-                  this._swapValue.style = `color: rgb(${(
-                    parseFloat(values[1]) * 255
-                  ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(
-                    0
-                  )}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
-                  break;
-                }
-              }
-            } else {
-              this._swapValue.style = "";
-            }
-
-            if (this._decimalsStatus) {
-              this._swapValue.text = `${value.toFixed(1)}`;
-            } else {
-              this._swapValue.text = `${value.toFixed(0)}`;
-            }
-
+          } else {
+            [value, unit] = this._convertValueToUnit(
+              value,
+              this._swapUnitMeasure
+            );
+            this._swapValue.style = this._getUsageColor(
+              value,
+              this._swapColors
+            );
+            this._swapValue.text = `${this._getValueFixed(value)}`;
             this._swapUnit.text = unit;
-
-            break;
-        }
-      });
+          }
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading swap:", error)
+        );
     }
 
     _refreshDiskStatsValue() {
-      this._loadFile("/proc/diskstats").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+      this._loadFile("/proc/diskstats")
+        .then((contents) => {
+          const lines = new TextDecoder().decode(contents).split("\n");
+          const idle = GLib.get_monotonic_time() / 1000;
 
-        switch (this._diskStatsMode) {
-          case "single":
-            let rwTot = [0, 0];
-            let rw = [0, 0];
-
-            const filesystem = "single";
-
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i];
-              const entry = line.trim().split(/\s+/);
-
-              if (entry[2].match(/loop*/)) {
-                continue;
-              }
-
-              // Found
-              if (this._diskStatsBox.get_filesystem(entry[2])) {
-                rwTot[0] += parseInt(entry[5]);
-                rwTot[1] += parseInt(entry[9]);
-
-                // sector is 512 bytes
-                // 1 kilobyte = 2 sectors
-                rwTot[0] /= 2;
-                rwTot[1] /= 2;
-              }
-            }
-
-            const idle = GLib.get_monotonic_time() / 1000;
+          const processEntry = (filesystem, rwTot, rw) => {
             const delta =
-              (idle - this._diskStatsBox.get_idle(filesystem)) / 1000;
+              (idle - (this._diskStatsBox.get_idle(filesystem) || idle)) / 1000;
             this._diskStatsBox.set_idle(filesystem, idle);
 
             let unit = "";
@@ -2480,687 +2398,256 @@ const ResourceMonitor = GObject.registerClass(
             if (delta > 0) {
               const rwTotOld = this._diskStatsBox.get_rw_tot(filesystem);
               for (let i = 0; i < 2; i++) {
-                rw[i] = (rwTot[i] - rwTotOld[i]) / delta;
+                rw[i] = (rwTot[i] - (rwTotOld[i] || 0)) / delta;
               }
               this._diskStatsBox.set_rw_tot(filesystem, rwTot);
 
-              switch (this._diskStatsUnitMeasure) {
-                case "k":
-                  unit = "K";
-                  break;
-
-                case "m":
-                  unit = "M";
-                  rw[0] /= 1024;
-                  rw[1] /= 1024;
-                  break;
-
-                case "g":
-                  unit = "G";
-                  rw[0] /= 1024;
-                  rw[1] /= 1024;
-                  rw[0] /= 1024;
-                  rw[1] /= 1024;
-                  break;
-
-                case "t":
-                  unit = "T";
-                  rw[0] /= 1024;
-                  rw[1] /= 1024;
-                  rw[0] /= 1024;
-                  rw[1] /= 1024;
-                  rw[0] /= 1024;
-                  rw[1] /= 1024;
-                  break;
-
-                case "auto":
-
-                default:
-                  if (rw[0] > 1024 || rw[1] > 1024) {
-                    unit = "M";
-                    rw[0] /= 1024;
-                    rw[1] /= 1024;
-                    if (rw[0] > 1024 || rw[1] > 1024) {
-                      unit = "G";
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      if (rw[0] > 1024 || rw[1] > 1024) {
-                        unit = "T";
-                        rw[0] /= 1024;
-                        rw[1] /= 1024;
-                      }
-                    }
-                  } else {
-                    unit = "K";
-                  }
-
-                  break;
-              }
+              // Convert K to B
+              rw[0] = rw[0] * 1024;
+              rw[1] = rw[1] * 1024;
+              // Convert units and determine appropriate unit string
+              const unitResult = this._convertValuesToUnit(
+                rw,
+                this._diskStatsUnitMeasure
+              );
+              rw = unitResult.values;
+              unit = unitResult.unit;
             }
 
-            let style = "";
-            if (this._diskStatsColors.length > 0) {
-              for (let i = 0; i < this._diskStatsColors.length; i++) {
-                const item = this._diskStatsColors[i];
-                const values = item.split(COLOR_LIST_SEPARATOR);
+            this._diskStatsBox.update_element_value(
+              filesystem,
+              `${this._getValueFixed(rw[0])}|${this._getValueFixed(rw[1])}`,
+              unit,
+              this._getUsageColor(rw, this._diskStatsColors)
+            );
+          };
 
+          switch (this._diskStatsMode) {
+            case "single": {
+              let rwTot = [0, 0];
+              let rw = [0, 0];
+              const filesystem = "single";
+
+              lines.forEach((line) => {
+                const entry = line.trim().split(/\s+/);
                 if (
-                  rw[0] <= parseFloat(values[0]) ||
-                  rw[1] <= parseFloat(values[0])
+                  entry[2] &&
+                  !/^loop/.test(entry[2]) &&
+                  this._diskStatsBox.get_filesystem(entry[2])
                 ) {
-                  style = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(
-                    0
-                  )}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                    parseFloat(values[3]) * 255
-                  ).toFixed(0)});`;
-                  break;
+                  // sector is 512 bytes
+                  // 1 kilobyte = 2 sectors
+                  rwTot[0] += parseInt(entry[5], 10) / 2; // Read sectors -> KB
+                  rwTot[1] += parseInt(entry[9], 10) / 2; // Write sectors -> KB
                 }
-              }
-            } else {
-              style = "";
+              });
+
+              processEntry(filesystem, rwTot, rw);
+              break;
             }
 
-            if (this._decimalsStatus) {
-              this._diskStatsBox.update_element_value(
-                filesystem,
-                `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`,
-                unit,
-                style
-              );
-            } else {
-              this._diskStatsBox.update_element_value(
-                filesystem,
-                `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`,
-                unit,
-                style
-              );
-            }
-
-            break;
-
-          case "multiple":
-
-          default:
-            for (let i = 0; i < lines.length - 1; i++) {
-              const line = lines[i];
-              const entry = line.trim().split(/\s+/);
-
-              if (entry[2].match(/loop*/)) {
-                continue;
-              }
-
-              const filesystem = this._diskStatsBox.get_filesystem(entry[2]);
-              // Found
-              if (filesystem) {
-                let rwTot = [0, 0];
-                let rw = [0, 0];
-
-                rwTot[0] += parseInt(entry[5]);
-                rwTot[1] += parseInt(entry[9]);
-
-                // sector is 512 bytes
-                // 1 kilobyte = 2 sectors
-                rwTot[0] /= 2;
-                rwTot[1] /= 2;
-
-                const idle = GLib.get_monotonic_time() / 1000;
-                const delta =
-                  (idle - this._diskStatsBox.get_idle(filesystem)) / 1000;
-                this._diskStatsBox.set_idle(filesystem, idle);
-
-                let unit = "";
-
-                if (delta > 0) {
-                  const rwTotOld = this._diskStatsBox.get_rw_tot(filesystem);
-                  for (let i = 0; i < 2; i++) {
-                    rw[i] = (rwTot[i] - rwTotOld[i]) / delta;
-                  }
-                  this._diskStatsBox.set_rw_tot(filesystem, rwTot);
-
-                  switch (this._diskStatsUnitMeasure) {
-                    case "k":
-                      unit = "K";
-                      break;
-
-                    case "m":
-                      unit = "M";
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      break;
-
-                    case "g":
-                      unit = "G";
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      break;
-
-                    case "t":
-                      unit = "T";
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      rw[0] /= 1024;
-                      rw[1] /= 1024;
-                      break;
-
-                    case "auto":
-
-                    default:
-                      if (rw[0] > 1024 || rw[1] > 1024) {
-                        unit = "M";
-                        rw[0] /= 1024;
-                        rw[1] /= 1024;
-                        if (rw[0] > 1024 || rw[1] > 1024) {
-                          unit = "G";
-                          rw[0] /= 1024;
-                          rw[1] /= 1024;
-                          if (rw[0] > 1024 || rw[1] > 1024) {
-                            unit = "T";
-                            rw[0] /= 1024;
-                            rw[1] /= 1024;
-                          }
-                        }
-                      } else {
-                        unit = "K";
-                      }
-
-                      break;
-                  }
-                }
-
-                let style = "";
-                if (this._diskStatsColors.length > 0) {
-                  for (let i = 0; i < this._diskStatsColors.length; i++) {
-                    const item = this._diskStatsColors[i];
-                    const values = item.split(COLOR_LIST_SEPARATOR);
-
-                    if (
-                      rw[0] <= parseFloat(values[0]) ||
-                      rw[1] <= parseFloat(values[0])
-                    ) {
-                      style = `color: rgb(${(
-                        parseFloat(values[1]) * 255
-                      ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(
-                        0
-                      )}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
-                      break;
-                    }
-                  }
-                } else {
-                  style = "";
-                }
-
-                if (this._decimalsStatus) {
-                  this._diskStatsBox.update_element_value(
-                    filesystem,
-                    `${rw[0].toFixed(1)}|${rw[1].toFixed(1)}`,
-                    unit,
-                    style
+            case "multiple":
+            default:
+              lines.forEach((line) => {
+                const entry = line.trim().split(/\s+/);
+                if (entry[2] && !/^loop/.test(entry[2])) {
+                  const filesystem = this._diskStatsBox.get_filesystem(
+                    entry[2]
                   );
-                } else {
-                  this._diskStatsBox.update_element_value(
-                    filesystem,
-                    `${rw[0].toFixed(0)}|${rw[1].toFixed(0)}`,
-                    unit,
-                    style
-                  );
+                  if (filesystem) {
+                    let rwTot = [
+                      // sector is 512 bytes
+                      // 1 kilobyte = 2 sectors
+                      parseInt(entry[5], 10) / 2, // Read sectors -> KB
+                      parseInt(entry[9], 10) / 2, // Write sectors -> KB
+                    ];
+                    let rw = [0, 0];
+                    processEntry(filesystem, rwTot, rw);
+                  } else {
+                    this._diskStatsBox.update_element_value(
+                      filesystem,
+                      "--|--",
+                      "",
+                      ""
+                    );
+                  }
                 }
-              } else {
-                // Not found
-                this._diskStatsBox.update_element_value(
-                  filesystem,
-                  "--|--",
-                  "",
-                  ""
-                );
-              }
-            }
-
-            break;
-        }
-      });
+              });
+              break;
+          }
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading disk stats:", error)
+        );
     }
 
     _refreshDiskSpaceValue() {
-      this._executeCommand([
-        "df",
-        "-BKB",
-        "-x",
-        "squashfs",
-        "-x",
-        "tmpfs",
-      ]).then((output) => {
-        const lines = output.split("\n");
+      this._executeCommand(["df", "-BKB", "-x", "squashfs", "-x", "tmpfs"])
+        .then((contents) => {
+          const lines = contents.split("\n");
 
-        // Excludes the first line of output
-        for (let i = 1; i < lines.length - 1; i++) {
-          const line = lines[i];
-          const entry = line.trim().split(/\s+/);
+          // Exclude the header line
+          for (let i = 1; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            const entry = line.split(/\s+/);
 
-          const filesystem = entry[0];
+            const filesystem = entry[0];
+            let value = 0;
+            let unit = "KB";
 
-          let value = "";
-          let unit = "KB";
-          let style = "";
-          switch (this._diskSpaceUnitType) {
-            case "perc":
-              const used = `${entry[4].slice(0, -1)}`;
-
-              switch (this._diskSpaceMonitor) {
-                case "free":
-                  value = (100 - parseInt(used)).toString();
-
-                  break;
-
-                case "used":
-
-                default:
-                  value = used;
-
-                  break;
-              }
-
-              if (this._diskSpaceColors.length > 0) {
-                for (let i = 0; i < this._diskSpaceColors.length; i++) {
-                  const item = this._diskSpaceColors[i];
-                  const values = item.split(COLOR_LIST_SEPARATOR);
-
-                  if (value <= parseFloat(values[0])) {
-                    style = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(
-                      0
-                    )}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                      parseFloat(values[3]) * 255
-                    ).toFixed(0)});`;
-                    break;
-                  }
-                }
-              } else {
-                style = "";
-              }
+            if (this._diskSpaceUnitType === "perc") {
+              const usedPercent = parseInt(entry[4].slice(0, -1), 10);
+              value =
+                this._diskSpaceMonitor === "free"
+                  ? 100 - usedPercent
+                  : usedPercent;
 
               this._diskSpaceBox.update_element_value(
                 filesystem,
-                value,
+                `${value}`,
                 "%",
-                style
+                this._getUsageColor(value, this._diskSpaceColors)
+              );
+            } else {
+              // Numeric mode: parse and format value in selected unit
+              const sizeInKB =
+                this._diskSpaceMonitor === "free"
+                  ? parseInt(entry[3].slice(0, -2), 10)
+                  : parseInt(entry[2].slice(0, -2), 10);
+
+              [value, unit] = this._convertValueToUnit(
+                sizeInKB,
+                this._diskSpaceUnitMeasure
               );
 
-              break;
-
-            case "numeric":
-
-            default:
-              switch (this._diskSpaceMonitor) {
-                case "free":
-                  value = parseInt(entry[3].slice(0, -2));
-
-                  break;
-
-                case "used":
-
-                default:
-                  value = parseInt(entry[2].slice(0, -2));
-
-                  break;
-              }
-
-              switch (this._diskSpaceUnitMeasure) {
-                case "k":
-                  unit = "KB";
-                  break;
-
-                case "m":
-                  unit = "MB";
-                  value /= 1000;
-                  break;
-
-                case "g":
-                  unit = "GB";
-                  value /= 1000;
-                  value /= 1000;
-                  break;
-
-                case "t":
-                  unit = "TB";
-                  value /= 1000;
-                  value /= 1000;
-                  value /= 1000;
-                  break;
-
-                case "auto":
-
-                default:
-                  if (value > 1000) {
-                    unit = "MB";
-                    value /= 1000;
-                    if (value > 1000) {
-                      unit = "GB";
-                      value /= 1000;
-                      if (value > 1000) {
-                        unit = "TB";
-                        value /= 1000;
-                      }
-                    }
-                  } else {
-                    unit = "KB";
-                  }
-
-                  break;
-              }
-
-              if (this._diskSpaceColors.length > 0) {
-                for (let i = 0; i < this._diskSpaceColors.length; i++) {
-                  const item = this._diskSpaceColors[i];
-                  const values = item.split(COLOR_LIST_SEPARATOR);
-
-                  if (value <= parseFloat(values[0])) {
-                    style = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(
-                      0
-                    )}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                      parseFloat(values[3]) * 255
-                    ).toFixed(0)});`;
-                    break;
-                  }
-                }
-              } else {
-                style = "";
-              }
-
-              if (this._decimalsStatus) {
-                this._diskSpaceBox.update_element_value(
-                  filesystem,
-                  `${value.toFixed(1)}`,
-                  unit,
-                  style
-                );
-              } else {
-                this._diskSpaceBox.update_element_value(
-                  filesystem,
-                  `${value.toFixed(0)}`,
-                  unit,
-                  style
-                );
-              }
-
-              break;
+              this._diskSpaceBox.update_element_value(
+                filesystem,
+                `${this._getValueFixed(value)}`,
+                unit,
+                this._getUsageColor(converted.value, this._diskSpaceColors)
+              );
+            }
           }
-        }
-      });
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading disk space:", error)
+        );
     }
 
     _refreshEthValue() {
-      this._loadFile("/proc/net/dev").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+      this._loadFile("/proc/net/dev")
+        .then((contents) => {
+          const lines = new TextDecoder().decode(contents).split("\n");
 
-        let duTot = [0, 0];
-        let du = [0, 0];
+          let duTot = [0, 0];
+          let du = [0, 0];
 
-        // Excludes the first two lines of output
-        for (let i = 2; i < lines.length - 1; i++) {
-          const line = lines[i];
-          const entry = line.trim().split(":");
-          if (entry[0].match(/(eth[0-9]+|en[a-z0-9]*)/)) {
-            const values = entry[1].trim().split(/\s+/);
+          // Exclude the first two header lines
+          for (let i = 2; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            const [iface, data] = line.split(":").map((s) => s.trim());
 
-            duTot[0] += parseInt(values[0]);
-            duTot[1] += parseInt(values[8]);
-          }
-        }
-
-        const idle = GLib.get_monotonic_time() / 1000;
-        const delta = (idle - this._ethIdleOld) / 1000;
-
-        // True bits
-        // False Bytes
-        const boolUnit = this._netUnit === "bits";
-
-        const factor = boolUnit ? 8 : 1;
-
-        if (delta > 0) {
-          for (let i = 0; i < 2; i++) {
-            du[i] = ((duTot[i] - this._duTotEthOld[i]) * factor) / delta;
-            this._duTotEthOld[i] = duTot[i];
-          }
-
-          switch (this._netUnitMeasure) {
-            case "b":
-              this._ethUnit.text = boolUnit ? "b" : "B";
-              break;
-
-            case "k":
-              this._ethUnit.text = boolUnit ? "k" : "K";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "m":
-              this._ethUnit.text = boolUnit ? "m" : "M";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "g":
-              this._ethUnit.text = boolUnit ? "g" : "G";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "t":
-              this._ethUnit.text = boolUnit ? "t" : "T";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "auto":
-
-            default:
-              if (du[0] > 1024 || du[1] > 1024) {
-                this._ethUnit.text = boolUnit ? "k" : "K";
-                du[0] /= 1024;
-                du[1] /= 1024;
-                if (du[0] > 1024 || du[1] > 1024) {
-                  this._ethUnit.text = boolUnit ? "m" : "M";
-                  du[0] /= 1024;
-                  du[1] /= 1024;
-                  if (du[0] > 1024 || du[1] > 1024) {
-                    this._ethUnit.text = boolUnit ? "g" : "G";
-                    du[0] /= 1024;
-                    du[1] /= 1024;
-                    if (du[0] > 1024 || du[1] > 1024) {
-                      this._ethUnit.text = boolUnit ? "t" : "T";
-                      du[0] /= 1024;
-                      du[1] /= 1024;
-                    }
-                  }
-                }
-              } else {
-                this._ethUnit.text = boolUnit ? "b" : "B";
-              }
-
-              break;
-          }
-        }
-
-        this._ethIdleOld = idle;
-
-        if (this._netEthColors.length > 0) {
-          for (let i = 0; i < this._netEthColors.length; i++) {
-            const item = this._netEthColors[i];
-            const values = item.split(COLOR_LIST_SEPARATOR);
-
-            if (
-              du[0] <= parseFloat(values[0]) ||
-              du[1] <= parseFloat(values[0])
-            ) {
-              this._ethValue.style = `color: rgb(${(
-                parseFloat(values[1]) * 255
-              ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                parseFloat(values[3]) * 255
-              ).toFixed(0)});`;
-              break;
+            // Match ethernet interfaces only
+            if (/^(eth[0-9]+|en[a-z0-9]*)$/.test(iface)) {
+              const values = data.split(/\s+/);
+              duTot[0] += parseInt(values[0], 10); // Received bytes
+              duTot[1] += parseInt(values[8], 10); // Transmitted bytes
             }
           }
-        } else {
-          this._ethValue.style = "";
-        }
 
-        if (this._decimalsStatus) {
-          this._ethValue.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
-        } else {
-          this._ethValue.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
-        }
-      });
+          const idle = GLib.get_monotonic_time() / 1000;
+          const delta = (idle - (this._ethIdleOld || idle)) / 1000;
+          this._ethIdleOld = idle;
+
+          // True = bits, False = bytes
+          const factor = this._netUnit === "bits" ? 8 : 1;
+
+          if (delta > 0) {
+            for (let i = 0; i < 2; i++) {
+              du[i] =
+                ((duTot[i] - (this._duTotEthOld[i] || 0)) * factor) / delta;
+              this._duTotEthOld[i] = duTot[i];
+            }
+
+            // Convert units based on user setting or auto-detect
+            const result = this._convertValuesToUnit(
+              du,
+              this._netUnitMeasure,
+              this._netUnit === "bits"
+            );
+            du = result.values;
+            this._ethUnit.text = result.unit;
+          }
+
+          // Set color based on thresholds
+          this._ethValue.style = this._getUsageColor(du, this._netEthColors);
+
+          // Display the download/upload values with appropriate decimal places
+          this._ethValue.text = `${this._getValueFixed(
+            du[0]
+          )}|${this._getValueFixed(du[1])}`;
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading eth:", error)
+        );
     }
 
     _refreshWlanValue() {
-      this._loadFile("/proc/net/dev").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+      this._loadFile("/proc/net/dev")
+        .then((contents) => {
+          const lines = new TextDecoder().decode(contents).split("\n");
 
-        let duTot = [0, 0];
-        let du = [0, 0];
+          let duTot = [0, 0];
+          let du = [0, 0];
 
-        // Excludes the first two lines of output
-        for (let i = 2; i < lines.length - 1; i++) {
-          const line = lines[i];
-          const entry = line.trim().split(":");
-          if (entry[0].match(/(wlan[0-9]+|wl[a-z0-9]*)/)) {
-            const values = entry[1].trim().split(/\s+/);
+          // Exclude the first two header lines
+          for (let i = 2; i < lines.length - 1; i++) {
+            const line = lines[i].trim();
+            const [iface, data] = line.split(":").map((s) => s.trim());
 
-            duTot[0] += parseInt(values[0]);
-            duTot[1] += parseInt(values[8]);
-          }
-        }
-
-        const idle = GLib.get_monotonic_time() / 1000;
-        const delta = (idle - this._wlanIdleOld) / 1000;
-
-        // True bits
-        // False Bytes
-        const boolUnit = this._netUnit === "bits";
-
-        const factor = boolUnit ? 8 : 1;
-
-        if (delta > 0) {
-          for (let i = 0; i < 2; i++) {
-            du[i] = ((duTot[i] - this._duTotWlanOld[i]) * factor) / delta;
-            this._duTotWlanOld[i] = duTot[i];
-          }
-
-          switch (this._netUnitMeasure) {
-            case "b":
-              this._wlanUnit.text = boolUnit ? "b" : "B";
-              break;
-
-            case "k":
-              this._wlanUnit.text = boolUnit ? "k" : "K";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "m":
-              this._wlanUnit.text = boolUnit ? "m" : "M";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "g":
-              this._wlanUnit.text = boolUnit ? "g" : "G";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "t":
-              this._wlanUnit.text = boolUnit ? "t" : "T";
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              du[0] /= 1024;
-              du[1] /= 1024;
-              break;
-
-            case "auto":
-
-            default:
-              if (du[0] > 1024 || du[1] > 1024) {
-                this._wlanUnit.text = boolUnit ? "k" : "K";
-                du[0] /= 1024;
-                du[1] /= 1024;
-                if (du[0] > 1024 || du[1] > 1024) {
-                  this._wlanUnit.text = boolUnit ? "m" : "M";
-                  du[0] /= 1024;
-                  du[1] /= 1024;
-                  if (du[0] > 1024 || du[1] > 1024) {
-                    this._wlanUnit.text = boolUnit ? "g" : "G";
-                    du[0] /= 1024;
-                    du[1] /= 1024;
-                    if (du[0] > 1024 || du[1] > 1024) {
-                      this._wlanUnit.text = boolUnit ? "t" : "T";
-                      du[0] /= 1024;
-                      du[1] /= 1024;
-                    }
-                  }
-                }
-              } else {
-                this._wlanUnit.text = boolUnit ? "b" : "B";
-              }
-
-              break;
-          }
-        }
-
-        this._wlanIdleOld = idle;
-
-        if (this._netWlanColors.length > 0) {
-          for (let i = 0; i < this._netWlanColors.length; i++) {
-            const item = this._netWlanColors[i];
-            const values = item.split(COLOR_LIST_SEPARATOR);
-
-            if (
-              du[0] <= parseFloat(values[0]) ||
-              du[1] <= parseFloat(values[0])
-            ) {
-              this._wlanValue.style = `color: rgb(${(
-                parseFloat(values[1]) * 255
-              ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                parseFloat(values[3]) * 255
-              ).toFixed(0)});`;
-              break;
+            // Match wlan interfaces only
+            if (/^(wlan[0-9]+|wl[a-z0-9]*)$/.test(iface)) {
+              const values = data.split(/\s+/);
+              duTot[0] += parseInt(values[0], 10); // Received bytes
+              duTot[1] += parseInt(values[8], 10); // Transmitted bytes
             }
           }
-        } else {
-          this._wlanValue.style = "";
-        }
 
-        if (this._decimalsStatus) {
-          this._wlanValue.text = `${du[0].toFixed(1)}|${du[1].toFixed(1)}`;
-        } else {
-          this._wlanValue.text = `${du[0].toFixed(0)}|${du[1].toFixed(0)}`;
-        }
-      });
+          const idle = GLib.get_monotonic_time() / 1000;
+          const delta = (idle - (this._wlanIdleOld || idle)) / 1000;
+          this._wlanIdleOld = idle;
+
+          // True = bits, False = bytes
+          const factor = this._netUnit === "bits" ? 8 : 1;
+
+          if (delta > 0) {
+            for (let i = 0; i < 2; i++) {
+              du[i] =
+                ((duTot[i] - (this._duTotWlanOld[i] || 0)) * factor) / delta;
+              this._duTotWlanOld[i] = duTot[i];
+            }
+
+            // Convert units based on user setting or auto-detect
+            const result = this._convertValuesToUnit(
+              du,
+              this._netUnitMeasure,
+              this._netUnit === "bits"
+            );
+            du = result.values;
+            this._wlanUnit.text = result.unit;
+          }
+
+          // Set color based on thresholds
+          this._wlanValue.style = this._getUsageColor(du, this._netWlanColors);
+
+          // Display the download/upload values with appropriate decimal places
+          this._wlanValue.text = `${this._getValueFixed(
+            du[0]
+          )}|${this._getValueFixed(du[1])}`;
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading wlan:", error)
+        );
     }
 
     _refreshCpuFrequencyValue() {
@@ -3168,208 +2655,123 @@ const ResourceMonitor = GObject.registerClass(
         "bash",
         "-c",
         "cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
-      ]).then((output) => {
-        const lines = output.split("\n");
+      ])
+        .then((contents) => {
+          const lines = contents.split("\n");
 
-        let value = 0;
-        let unit = "";
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i];
-          const entry = parseInt(line.trim());
+          // Calculate the maximum frequency in the list
+          let maxFrequency = Math.max(
+            ...lines
+              .map((line) => parseInt(line.trim(), 10))
+              .filter(Number.isFinite)
+          );
 
-          // max_freq
-          if (entry > value) {
-            value = entry;
-          }
-        }
+          // Convert frequency to desired unit and format the output
+          const [value, unit] = this._convertValueToUnit(
+            maxFrequency,
+            this._cpuFrequencyUnitMeasure,
+            true
+          );
 
-        switch (this._cpuFrequencyUnitMeasure) {
-          case "k":
-            unit = "KHz";
-            break;
-
-          case "m":
-            unit = "MHz";
-            value /= 1000;
-            break;
-
-          case "g":
-            unit = "GHz";
-            value /= 1000;
-            value /= 1000;
-            break;
-
-          case "auto":
-
-          default:
-            if (value > 1000) {
-              unit = "MHz";
-              value /= 1000;
-              if (value > 1000) {
-                unit = "GHz";
-                value /= 1000;
-              }
-            } else {
-              unit = "KHz";
-            }
-
-            break;
-        }
-
-        this._cpuFrequencyUnit.text = unit;
-
-        if (this._cpuFrequencyColors.length > 0) {
-          for (let i = 0; i < this._cpuFrequencyColors.length; i++) {
-            const item = this._cpuFrequencyColors[i];
-            const values = item.split(COLOR_LIST_SEPARATOR);
-
-            if (value <= parseFloat(values[0])) {
-              this._cpuFrequencyValue.style = `color: rgb(${(
-                parseFloat(values[1]) * 255
-              ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                parseFloat(values[3]) * 255
-              ).toFixed(0)});`;
-              break;
-            }
-          }
-        } else {
-          this._cpuFrequencyValue.style = "";
-        }
-
-        if (this._decimalsStatus) {
-          this._cpuFrequencyValue.text = `${value.toFixed(2)}`;
-        } else {
-          this._cpuFrequencyValue.text = `${value.toFixed(0)}`;
-        }
-      });
+          this._cpuFrequencyValue.style = this._getUsageColor(
+            value,
+            this._cpuFrequencyColors
+          );
+          this._cpuFrequencyValue.text = `${this._getValueFixed(value)}`;
+          this._cpuFrequencyUnit.text = unit;
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading cpu frequncy:", error)
+        );
     }
 
     _refreshCpuLoadAverageValue() {
-      this._loadFile("/proc/loadavg").then((contents) => {
-        const lines = new TextDecoder().decode(contents).split("\n");
+      this._loadFile("/proc/loadavg")
+        .then((contents) => {
+          const line = new TextDecoder().decode(contents);
 
-        const entry = lines[0].trim().split(/\s/);
+          const [l0, l1, l2] = line
+            .trim()
+            .split(/\s+/)
+            .slice(0, 3)
+            .map(parseFloat);
 
-        const l0 = entry[0];
-        const l1 = entry[1];
-        const l2 = entry[2];
+          // Set color based on load average values
+          this._cpuLoadAverageValue.style = this._getUsageColor(
+            [l0, l1, l2],
+            this._cpuLoadAverageColors
+          );
 
-        if (this._cpuLoadAverageColors.length > 0) {
-          for (let i = 0; i < this._cpuLoadAverageColors.length; i++) {
-            const item = this._cpuLoadAverageColors[i];
-            const values = item.split(COLOR_LIST_SEPARATOR);
-
-            if (
-              l0 <=
-              parseFloat(
-                values[0] ||
-                  l1 <= parseFloat(values[0]) ||
-                  l2 <= parseFloat(values[0])
-              )
-            ) {
-              this._cpuLoadAverageValue.style = `color: rgb(${(
-                parseFloat(values[1]) * 255
-              ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                parseFloat(values[3]) * 255
-              ).toFixed(0)});`;
-              break;
-            }
-          }
-        } else {
-          this._cpuLoadAverageValue.style = "";
-        }
-
-        this._cpuLoadAverageValue.text = `${l0} ${l1} ${l2}`;
-      });
+          // Display load average values
+          this._cpuLoadAverageValue.text = `${l0} ${l1} ${l2}`;
+        })
+        .catch((error) =>
+          console.error(
+            "[Resource_Monitor] Error reading cpu load average:",
+            error
+          )
+        );
     }
 
     _refreshCpuTemperatureValue() {
       if (this._thermalCpuTemperatureDevicesList.length > 0) {
-        for (
-          let i = 0;
-          i < this._thermalCpuTemperatureDevicesList.length;
-          i++
-        ) {
-          const element = this._thermalCpuTemperatureDevicesList[i];
-          const it = element.split(
+        this._thermalCpuTemperatureDevicesList.forEach((element) => {
+          const [, status, path] = element.split(
             THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR
           );
 
-          const status = it[1];
-          const path = it[2];
+          // Skip if the sensor is inactive
+          if (status === "false" || !GLib.file_test(path, GLib.FileTest.EXISTS))
+            return;
 
-          if (status === "false") {
-            continue;
-          }
+          this._loadFile(path)
+            .then((contents) => {
+              const temperature = parseInt(
+                new TextDecoder().decode(contents),
+                10
+              );
 
-          if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
-            this._loadFile(path).then((contents) => {
-              const value = parseInt(new TextDecoder().decode(contents));
+              if (!isNaN(temperature)) {
+                this._cpuTemperatures += temperature / 1000;
+                this._cpuTemperaturesReadings++;
+              }
 
-              this._cpuTemperatures += value / 1000;
-              this._cpuTemperaturesReads++;
-
+              // Process the final average once all readings are completed
               if (
-                this._cpuTemperaturesReads >=
+                this._cpuTemperaturesReadings >=
                 this._thermalCpuTemperatureDevicesList.length
               ) {
-                // Temperatures Average
-                this._cpuTemperatures /= this._cpuTemperaturesReads;
+                const avg =
+                  this._cpuTemperatures / this._cpuTemperaturesReadings;
 
-                switch (this._thermalTemperatureUnit) {
-                  case "f":
-                    this._cpuTemperatures = this._cpuTemperatures * 1.8 + 32;
-                    this._cpuTemperatureUnit.text = "°F";
+                // Convert temperature to desired unit
+                const [value, unit] = this._convertTemperature(avg);
 
-                    break;
+                this._cpuTemperatureValue.text = `${this._getValueFixed(
+                  value
+                )}`;
+                this._cpuTemperatureUnit.text = unit;
 
-                  case "c":
+                // Apply color based on thresholds
+                this._cpuTemperatureValue.style = this._getUsageColor(
+                  value,
+                  this._thermalCpuColors
+                );
 
-                  default:
-                    this._cpuTemperatureUnit.text = "°C";
-
-                    break;
-                }
-
-                if (this._thermalCpuColors.length > 0) {
-                  for (let i = 0; i < this._thermalCpuColors.length; i++) {
-                    const item = this._thermalCpuColors[i];
-                    const values = item.split(COLOR_LIST_SEPARATOR);
-
-                    if (this._cpuTemperatures <= parseFloat(values[0])) {
-                      this._cpuTemperatureValue.style = `color: rgb(${(
-                        parseFloat(values[1]) * 255
-                      ).toFixed(0)}, ${(parseFloat(values[2]) * 255).toFixed(
-                        0
-                      )}, ${(parseFloat(values[3]) * 255).toFixed(0)});`;
-                      break;
-                    }
-                  }
-                } else {
-                  this._cpuTemperatureValue.style = "";
-                }
-
-                if (this._decimalsStatus) {
-                  this._cpuTemperatureValue.text = `${this._cpuTemperatures.toFixed(
-                    1
-                  )}`;
-                } else {
-                  this._cpuTemperatureValue.text = `${this._cpuTemperatures.toFixed(
-                    0
-                  )}`;
-                }
-
+                // Reset totals
                 this._cpuTemperatures = 0;
-                this._cpuTemperaturesReads = 0;
+                this._cpuTemperaturesReadings = 0;
               }
+            })
+            .catch((error) => {
+              console.error(
+                "[Resource_Monitor] Error reading cpu thermal:",
+                error
+              );
             });
-          } else {
-            this._cpuTemperatureValue.text = _("Temperature Error");
-            this._cpuTemperatureUnit.text = "";
-          }
-        }
+        });
       } else {
-        this._cpuTemperatureValue.text = _("--");
+        this._cpuTemperatureValue.text = "--";
       }
     }
 
@@ -3378,230 +2780,90 @@ const ResourceMonitor = GObject.registerClass(
         "nvidia-smi",
         "--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
         "--format=csv,noheader",
-      ]).then((output) => {
-        const lines = output.split("\n");
+      ])
+        .then((contents) => {
+          const lines = contents.trim().split("\n");
 
-        for (let i = 0; i < lines.length - 1; i++) {
-          const line = lines[i];
-          const entry = line.trim().split(/\,\s/);
-
-          const uuid = entry[0];
-          let memoryTotal = entry[1].slice(0, -4);
-          let memoryUsed = entry[2].slice(0, -4);
-          let memoryFree = entry[3].slice(0, -4);
-          const usage = entry[4].slice(0, -1);
-          const temperature = entry[5];
-
-          // mebibyte
-          memoryTotal = parseInt(memoryTotal);
-          memoryUsed = parseInt(memoryUsed);
-          memoryFree = parseInt(memoryFree);
-
-          // kibibyte
-          memoryTotal *= 1024;
-          memoryUsed *= 1024;
-          memoryFree *= 1024;
-
-          // kilobyte
-          memoryTotal *= 1.024;
-          memoryUsed *= 1.024;
-          memoryFree *= 1.024;
-
-          let style = "";
-          if (this._gpuColors.length > 0) {
-            for (let i = 0; i < this._gpuColors.length; i++) {
-              const item = this._gpuColors[i];
-              const values = item.split(COLOR_LIST_SEPARATOR);
-
-              if (usage <= parseFloat(values[0])) {
-                style = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(
-                  0
-                )}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                  parseFloat(values[3]) * 255
-                ).toFixed(0)});`;
-                break;
-              }
-            }
-          } else {
-            style = "";
-          }
-
-          this._gpuBox.update_element_value(uuid, usage, "%", style);
-
-          let value = 0;
-          let unit = "KB";
-          switch (this._gpuMemoryUnitType) {
-            case "perc":
-              const used = (100 * memoryUsed) / memoryTotal;
-              unit = "%";
-
-              switch (this._gpuMemoryMonitor) {
-                case "free":
-                  value = 100 - used;
-
-                  break;
-
-                case "used":
-
-                default:
-                  value = used;
-
-                  break;
-              }
-
-              break;
-
-            case "numeric":
-
-            default:
-              switch (this._gpuMemoryMonitor) {
-                case "free":
-                  value = memoryFree;
-
-                  break;
-
-                case "used":
-
-                default:
-                  value = memoryUsed;
-
-                  break;
-              }
-
-              switch (this._gpuMemoryUnitMeasure) {
-                case "k":
-                  unit = "KB";
-                  break;
-
-                case "m":
-                  unit = "MB";
-                  value /= 1000;
-
-                  break;
-
-                case "g":
-                  unit = "GB";
-                  value /= 1000;
-                  value /= 1000;
-
-                  break;
-
-                case "t":
-                  unit = "TB";
-                  value /= 1000;
-                  value /= 1000;
-                  value /= 1000;
-
-                  break;
-
-                case "auto":
-
-                default:
-                  if (value > 1000) {
-                    unit = "MB";
-                    value /= 1000;
-                    if (value > 1000) {
-                      unit = "GB";
-                      value /= 1000;
-                      if (value > 1000) {
-                        unit = "TB";
-                        value /= 1000;
-                      }
-                    }
-                  } else {
-                    unit = "KB";
-                  }
-
-                  break;
-              }
-
-              break;
-          }
-
-          let valueT = parseInt(temperature);
-          let unitT = "°C";
-          switch (this._thermalTemperatureUnit) {
-            case "f":
-              valueT = valueT * 1.8 + 32;
-              unitT = "°F";
-
-              break;
-
-            case "c":
-
-            default:
-              unitT = "°C";
-
-              break;
-          }
-
-          let styleM = "";
-          if (this._gpuMemoryColors.length > 0) {
-            for (let i = 0; i < this._gpuMemoryColors.length; i++) {
-              const item = this._gpuMemoryColors[i];
-              const values = item.split(COLOR_LIST_SEPARATOR);
-
-              if (value <= parseFloat(values[0])) {
-                styleM = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(
-                  0
-                )}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                  parseFloat(values[3]) * 255
-                ).toFixed(0)});`;
-                break;
-              }
-            }
-          } else {
-            styleM = "";
-          }
-
-          let styleT = "";
-          if (this._thermalGpuColors.length > 0) {
-            for (let i = 0; i < this._thermalGpuColors.length; i++) {
-              const item = this._thermalGpuColors[i];
-              const values = item.split(COLOR_LIST_SEPARATOR);
-
-              if (valueT <= parseFloat(values[0])) {
-                styleT = `color: rgb(${(parseFloat(values[1]) * 255).toFixed(
-                  0
-                )}, ${(parseFloat(values[2]) * 255).toFixed(0)}, ${(
-                  parseFloat(values[3]) * 255
-                ).toFixed(0)});`;
-                break;
-              }
-            }
-          } else {
-            styleT = "";
-          }
-
-          if (this._decimalsStatus) {
-            this._gpuBox.update_element_memory_value(
+          lines.forEach((line) => {
+            const [
               uuid,
-              `${value.toFixed(1)}`,
-              unit,
-              styleM
+              memoryTotalStr,
+              memoryUsedStr,
+              memoryFreeStr,
+              usageStr,
+              temperatureStr,
+            ] = line.trim().split(/,\s/);
+
+            const usage = parseInt(usageStr.slice(0, -1), 10);
+            let memoryTotal =
+              parseInt(memoryTotalStr.slice(0, -4), 10) * 1024 * 1.024;
+            let memoryUsed =
+              parseInt(memoryUsedStr.slice(0, -4), 10) * 1024 * 1.024;
+            let memoryFree =
+              parseInt(memoryFreeStr.slice(0, -4), 10) * 1024 * 1.024;
+            const temperature = parseInt(temperatureStr, 10);
+
+            // GPU utilization
+            this._gpuBox.update_element_value(
+              uuid,
+              `${usage}`,
+              "%",
+              this._getUsageColor(usage, this._gpuColors)
             );
+
+            // GPU memory
+            let memoryValue;
+            let memoryUnit = "KB";
+
+            // Determine display value based on _gpuMemoryMonitor setting
+            switch (this._gpuMemoryMonitor) {
+              case "free":
+                memoryValue = memoryFree;
+                break;
+              case "used":
+              default:
+                memoryValue = memoryUsed;
+                break;
+            }
+
+            // Apply unit conversions or percentage formatting
+            if (this._gpuMemoryUnitType === "perc") {
+              const percentValue = (100 * memoryValue) / memoryTotal;
+              this._gpuBox.update_element_memory_value(
+                uuid,
+                `${this._getValueFixed(percentValue)}`,
+                "%",
+                this._getUsageColor(percentValue, this._gpuMemoryColors)
+              );
+            } else {
+              [memoryValue, memoryUnit] = this._convertValueToUnit(
+                memoryValue,
+                this._gpuMemoryUnitMeasure
+              );
+
+              this._gpuBox.update_element_memory_value(
+                uuid,
+                `${this._getValueFixed(memoryValue)}`,
+                memoryUnit,
+                this._getUsageColor(memoryValue, this._gpuMemoryColors)
+              );
+            }
+
+            // GPU Thermal
+            // Convert temperature to desired unit
+            const [tempValue, tempUnit] = this._convertTemperature(temperature);
+
             this._gpuBox.update_element_thermal_value(
               uuid,
-              `${valueT.toFixed(1)}`,
-              unitT,
-              styleT
+              `${this._getValueFixed(tempValue)}`,
+              tempUnit,
+              this._getUsageColor(tempValue, this._thermalGpuColors)
             );
-          } else {
-            this._gpuBox.update_element_memory_value(
-              uuid,
-              `${value.toFixed(0)}`,
-              unit,
-              styleM
-            );
-            this._gpuBox.update_element_thermal_value(
-              uuid,
-              `${valueT.toFixed(0)}`,
-              unitT,
-              styleT
-            );
-          }
-        }
-      });
+          });
+        })
+        .catch((error) =>
+          console.error("[Resource_Monitor] Error reading gpu:", error)
+        );
     }
 
     // Common Function
@@ -3660,7 +2922,7 @@ const ResourceMonitor = GObject.registerClass(
         const contents = await this._loadContents(file, cancellable);
         return contents;
       } catch (error) {
-        console.error(`[Resource_Monitor] Load File Error: ${error.message}`);
+        console.error("[Resource_Monitor] Load File Error:", error);
       }
     }
 
@@ -3693,9 +2955,7 @@ const ResourceMonitor = GObject.registerClass(
         const output = await this._readOutput(proc, cancellable);
         return output;
       } catch (error) {
-        console.error(
-          `[Resource_Monitor] Execute Command Error: ${error.message}`
-        );
+        console.error("[Resource_Monitor] Execute Command Error:", error);
       }
     }
   }
