@@ -176,6 +176,11 @@
             <summary></summary>
             <description></description>
         </key>
+        <key name="diskshowdevicename" type="b">
+            <default>true</default>
+            <summary></summary>
+            <description></description>
+        </key>
         <key name="diskstatsstatus" type="b">
             <default>true</default>
             <summary></summary>

@@ -835,6 +835,28 @@
                   <object class="GtkLabel">
                     <property name="css-classes">main-label</property>
                     <property name="halign">start</property>
+                    <property name="label">Common</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkBox">
+                    <property name="margin-start">8</property>
+                    <child>
+                      <object class="GtkLabel">
+                        <property name="halign">start</property>
+                        <property name="hexpand">1</property>
+                        <property name="label">Show Device Name</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkSwitch" id="disk_show_device_name"/>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkLabel">
+                    <property name="css-classes">main-label</property>
+                    <property name="halign">start</property>
                     <property name="label">Stats</property>
                   </object>
                 </child>

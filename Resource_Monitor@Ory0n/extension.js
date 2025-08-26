@@ -77,6 +77,7 @@ const SWAP_MONITOR = "swapmonitor";
 const SWAP_ALERT = "swapalert";
 const SWAP_ALERT_THRESHOLD = "swapalertthreshold";
 
+const DISK_SHOW_DEVICE_NAME = "diskshowdevicename";
 const DISK_STATS_STATUS = "diskstatsstatus";
 const DISK_STATS_WIDTH = "diskstatswidth";
 const DISK_STATS_COLORS = "diskstatscolors";
@@ -671,6 +672,7 @@ const ResourceMonitor = GObject.registerClass(
       this._swapAlert = this._settings.get_boolean(SWAP_ALERT);
       this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
 
+      this._diskShowDeviceName = this._settings.get_boolean(DISK_SHOW_DEVICE_NAME);
       this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
       this._diskStatsWidth =
         this._settings.get_int(DISK_STATS_WIDTH) * this._scaleFactor;
@@ -882,6 +884,10 @@ const ResourceMonitor = GObject.registerClass(
         this._swapAlertThresholdChanged.bind(this)
       );
 
+      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
+        `changed::${DISK_SHOW_DEVICE_NAME}`,
+        this._diskShowDeviceNameChanged.bind(this)
+      );
       this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
         `changed::${DISK_STATS_STATUS}`,
         this._diskStatsStatusChanged.bind(this)
@@ -1486,6 +1492,17 @@ const ResourceMonitor = GObject.registerClass(
       this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
     }
 
+    _diskShowDeviceNameChanged() {
+      this._diskShowDeviceName = this._settings.get_boolean(DISK_SHOW_DEVICE_NAME);
+
+      this._diskStatsBox.set_element_name_visibility(
+        this._diskShowDeviceName
+      );
+      this._diskSpaceBox.set_element_name_visibility(
+        this._diskShowDeviceName
+      );
+    }
+
     _diskStatsStatusChanged() {
       this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
 
@@ -1614,6 +1631,13 @@ const ResourceMonitor = GObject.registerClass(
       );
       this._diskSpaceBox.set_element_width(
         this._diskSpaceWidth * this._scaleFactor
+      );
+
+      this._diskStatsBox.set_element_name_visibility(
+        this._diskShowDeviceName
+      );
+      this._diskSpaceBox.set_element_name_visibility(
+        this._diskShowDeviceName
       );
     }
 
@@ -2016,6 +2040,8 @@ const ResourceMonitor = GObject.registerClass(
       //this._swapAlertChanged();
 
       //this._swapAlertThresholdChanged();
+
+      //this._diskShowDeviceNameChanged();
 
       this._diskStatsStatusChanged();
 
@@ -2648,7 +2674,7 @@ const ResourceMonitor = GObject.registerClass(
           this._cpuFrequencyUnit.text = unit;
         })
         .catch((error) =>
-          console.error("[Resource_Monitor] Error reading cpu frequncy:", error)
+          console.error("[Resource_Monitor] Error reading cpu frequency:", error)
         );
     }
 
@@ -2935,7 +2961,6 @@ const DiskContainer = GObject.registerClass(
 
       this._elementsPath = [];
       this._elementsName = [];
-      this._elementsLabel = [];
       this._elementsValue = [];
       this._elementsUnit = [];
     }
@@ -2955,10 +2980,21 @@ const DiskContainer = GObject.registerClass(
       }
     }
 
+    set_element_name_visibility(status) {
+      this._elementsPath.forEach((element) => {
+        if (typeof this._elementsName[element] !== "undefined") {
+          if (status) {
+            this._elementsName[element].show();
+          } else {
+            this._elementsName[element].hide();
+          }
+        }
+      });
+    }
+
     cleanup_elements() {
       this._elementsPath = [];
       this._elementsName = [];
-      this._elementsLabel = [];
       this._elementsValue = [];
       this._elementsUnit = [];
 

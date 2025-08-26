@@ -73,6 +73,7 @@ const SWAP_MONITOR = "swapmonitor";
 const SWAP_ALERT = "swapalert";
 const SWAP_ALERT_THRESHOLD = "swapalertthreshold";
 
+const DISK_SHOW_DEVICE_NAME = "diskshowdevicename";
 const DISK_STATS_STATUS = "diskstatsstatus";
 const DISK_STATS_WIDTH = "diskstatswidth";
 const DISK_STATS_COLORS = "diskstatscolors";
@@ -834,6 +835,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildDisk() {
+      this._diskShowDeviceName = this._builder.get_object("disk_show_device_name");
       this._diskStatsDisplay = this._builder.get_object("disk_stats_display");
       this._diskStatsWidthSpinbutton = this._builder.get_object(
         "disk_stats_width_spinbutton"
@@ -876,6 +878,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         "disk_devices_columnview"
       );
 
+      this._connectSwitchButton(
+        this._settings,
+        DISK_SHOW_DEVICE_NAME,
+        this._diskShowDeviceName
+      );
       this._connectSwitchButton(
         this._settings,
         DISK_STATS_STATUS,
