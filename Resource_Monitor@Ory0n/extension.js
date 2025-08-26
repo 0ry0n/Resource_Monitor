@@ -2258,7 +2258,7 @@ const ResourceMonitor = GObject.registerClass(
           // Apply unit conversions or percentage formatting
           if (this._ramUnitType === "perc") {
             const percentValue = (100 * value) / total;
-            this._ramValue.style = this._getUsageColor(value, this._ramColors);
+            this._ramValue.style = this._getUsageColor(percentValue, this._ramColors);
             this._ramValue.text = `${this._getValueFixed(percentValue)}`;
             this._ramUnit.text = "%";
           } else {
@@ -2326,7 +2326,7 @@ const ResourceMonitor = GObject.registerClass(
           if (this._swapUnitType === "perc") {
             const percentValue = (100 * value) / total;
             this._swapValue.style = this._getUsageColor(
-              value,
+              percentValue,
               this._swapColors
             );
             this._swapValue.text = `${this._getValueFixed(percentValue)}`;
