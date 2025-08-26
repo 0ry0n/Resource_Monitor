@@ -2,7 +2,7 @@
   "name": "Resource Monitor",
   "uuid": "Resource_Monitor@Ory0n",
   "description": "Resource Monitor is a GNOME Shell extension that provides real-time monitoring of key system resources directly in the GNOME Shell top bar. It tracks CPU usage, load average, and temperature; RAM and swap usage; disk stats and space; GPU usage, memory, and temperature; and network activity for both WLAN and Ethernet connections.",
-  "shell-version": ["45", "46", "47"],
+  "shell-version": ["45", "46", "47", "48"],
   "url": "https://github.com/0ry0n/Resource_Monitor/",
   "donations": {
     "paypal": "0ry0n"

@@ -10,7 +10,7 @@ Resource_Monitor is a GNOME Shell extension that provides real-time monitoring o
 | ![Main View](/images/main.png) |
 
 ## GNOME Shell versions supported
-**45, 46, 47**
+**45, 46, 47, 48**
 - For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) or [gnome-40-44](../../tree/gnome-40-44) branch.
 
 ## How-To Install
