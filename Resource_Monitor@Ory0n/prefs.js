@@ -29,6 +29,13 @@ const { Gio, GObject, Gtk, Gdk, GLib } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 const ByteArray = imports.byteArray;
 const Me = ExtensionUtils.getCurrentExtension();
+
+const GpuBackend = Me.imports.gpu.backend.GpuBackend
+const AmdBackend = Me.imports.gpu.amd.AmdBackend
+const NvidiaBackend = Me.imports.gpu.nvidia.NvidiaBackend
+const _executeCommand = Me.imports.utils.executeCommand
+
+
 const Gettext = imports.gettext;
 
 const Domain = Gettext.domain(Me.metadata.uuid);
@@ -107,6 +114,8 @@ const GPU_MEMORY_MONITOR = 'gpumemorymonitor';
 const GPU_DISPLAY_DEVICE_NAME = 'gpudisplaydevicename'
 const GPU_DEVICES_LIST = 'gpudeviceslist';
 const GPU_DEVICES_LIST_SEPARATOR = ':';
+
+const AMD_VENDOR_ID = '0x1002';
 
 const ResourceMonitorBuilderScope = GObject.registerClass({
     Implements: [Gtk.BuilderScope],
@@ -476,7 +485,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Get current disks settings
             let disksArray = settings.get_strv(DISK_DEVICES_LIST);
 
-            this._executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
+            _executeCommand(['df', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 let lines = output.split('\n');
 
                 // Excludes the first line of output
@@ -672,10 +681,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Detect sensors
             //let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
 
-            this._executeCommand(['bash', '-c', 'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi']).then(output => {
+            _executeCommand(['bash', '-c', 'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi']).then(output => {
                 let result = output.split('\n')[0];
                 if (result === 'EXIST') {
-                    this._executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done']).then(output => {
+                    _executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done']).then(output => {
                         let lines = output.split('\n');
 
                         for (let i = 0; i < lines.length - 1; i++) {
@@ -755,84 +764,98 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Get current disks settings
             let gpuTempsArray = this._settings.get_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST);
 
-            // NVIDIA
-            this._executeCommand(['nvidia-smi', '-L']).then(output => {
-                let lines = output.split('\n');
+            if(NvidiaBackend.detect()){
+                _executeCommand(['nvidia-smi', '-L']).then(output => {
+                    let lines = output.split('\n');
 
-                for (let i = 0; i < lines.length - 1; i++) {
-                    let line = lines[i];
-                    let entry = line.trim().split(/:/);
+                    for (let i = 0; i < lines.length - 1; i++) {
+                        let line = lines[i];
+                        let entry = line.trim().split(/:/);
 
-                    let device = entry[0];
-                    let name = entry[1].slice(1, -6);
-                    let uuid = entry[2].slice(1, -1);
+                        let device = entry[0];
+                        let name = entry[1].slice(1, -6);
+                        let uuid = entry[2].slice(1, -1);
 
-                    let statusButton = false;
+                        let statusButton = false;
 
-                    // Init gui
-                    for (let i = 0; i < gpuTempsArray.length; i++) {
-                        let element = gpuTempsArray[i];
-                        let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+                        // Init gui
+                        for (let i = 0; i < gpuTempsArray.length; i++) {
+                            let element = gpuTempsArray[i];
+                            let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
-                        if (uuid === it[0]) {
-                            statusButton = (it[2] === 'true');
+                            if (uuid === it[0]) {
+                                statusButton = (it[2] === 'true');
 
-                            break;
+                                break;
+                            }
                         }
+
+                        this._thermalGpuDevicesModel.set(this._thermalGpuDevicesModel.append(), [0, 1, 2], [uuid, name, statusButton]);
                     }
 
-                    this._thermalGpuDevicesModel.set(this._thermalGpuDevicesModel.append(), [0, 1, 2], [uuid, name, statusButton]);
-                }
-
-                // Save new gpuTempsArray with the list of new devices (to remove old devices)
-                gpuTempsArray = [];
-                this._thermalGpuDevicesModel.foreach((list, path, iter) => {
-                    gpuTempsArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2));
+                    // Save new gpuTempsArray with the list of new devices (to remove old devices)
+                    gpuTempsArray = [];
+                    this._thermalGpuDevicesModel.foreach((list, path, iter) => {
+                        gpuTempsArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2));
+                    });
+                    this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
                 });
-                this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
-            });
+            }
+            else if(AmdBackend.detect()){
+                _executeCommand([
+                    'bash', '-c',
+                    'for card in /sys/class/drm/card*; do ' +
+                    'for hw in "$card/device/hwmon/hwmon"*; do ' +
+                    'name_file="$hw/name"; ' +
+                    'if [[ -f "$name_file" ]]; then ' +
+                    'name=$(<"$name_file"); ' +
+                    'if [[ "$name" == "amdgpu" ]]; then ' +
+                    'echo "$(basename "$card"):$hw"; ' +
+                    'fi ' +
+                    'fi ' +
+                    'done ' +
+                    'done'
+                ]).then(output => {
+                    let lines = output.trim().split('\n');
 
-            // AMD
-            //this._executeCommand(['bash', '-c', 'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi']).then(output => {
-            //    let result = output.split('\n')[0];
-            //    if (result === 'EXIST') {
-            //        this._executeCommand(['bash', '-c', 'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "amdgpu" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done']).then(output => {
-            /*            let lines = output.split('\n');
+                    for (let line of lines) {
+                        if (!line) continue;
 
-                        for (let i = 0; i < lines.length - 1; i++) {
-                            let line = lines[i];
-                            let entry = line.trim().split(/-/);
+                        let [card, path] = line.split(':');
+                        let device = `AMD ${card}`;
+                        let statusButton = false;
 
-                            let device = entry[0];
-                            let path = entry[1];
-
-                            let statusButton = false;
-
-                            // Init gui
-                            for (let i = 0; i < cpuTempsArray.length; i++) {
-                                let element = cpuTempsArray[i];
-                                let it = element.split(THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR);
-
-                                if (device === it[0]) {
-                                    statusButton = (it[1] === 'true');
-
-                                    break;
-                                }
+                        // Restore saved state
+                        for (let i = 0; i < gpuTempsArray.length; i++) {
+                            let it = gpuTempsArray[i].split(GPU_DEVICES_LIST_SEPARATOR);
+                            if (path === it[0]) {
+                                statusButton = (it[2] === 'true');
+                                break;
                             }
-
-                            this._thermalGpuDevicesModel.set(this._thermalGpuDevicesModel.append(), [0, 1, 2], [uuid, device, statusButton]);
                         }
 
-                        // Save new cpuTempsArray with the list of new devices (to remove old devices)
-                        gpuTempsArray = [];
-                        this._thermalGpuDevicesModel.foreach((list, path, iter) => {
-                            gpuTempsArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2));
-                        });
-                        this._settings.set_strv(THERMAL_GPU_TEMPERATURE_DEVICES_LIST, gpuTempsArray);
+                        this._thermalGpuDevicesModel.set(
+                            this._thermalGpuDevicesModel.append(),
+                            [0, 1, 2],
+                            [card, device, statusButton]
+                        );
+                    }
+
+                    gpuTempsArray = [];
+                    this._thermalGpuDevicesModel.foreach((list, path, iter) => {
+                        gpuTempsArray.push(
+                            list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR +
+                            list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR +
+                            list.get_value(iter, 2)
+                        );
                     });
-                }
-            });
-            */
+                    this._settings.set_strv(
+                        THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
+                        gpuTempsArray
+                    );
+                });
+            }
+            
         }
 
         _buildGpu() {
@@ -917,43 +940,74 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Get current disks settings
             let gpuDevicesArray = this._settings.get_strv(GPU_DEVICES_LIST);
 
-            this._executeCommand(['nvidia-smi', '-L']).then(output => {
-                let lines = output.split('\n');
+            if(NvidiaBackend.detect()){
+                _executeCommand(['nvidia-smi', '-L']).then(output => {
+                    let lines = output.split('\n');
 
-                for (let i = 0; i < lines.length - 1; i++) {
-                    let line = lines[i];
-                    let entry = line.trim().split(/:/);
+                    for (let i = 0; i < lines.length - 1; i++) {
+                        let line = lines[i];
+                        let entry = line.trim().split(/:/);
 
-                    let device = entry[0];
-                    let name = entry[1].slice(1, -6);
-                    let uuid = entry[2].slice(1, -1);
+                        let device = entry[0];
+                        let name = entry[1].slice(1, -6);
+                        let uuid = entry[2].slice(1, -1);
 
-                    let usageButton = false;
-                    let memoryButton = false;
+                        let usageButton = false;
+                        let memoryButton = false;
 
-                    // Init gui
-                    for (let i = 0; i < gpuDevicesArray.length; i++) {
-                        let element = gpuDevicesArray[i];
-                        let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
+                        // Init gui
+                        for (let i = 0; i < gpuDevicesArray.length; i++) {
+                            let element = gpuDevicesArray[i];
+                            let it = element.split(GPU_DEVICES_LIST_SEPARATOR);
 
-                        if (uuid === it[0]) {
-                            usageButton = (it[2] === 'true');
-                            memoryButton = (it[3] === 'true');
+                            if (uuid === it[0]) {
+                                usageButton = (it[2] === 'true');
+                                memoryButton = (it[3] === 'true');
 
-                            break;
+                                break;
+                            }
                         }
+
+                        this._gpuDevicesModel.set(this._gpuDevicesModel.append(), [0, 1, 2, 3], [uuid, name, usageButton, memoryButton]);
                     }
 
-                    this._gpuDevicesModel.set(this._gpuDevicesModel.append(), [0, 1, 2, 3], [uuid, name, usageButton, memoryButton]);
-                }
-
-                // Save new gpuTempsArray with the list of new devices (to remove old devices)
-                gpuDevicesArray = [];
-                this._gpuDevicesModel.foreach((list, path, iter) => {
-                    gpuDevicesArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
+                    // Save new gpuTempsArray with the list of new devices (to remove old devices)
+                    gpuDevicesArray = [];
+                    this._gpuDevicesModel.foreach((list, path, iter) => {
+                        gpuDevicesArray.push(list.get_value(iter, 0) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 1) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 2) + GPU_DEVICES_LIST_SEPARATOR + list.get_value(iter, 3));
+                    });
+                    this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
                 });
-                this._settings.set_strv(GPU_DEVICES_LIST, gpuDevicesArray);
-            });
+            }
+            else if(AmdBackend.detect()){
+                _executeCommand(['sh', '-c', 'ls /sys/class/drm | grep "^card[0-9]"'])
+                    .then(output => {
+                        let cards = output.trim().split('\n');
+
+                        for (let card of cards) {
+                            // Check vendor
+                            const vendorPath = `/sys/class/drm/${card}/device/vendor`;
+                            if (GLib.file_test(vendorPath, GLib.FileTest.EXISTS)) {
+                                _executeCommand([
+                                    'cat',
+                                    vendorPath
+                                ]).then(vendor => {
+                                    if (vendor.trim() === AMD_VENDOR_ID) { 
+                                    let uuid = card;
+                                    let name = 'AMD GPU';
+
+                                    this._gpuDevicesModel.set(
+                                        this._gpuDevicesModel.append(),
+                                        [0, 1, 2, 3],
+                                        [uuid, name, false, false]
+                                    );
+                                    }
+                                });
+                            }
+                        }
+                    });
+            }
+            
         }
 
         _loadContents(file, cancellable = null) {
@@ -981,34 +1035,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             }
         }
 
-        _readOutput(proc, cancellable = null) {
-            return new Promise((resolve, reject) => {
-                proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
-                    try {
-                        const [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
-
-                        if (source_object.get_successful()) {
-                            resolve(stdout);
-                        } else {
-                            throw new Error(stderr);
-                        }
-                    } catch (e) {
-                        reject(e);
-                    }
-                });
-            });
-        }
-
-        async _executeCommand(command, cancellable = null) {
-            try {
-                const proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-                const output = await this._readOutput(proc, cancellable);
-
-                return output;
-            } catch (error) {
-                log('[Resource_Monitor] Execute Command Error (' + error + ')');
-            }
-        }
     });
 
 function init() {
