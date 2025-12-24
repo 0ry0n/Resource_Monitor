@@ -1,4 +1,6 @@
+const { GLib } = imports.gi;
 const GpuBackend = imports.misc.extensionUtils.getCurrentExtension().imports.gpu.backend.GpuBackend;
+const _executeCommand = imports.misc.extensionUtils.getCurrentExtension().imports.utils.executeCommand
 
 var NvidiaBackend = class NvidiaBackend extends GpuBackend {
     static detect() {
@@ -11,7 +13,7 @@ var NvidiaBackend = class NvidiaBackend extends GpuBackend {
     }
 
     async query() {
-        const output = await this._executeCommand(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu', '--format=csv,noheader']);
+        const output = await _executeCommand(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu', '--format=csv,noheader']);
         const lines = output.split('\n');
 
         for (let i = 0; i < lines.length - 1; i++) {
