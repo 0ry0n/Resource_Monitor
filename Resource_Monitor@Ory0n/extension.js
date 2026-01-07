@@ -2174,8 +2174,10 @@ const ResourceMonitor = GObject.registerClass(
 
       let exponent = 0;
 
-      if (unitMeasure && unitSuffixes.includes(unitMeasure.toUpperCase())) {
-        exponent = unitSuffixes.indexOf(unitMeasure.toUpperCase());
+      const normalizedUnit = isBits ? unitMeasure : unitMeasure?.toUpperCase();
+
+      if (unitMeasure && unitSuffixes.includes(normalizedUnit)) {
+        exponent = unitSuffixes.indexOf(normalizedUnit);
       } else {
         while (values.some(v => v >= factor ** (exponent + 1)) && exponent < 4) {
           exponent++;
