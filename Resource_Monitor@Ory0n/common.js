@@ -60,12 +60,13 @@ export function serializeDiskEntry({
 export function parseDiskEntry(serialized) {
   const parsed = _parseJsonEntry(serialized, "disk");
   if (parsed) {
+    const device = parsed.device ?? "";
     return {
-      device: parsed.device ?? "",
+      device,
       mountPoint: parsed.mountPoint ?? "",
       stats: _toBoolean(parsed.stats),
       space: _toBoolean(parsed.space),
-      displayName: parsed.displayName ?? "",
+      displayName: parsed.displayName || device,
     };
   }
 
@@ -77,7 +78,7 @@ export function parseDiskEntry(serialized) {
     mountPoint,
     stats: _toBoolean(stats),
     space: _toBoolean(space),
-    displayName: name.join(" "),
+    displayName: name.join(" ") || device,
   };
 }
 
@@ -166,12 +167,13 @@ export function serializeGpuEntry({
 export function parseGpuEntry(serialized) {
   const parsed = _parseJsonEntry(serialized, "gpu");
   if (parsed) {
+    const name = parsed.name ?? "";
     return {
       device: parsed.device ?? "",
-      name: parsed.name ?? "",
+      name,
       usage: _toBoolean(parsed.usage),
       memory: _toBoolean(parsed.memory),
-      displayName: parsed.displayName ?? "",
+      displayName: parsed.displayName || name,
     };
   }
 
@@ -186,6 +188,6 @@ export function parseGpuEntry(serialized) {
     name: _joinLegacyParts(parts, 0, parts.length),
     usage: _toBoolean(usage),
     memory: _toBoolean(memory),
-    displayName,
+    displayName: displayName || _joinLegacyParts(parts, 0, parts.length),
   };
 }

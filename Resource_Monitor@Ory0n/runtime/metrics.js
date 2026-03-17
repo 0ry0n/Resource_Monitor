@@ -66,14 +66,12 @@ export function getUsageColor(value, colors, separator = " ") {
 
   for (let index = thresholds.length - 1; index >= 0; index--) {
     const threshold = thresholds[index];
-    if (normalizedValue >= threshold.threshold) {
+    if (normalizedValue > threshold.threshold) {
       return threshold.style;
     }
   }
 
-  // If the current value is below the first configured threshold, keep the
-  // lowest rule instead of dropping color entirely.
-  return thresholds[0].style;
+  return "";
 }
 
 export function getValueFixed(value, showDecimals) {

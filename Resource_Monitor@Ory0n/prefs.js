@@ -146,9 +146,25 @@ const GPU_MEMORY_MONITOR = "gpumemorymonitor";
 const GPU_DISPLAY_DEVICE_NAME = "gpudisplaydevicename";
 const GPU_DEVICES_LIST = "gpudeviceslist";
 
+function parseNvidiaSmiListLine(line) {
+  const match = line.match(/^(GPU \d+):\s+(.*)\s+\(UUID:\s+([^)]+)\)$/);
+  if (!match) {
+    return null;
+  }
+
+  const [, device, name, uuid] = match;
+  return {
+    device,
+    name,
+    uuid,
+  };
+}
+
 const ResourceMonitorPrefsWidget = GObject.registerClass(
   class ResourceMonitorPrefsWidget extends GObject.Object {
     _init({ settings, dir, metadata }) {
+      super._init();
+
       this._settings = settings;
       this._dir = dir;
       this._metadata = metadata;
@@ -306,7 +322,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _bindToggleSensitivity(toggle, widgets, callback = null) {
-      toggle.connect("state-set", (button) => {
+      toggle.connect("notify::active", (button) => {
         this._setWidgetsSensitive(widgets, button.active);
         callback?.(button.active);
       });
@@ -590,7 +606,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const addRow = new Adw.ActionRow({
         title: _("Threshold Colors"),
         subtitle: _(
-          "Rules are matched from the highest threshold downward. Values below the first threshold keep the lowest color."
+          "Rules are matched from the highest threshold downward. Values that do not go higher than any threshold keep the default color."
         ),
       });
       addRow.add_suffix(this._takeWidget(addButton));
@@ -1417,7 +1433,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._iconsPositionCombobox
       );
 
-      this._iconsDisplay.connect("state-set", (button) => {
+      this._iconsDisplay.connect("notify::active", (button) => {
         this._iconsPositionCombobox.sensitive = button.active;
       });
       this._iconsPositionCombobox.sensitive = this._iconsDisplay.active;
@@ -1525,12 +1541,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _buildCpu() {
       this._cpuDisplay = this._createSwitch();
-      this._cpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._cpuWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._cpuColorsAddButton = this._createIconButton("list-add");
       this._cpuColorsListbox = this._createListBox();
       this._cpuFrequencyDisplay = this._createSwitch();
       this._cpuFrequencyWidthSpinbutton = this._createSpinButton({
-        upper: 500,
+        upper: 400,
       });
       this._cpuFrequencyColorsAddButton = this._createIconButton("list-add");
       this._cpuFrequencyColorsListbox = this._createListBox();
@@ -1542,7 +1558,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       ]);
       this._cpuLoadAverageDisplay = this._createSwitch();
       this._cpuLoadAverageWidthSpinbutton = this._createSpinButton({
-        upper: 500,
+        upper: 400,
       });
       this._cpuLoadAverageColorsAddButton = this._createIconButton("list-add");
       this._cpuLoadAverageColorsListbox = this._createListBox();
@@ -1617,7 +1633,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _buildRam() {
       this._ramDisplay = this._createSwitch();
-      this._ramWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._ramWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._ramColorsAddButton = this._createIconButton("list-add");
       this._ramColorsListbox = this._createListBox();
       this._ramUnitCombobox = this._createComboBox([
@@ -1663,7 +1679,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _buildSwap() {
       this._swapDisplay = this._createSwitch();
-      this._swapWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._swapWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._swapColorsAddButton = this._createIconButton("list-add");
       this._swapColorsListbox = this._createListBox();
       this._swapUnitCombobox = this._createComboBox([
@@ -1872,7 +1888,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
 
       // Display All
-      this._diskDevicesDisplayAll.connect("state-set", (button) => {
+      this._diskDevicesDisplayAll.connect("notify::active", (button) => {
         // Refresh
         this._readDiskDevices(
           this._settings,
@@ -1939,7 +1955,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               ) {
                 statsButton = diskConfig.stats;
                 spaceButton = diskConfig.space;
-                displayName = diskConfig.displayName;
+                displayName = diskConfig.displayName || filesystem;
                 break;
               }
             }
@@ -1969,7 +1985,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                   const devicePath = `/dev/${entry[2]}`;
 
                   // Skip loop devices
-                  if (entry[2].match(/loop*/)) continue;
+                  if (/^loop/.test(entry[2])) continue;
 
                   // Check if device is already listed
                   let isListed = false;
@@ -1992,7 +2008,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                       ) {
                         statsButton = diskConfig.stats;
                         spaceButton = diskConfig.space;
-                        displayName = diskConfig.displayName;
+                        displayName = diskConfig.displayName || devicePath;
                         break;
                       }
                     }
@@ -2043,11 +2059,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         ["t", _("Tera")],
       ]);
       this._netEthDisplay = this._createSwitch();
-      this._netEthWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._netEthWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._netEthColorsAddButton = this._createIconButton("list-add");
       this._netEthColorsListbox = this._createListBox();
       this._netWlanDisplay = this._createSwitch();
-      this._netWlanWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._netWlanWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._netWlanColorsAddButton = this._createIconButton("list-add");
       this._netWlanColorsListbox = this._createListBox();
 
@@ -2108,6 +2124,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildThermal() {
+      const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
+
       this._thermalUnitCombobox = this._createComboBox([
         ["c", _("°C")],
         ["f", _("°F")],
@@ -2122,6 +2140,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalGpuColorsAddButton = this._createIconButton("list-add");
       this._thermalGpuColorsListbox = this._createListBox();
       this._thermalGpuDevicesColumnView = this._createColumnView();
+      this._thermalGpuDevicesColumnView.sensitive = hasNvidiaSmi;
 
       connectComboBox(
         this._settings,
@@ -2233,46 +2252,50 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // NVIDIA GPU detection
-      executeCommand(["nvidia-smi", "-L"])
-        .then((output) => {
-          const lines = output.trim().split("\n");
+      if (hasNvidiaSmi) {
+        executeCommand(["nvidia-smi", "-L"])
+          .then((output) => {
+            const lines = output.trim().split("\n");
 
-          for (const line of lines) {
-            if (!line) continue;
+            for (const line of lines) {
+              if (!line) continue;
 
-            const entry = line.trim().split(":");
-            const device = entry[0].trim();
-            const name = entry[1]?.trim().slice(0, -6); // Remove trailing "(UUID)"
-            const uuid = entry[2]?.trim().slice(0, -1); // Remove trailing ")"
-
-            let statusButton = false;
-
-            for (const gpuConfig of gpuTempsArray) {
-              if (uuid === gpuConfig.device) {
-                statusButton = gpuConfig.monitor;
-                break;
+              const parsed = parseNvidiaSmiListLine(line.trim());
+              if (!parsed) {
+                continue;
               }
+
+              const { name, uuid } = parsed;
+
+              let statusButton = false;
+
+              for (const gpuConfig of gpuTempsArray) {
+                if (uuid === gpuConfig.device) {
+                  statusButton = gpuConfig.monitor;
+                  break;
+                }
+              }
+
+              // Append the GPU data to the thermal model
+              this._thermalGpuDevicesModel.append(
+                new ThermalGpuElement(uuid, name, statusButton)
+              );
             }
 
-            // Append the GPU data to the thermal model
-            this._thermalGpuDevicesModel.append(
-              new ThermalGpuElement(uuid, name, statusButton)
+            // Save updated GPU temperatures to settings
+            saveArrayToSettings(
+              this._thermalGpuDevicesModel,
+              this._settings,
+              THERMAL_GPU_TEMPERATURE_DEVICES_LIST
             );
-          }
-
-          // Save updated GPU temperatures to settings
-          saveArrayToSettings(
-            this._thermalGpuDevicesModel,
-            this._settings,
-            THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+          })
+          .catch((error) =>
+            console.error(
+              "[Resource_Monitor] Error executing nvidia-smi command:",
+              error
+            )
           );
-        })
-        .catch((error) =>
-          console.error(
-            "[Resource_Monitor] Error executing nvidia-smi command:",
-            error
-          )
-        );
+      }
 
       // Update
       this._thermalGpuDevicesModel.connect(
@@ -2296,6 +2319,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildGpu() {
+      const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
+
       this._gpuDisplay = this._createSwitch();
       this._gpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
       this._gpuColorsAddButton = this._createIconButton("list-add");
@@ -2319,6 +2344,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       ]);
       this._gpuDisplayDeviceName = this._createSwitch();
       this._gpuDevicesColumnView = this._createColumnView();
+      this._gpuDevicesColumnView.sensitive = hasNvidiaSmi;
 
       connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
       connectSpinButton(
@@ -2416,50 +2442,54 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // NVIDIA GPU detection
-      executeCommand(["nvidia-smi", "-L"])
-        .then((output) => {
-          const lines = output.trim().split("\n");
+      if (hasNvidiaSmi) {
+        executeCommand(["nvidia-smi", "-L"])
+          .then((output) => {
+            const lines = output.trim().split("\n");
 
-          for (const line of lines) {
-            if (!line) continue;
+            for (const line of lines) {
+              if (!line) continue;
 
-            const entry = line.trim().split(":");
-            const device = entry[0].trim();
-            const name = entry[1]?.trim().slice(0, -6); // Remove trailing "(UUID)"
-            const uuid = entry[2]?.trim().slice(0, -1); // Remove trailing ")"
-
-            let usageButton = false;
-            let memoryButton = false;
-            let displayName = name;
-
-            for (const gpuConfig of gpuDevicesArray) {
-              if (uuid === gpuConfig.device) {
-                usageButton = gpuConfig.usage;
-                memoryButton = gpuConfig.memory;
-                displayName = gpuConfig.displayName;
-                break;
+              const parsed = parseNvidiaSmiListLine(line.trim());
+              if (!parsed) {
+                continue;
               }
+
+              const { name, uuid } = parsed;
+
+              let usageButton = false;
+              let memoryButton = false;
+              let displayName = name;
+
+              for (const gpuConfig of gpuDevicesArray) {
+                if (uuid === gpuConfig.device) {
+                  usageButton = gpuConfig.usage;
+                  memoryButton = gpuConfig.memory;
+                  displayName = gpuConfig.displayName || name;
+                  break;
+                }
+              }
+
+              // Append the GPU data to the model
+              this._gpuDevicesModel.append(
+                new GpuElement(displayName, uuid, name, usageButton, memoryButton)
+              );
             }
 
-            // Append the GPU data to the model
-            this._gpuDevicesModel.append(
-              new GpuElement(displayName, uuid, name, usageButton, memoryButton)
+            // Save updated GPU array to settings
+            saveArrayToSettings(
+              this._gpuDevicesModel,
+              this._settings,
+              GPU_DEVICES_LIST
             );
-          }
-
-          // Save updated GPU array to settings
-          saveArrayToSettings(
-            this._gpuDevicesModel,
-            this._settings,
-            GPU_DEVICES_LIST
+          })
+          .catch((error) =>
+            console.error(
+              "[Resource_Monitor] Error executing nvidia-smi command:",
+              error
+            )
           );
-        })
-        .catch((error) =>
-          console.error(
-            "[Resource_Monitor] Error executing nvidia-smi command:",
-            error
-          )
-        );
+      }
 
       // Update
       this._gpuDevicesModel.connect(

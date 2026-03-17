@@ -27,11 +27,22 @@ function resetCpuFrequencyDisplay(indicator) {
   indicator._cpuFrequencyUnit.text = "KHz";
 }
 
+function resetCpuTemperatureDisplay(indicator) {
+  indicator._cpuTemperatureValue.style = "";
+  indicator._cpuTemperatureValue.text = "--";
+  indicator._cpuTemperatureUnit.text = indicator._thermalTemperatureUnit === "f" ? "°F" : "°C";
+}
+
 function resetGpuDisplay(indicator) {
   indicator._gpuDevices.forEach((device) => {
     indicator._gpuBox.update_element_value(device.device, "--", "%", "");
     indicator._gpuBox.update_element_memory_value(device.device, "--", "KB", "");
-    indicator._gpuBox.update_element_thermal_value(device.device, "--", "°C", "");
+    indicator._gpuBox.update_element_thermal_value(
+      device.device,
+      "--",
+      indicator._thermalTemperatureUnit === "f" ? "°F" : "°C",
+      ""
+    );
   });
 }
 
@@ -129,7 +140,7 @@ export function refreshSwapValue(indicator) {
             setAlertActive: (value) => {
               indicator._swapAlertActive = value;
             },
-            title: _("Resource Monitor - Low Memory Alert"),
+            title: _("Resource Monitor - Low Swap Alert"),
             message: _(
               "Available swap has dropped below %d%%. Please take action to free up memory."
             ).format(indicator._swapAlertThreshold),
@@ -488,7 +499,7 @@ export function refreshCpuTemperatureValue(indicator) {
           );
 
           if (!display) {
-            indicator._cpuTemperatureValue.text = "--";
+            resetCpuTemperatureDisplay(indicator);
             syncThermalCpuVisibility(indicator);
             indicator._logIssueOnce(
               "thermal-cpu-unavailable",
@@ -511,6 +522,8 @@ export function refreshCpuTemperatureValue(indicator) {
         })
         .catch((error) => {
           if (!indicator._isCancelledError(error)) {
+            resetCpuTemperatureDisplay(indicator);
+            syncThermalCpuVisibility(indicator);
             indicator._logIssueOnce(
               "thermal-cpu-read-error",
               "[Resource_Monitor] Error reading cpu thermal.",
@@ -520,7 +533,7 @@ export function refreshCpuTemperatureValue(indicator) {
         })
     );
   } else {
-    indicator._cpuTemperatureValue.text = "--";
+    resetCpuTemperatureDisplay(indicator);
     syncThermalCpuVisibility(indicator);
   }
 }
@@ -550,6 +563,7 @@ export function refreshGpuValue(indicator) {
         });
 
         if (entries.length === 0) {
+          resetGpuDisplay(indicator);
           syncGpuVisibility(indicator);
           indicator._logIssueOnce(
             "gpu-unavailable",

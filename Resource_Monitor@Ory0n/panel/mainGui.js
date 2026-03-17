@@ -218,5 +218,7 @@ export function buildMainGui(indicator) {
     }
   });
 
-  indicator.add_child(indicator._box);
+  if (indicator._box.get_parent() !== indicator) {
+    indicator.add_child(indicator._box);
+  }
 }
