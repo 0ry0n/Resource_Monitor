@@ -14,6 +14,8 @@ Resource_Monitor is a GNOME Shell extension that provides real-time monitoring o
 
 **45, 46, 47, 48, 49**
 
+The repository currently declares support only for the GNOME Shell versions that have been explicitly validated in this branch. GNOME Shell 50 is not advertised yet in `metadata.json` and should be added only after verification on a stable release.
+
 - For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) or [gnome-40-44](../../tree/gnome-40-44) branch.
 
 ## How-To Install
@@ -42,6 +44,13 @@ The repository now includes a small maintenance workflow for local development.
 - `make install`
   Installs the extension into `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/`.
 
+## Project Conventions
+
+- The extension follows the modern GNOME Shell extension layout with `metadata.json`, `extension.js`, `prefs.js`, GTK4/Libadwaita preferences, and a dedicated GSettings schema.
+- The GSettings schema id used by the project is `org.gnome.shell.extensions.resource-monitor`, aligned with GNOME extension conventions.
+- Supported GNOME Shell versions must stay synchronized between `metadata.json`, release notes, and this README.
+- New compatibility claims should only be added after validation on the corresponding stable GNOME Shell release.
+
 ## Release Workflow
 
 GitHub Actions now includes:
@@ -68,6 +77,12 @@ GitHub Actions now includes:
 ## About Units
 
 The units displayed in Resource_Monitor are in K, M, ... (powers of 1024), or KB, MB, ... (powers of 1000).
+
+## Runtime Dependencies
+
+- CPU frequency and CPU thermal discovery use direct sysfs access and do not require `bash`.
+- Disk space updates in the panel use filesystem queries through Gio instead of calling `df`.
+- NVIDIA GPU monitoring still relies on `nvidia-smi`, because that command is the source for the required GPU telemetry on supported systems.
 
 ## Bug Reporting
 

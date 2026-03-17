@@ -1,24 +1,79 @@
+function normalizeColorComponent(component) {
+  if (!Number.isFinite(component)) {
+    return null;
+  }
+
+  const scaled = component > 1 ? component : component * 255;
+  return Math.max(0, Math.min(255, Math.round(scaled)));
+}
+
+function normalizeColorEntry(colorItem, separator = " ") {
+  if (typeof colorItem !== "string") {
+    return "";
+  }
+
+  return colorItem.includes("undefined")
+    ? colorItem.replaceAll("undefined", separator)
+    : colorItem;
+}
+
+function parseColorThreshold(colorItem, separator) {
+  const [thresholdRaw, rRaw, gRaw, bRaw] = normalizeColorEntry(
+    colorItem,
+    separator
+  )
+    .split(separator)
+    .map(Number);
+  const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : null;
+  const r = normalizeColorComponent(rRaw);
+  const g = normalizeColorComponent(gRaw);
+  const b = normalizeColorComponent(bRaw);
+
+  if (threshold === null || r === null || g === null || b === null) {
+    return null;
+  }
+
+  return {
+    threshold,
+    style: `color: rgb(${r}, ${g}, ${b});`,
+  };
+}
+
+function getNormalizedThresholds(colors, separator) {
+  return colors
+    .map((colorItem) => parseColorThreshold(colorItem, separator))
+    .filter(Boolean)
+    .sort((first, second) => first.threshold - second.threshold);
+}
+
 export function getUsageColor(value, colors, separator = " ") {
   if (!colors || colors.length === 0) {
     return "";
   }
 
-  const normalizedValue = Array.isArray(value) ? Math.max(...value) : value;
+  const normalizedValue = Array.isArray(value)
+    ? Math.max(...value.filter(Number.isFinite))
+    : value;
 
-  for (const colorItem of colors) {
-    const [threshold, rRaw, gRaw, bRaw] = colorItem
-      .split(separator)
-      .map(Number);
+  if (!Number.isFinite(normalizedValue)) {
+    return "";
+  }
 
-    if (normalizedValue <= threshold) {
-      const r = Math.round(rRaw > 1 ? rRaw : rRaw * 255);
-      const g = Math.round(gRaw > 1 ? gRaw : gRaw * 255);
-      const b = Math.round(bRaw > 1 ? bRaw : bRaw * 255);
-      return `color: rgb(${r}, ${g}, ${b});`;
+  const thresholds = getNormalizedThresholds(colors, separator);
+  if (thresholds.length === 0) {
+    return "";
+  }
+
+  for (let index = thresholds.length - 1; index >= 0; index--) {
+    const threshold = thresholds[index];
+    if (normalizedValue >= threshold.threshold) {
+      return threshold.style;
     }
   }
 
-  return "";
+  // If the current value is below the first configured threshold, keep the
+  // lowest rule instead of dropping color entirely.
+  return thresholds[0].style;
 }
 
 export function getValueFixed(value, showDecimals) {

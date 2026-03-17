@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="com-github-Ory0n-Resource_Monitor">
-    <schema id="com.github.Ory0n.Resource_Monitor" path="/com/github/Ory0n/Resource_Monitor/">
+    <schema id="org.gnome.shell.extensions.resource-monitor" path="/org/gnome/shell/extensions/resource-monitor/">
         <key name="refreshtime" type="i">
             <default>2</default>
             <range min="1" max="60"/>

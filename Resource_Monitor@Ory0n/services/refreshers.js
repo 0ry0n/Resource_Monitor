@@ -5,12 +5,13 @@ import { buildCpuUsageSample, parseCpuFrequencyOutput, parseLoadAverageDisplay }
 import { buildMemoryDisplay } from "../runtime/memory.js";
 import {
   buildDiskSpaceDisplay,
-  parseDiskSpaceTable,
   parseDiskStatsEntries,
 } from "../runtime/disk.js";
 import { buildNetworkSample } from "../runtime/network.js";
 import { parseGpuSmiOutput } from "../runtime/gpu.js";
 import { buildCpuTemperatureDisplay } from "../runtime/thermal.js";
+import { queryFilesystemInfo } from "../runtime/io.js";
+import { getCpuFrequencyPaths } from "./runtime.js";
 import {
   hasVisibleCpuFrequency,
   hasVisibleThermalCpuTemperature,
@@ -19,6 +20,20 @@ import {
   syncGpuVisibility,
   syncThermalCpuVisibility,
 } from "./visibility.js";
+
+function resetCpuFrequencyDisplay(indicator) {
+  indicator._cpuFrequencyValue.style = "";
+  indicator._cpuFrequencyValue.text = "--";
+  indicator._cpuFrequencyUnit.text = "KHz";
+}
+
+function resetGpuDisplay(indicator) {
+  indicator._gpuDevices.forEach((device) => {
+    indicator._gpuBox.update_element_value(device.device, "--", "%", "");
+    indicator._gpuBox.update_element_memory_value(device.device, "--", "KB", "");
+    indicator._gpuBox.update_element_thermal_value(device.device, "--", "°C", "");
+  });
+}
 
 export function refreshCpuValue(indicator) {
   indicator._runRefreshTask("cpu", () =>
@@ -223,20 +238,40 @@ export function refreshDiskStatsValue(indicator) {
 }
 
 export function refreshDiskSpaceValue(indicator) {
-  indicator._runRefreshTask("disk-space", () =>
-    indicator._executeCommand([
-      "df",
-      "--output=source,used,avail,pcent",
-      "-B1K",
-      "-x",
-      "squashfs",
-      "-x",
-      "tmpfs",
-    ])
-      .then((contents) => {
-        indicator._clearLoggedIssue("disk-space-read-error");
+  const monitoredDevices = indicator._diskDevices.filter(
+    (device) => device.space && device.mountPoint
+  );
 
-        parseDiskSpaceTable(contents).forEach((entry) => {
+  indicator._runRefreshTask("disk-space", () =>
+    Promise.allSettled(
+      monitoredDevices.map(async (device) => {
+        const { size, free } = await queryFilesystemInfo(
+          device.mountPoint,
+          indicator._ioCancellable
+        );
+
+        return {
+          filesystem: device.device,
+          usedKilobytes: Math.max(0, (size - free) / 1024),
+          availableKilobytes: Math.max(0, free / 1024),
+          usedPercent: size > 0 ? Math.round((100 * (size - free)) / size) : 0,
+        };
+      })
+    )
+      .then((results) => {
+        let hasSuccess = false;
+        let firstError = null;
+
+        results.forEach((result) => {
+          if (result.status !== "fulfilled") {
+            if (!firstError && !indicator._isCancelledError(result.reason)) {
+              firstError = result.reason;
+            }
+            return;
+          }
+
+          hasSuccess = true;
+          const entry = result.value;
           const display = buildDiskSpaceDisplay(entry, {
             monitor: indicator._diskSpaceMonitor,
             unitType: indicator._diskSpaceUnitType,
@@ -252,6 +287,16 @@ export function refreshDiskSpaceValue(indicator) {
             indicator._getUsageColor(display.value, indicator._diskSpaceColors)
           );
         });
+
+        if (hasSuccess || monitoredDevices.length === 0) {
+          indicator._clearLoggedIssue("disk-space-read-error");
+        } else if (firstError) {
+          indicator._logIssueOnce(
+            "disk-space-read-error",
+            "[Resource_Monitor] Error reading disk space.",
+            firstError
+          );
+        }
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
@@ -340,9 +385,10 @@ export function refreshWlanValue(indicator) {
 }
 
 export function refreshCpuFrequencyValue(indicator) {
-  if (!indicator._capabilities.bash || !indicator._capabilities.cpuFrequency) {
-    indicator._cpuFrequencyValue.text = "--";
-    indicator._cpuFrequencyUnit.text = "KHz";
+  const frequencyPaths = getCpuFrequencyPaths();
+
+  if (frequencyPaths.length === 0) {
+    resetCpuFrequencyDisplay(indicator);
     syncCpuFrequencyVisibility(indicator);
     indicator._logIssueOnce(
       "cpu-frequency-unavailable",
@@ -352,21 +398,19 @@ export function refreshCpuFrequencyValue(indicator) {
   }
 
   indicator._runRefreshTask("cpu-frequency", () =>
-    indicator._executeCommand([
-      "bash",
-      "-c",
-      "cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
-    ])
-      .then((contents) => {
+    Promise.allSettled(frequencyPaths.map((path) => indicator._loadFile(path)))
+      .then((results) => {
+        const contents = results
+          .filter((result) => result.status === "fulfilled")
+          .map((result) => new TextDecoder().decode(result.value))
+          .join("\n");
         const display = parseCpuFrequencyOutput(
           contents,
           indicator._cpuFrequencyUnitMeasure
         );
 
         if (!display) {
-          indicator._cpuFrequencyValue.text = "--";
-          indicator._cpuFrequencyUnit.text = "KHz";
-          indicator._capabilities.cpuFrequency = false;
+          resetCpuFrequencyDisplay(indicator);
           syncCpuFrequencyVisibility(indicator);
           indicator._logIssueOnce(
             "cpu-frequency-unavailable",
@@ -390,9 +434,7 @@ export function refreshCpuFrequencyValue(indicator) {
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
-          indicator._capabilities.cpuFrequency = false;
-          indicator._cpuFrequencyValue.text = "--";
-          indicator._cpuFrequencyUnit.text = "KHz";
+          resetCpuFrequencyDisplay(indicator);
           syncCpuFrequencyVisibility(indicator);
           indicator._logIssueOnce(
             "cpu-frequency-read-error",
@@ -548,8 +590,7 @@ export function refreshGpuValue(indicator) {
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
-          indicator._capabilities.nvidiaSmi = false;
-          indicator._gpuBox.cleanup_elements();
+          resetGpuDisplay(indicator);
           syncGpuVisibility(indicator);
           indicator._logIssueOnce(
             "gpu-read-error",

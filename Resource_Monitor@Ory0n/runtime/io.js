@@ -11,7 +11,7 @@ export function loadContents(file, cancellable = null) {
           reject(new Error("Failed to load contents"));
         }
       } catch (error) {
-        reject(new Error(`Error in load_contents_finish: ${error.message}`));
+        reject(error);
       }
     });
   });
@@ -34,7 +34,7 @@ export function readOutput(proc, cancellable = null) {
           reject(new Error(`Process failed with error: ${stderr}`));
         }
       } catch (error) {
-        reject(new Error(`Error in communicate_utf8_finish: ${error.message}`));
+        reject(error);
       }
     });
   });
@@ -46,4 +46,27 @@ export function executeCommand(command, cancellable = null) {
     Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
   );
   return readOutput(proc, cancellable);
+}
+
+export function queryFilesystemInfo(path, cancellable = null) {
+  const file = Gio.File.new_for_path(path);
+
+  return new Promise((resolve, reject) => {
+    file.query_filesystem_info_async(
+      `${Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE},${Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE}`,
+      0,
+      cancellable,
+      (sourceObject, result) => {
+        try {
+          const info = sourceObject.query_filesystem_info_finish(result);
+          resolve({
+            size: info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_SIZE),
+            free: info.get_attribute_uint64(Gio.FILE_ATTRIBUTE_FILESYSTEM_FREE),
+          });
+        } catch (error) {
+          reject(error);
+        }
+      }
+    );
+  });
 }

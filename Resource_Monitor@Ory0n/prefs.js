@@ -22,6 +22,7 @@
 import Adw from "gi://Adw";
 import Gdk from "gi://Gdk?version=4.0";
 import Gio from "gi://Gio";
+import GLib from "gi://GLib";
 import GObject from "gi://GObject";
 import Gtk from "gi://Gtk?version=4.0";
 
@@ -54,6 +55,7 @@ import {
   ThermalCpuElement,
   ThermalGpuElement,
 } from "./prefs/models.js";
+import { getThermalCpuSensorDescriptors } from "./services/runtime.js";
 
 // Settings
 const REFRESH_TIME = "refreshtime";
@@ -402,7 +404,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       view.append_column(
         new Gtk.ColumnViewColumn({
-          title: _(title),
+          title,
           factory,
           resizable: true,
         })
@@ -445,7 +447,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       view.append_column(
         new Gtk.ColumnViewColumn({
-          title: _(title),
+          title,
           factory,
           resizable: true,
         })
@@ -502,12 +504,94 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return container;
     }
 
+    _cleanupCssProvider() {
+      if (!this._provider) {
+        return;
+      }
+
+      const display = Gdk.Display.get_default();
+      if (display) {
+        Gtk.StyleContext.remove_provider_for_display(display, this._provider);
+      }
+
+      this._provider = null;
+    }
+
+    async _readMountEntries() {
+      const mounts = await loadFile("/proc/self/mounts");
+      const lines = new TextDecoder().decode(mounts).split("\n");
+      const entries = [];
+      const ignoredFs = new Set(["squashfs", "tmpfs"]);
+
+      for (const line of lines) {
+        if (!line.trim()) {
+          continue;
+        }
+
+        const parts = line.split(" ");
+        if (parts.length < 3) {
+          continue;
+        }
+
+        const device = parts[0];
+        const mountPoint = parts[1]
+          .replaceAll("\\040", " ")
+          .replaceAll("\\011", "\t")
+          .replaceAll("\\012", "\n")
+          .replaceAll("\\134", "\\");
+        const fsType = parts[2];
+
+        if (ignoredFs.has(fsType) || !device.startsWith("/dev/")) {
+          continue;
+        }
+
+        entries.push({
+          filesystem: device,
+          mountPoint,
+        });
+      }
+
+      return entries;
+    }
+
+    async _readThermalCpuSensors() {
+      const decoder = new TextDecoder();
+      const allowedSensorNames = new Set(["coretemp", "k10temp", "zenpower"]);
+      const descriptors = getThermalCpuSensorDescriptors();
+      const sensors = [];
+
+      for (const descriptor of descriptors) {
+        const chipName = decoder.decode(await loadFile(descriptor.namePath)).trim();
+        if (!allowedSensorNames.has(chipName)) {
+          continue;
+        }
+
+        let label = descriptor.fallbackLabel;
+        if (GLib.file_test(descriptor.labelPath, GLib.FileTest.EXISTS)) {
+          try {
+            label = decoder.decode(await loadFile(descriptor.labelPath)).trim();
+          } catch (error) {
+            label = descriptor.fallbackLabel;
+          }
+        }
+
+        sensors.push({
+          device: descriptor.inputPath,
+          name: `${chipName}: ${label}`,
+        });
+      }
+
+      return sensors;
+    }
+
     _createListGroup(title, description, addButton, listbox) {
       const group = this._createSettingsGroup(title, description);
 
       const addRow = new Adw.ActionRow({
         title: _("Threshold Colors"),
-        subtitle: _("Add, remove, and reorder value thresholds."),
+        subtitle: _(
+          "Rules are matched from the highest threshold downward. Values below the first threshold keep the lowest color."
+        ),
       });
       addRow.add_suffix(this._takeWidget(addButton));
       if (addRow.set_activatable_widget) {
@@ -1233,9 +1317,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     fillPreferencesWindow(window) {
       window.set_default_size(980, 760);
 
-      if (window.set_search_enabled) {
-        window.set_search_enabled(false);
+      if (window.set_title) {
+        window.set_title(this._metadata?.name ?? _("Resource Monitor"));
       }
+
+      if (window.set_search_enabled) {
+        window.set_search_enabled(true);
+      }
+
+      window.connect("close-request", () => {
+        this._cleanupCssProvider();
+        return false;
+      });
 
       window.add(this._buildNativeGlobalPage("Global"));
       window.add(this._buildNativeCpuPage("Cpu"));
@@ -1732,7 +1825,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Display Name Column
       this._appendEditableTextColumn(this._diskDevicesColumnView, this._diskDevicesModel, {
-        title: "Display Name",
+        title: _("Display Name"),
         getText: (item) => item.displayName,
         setText: (item, text) => item.setDisplayName(text),
       });
@@ -1761,7 +1854,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Stats Column
       this._appendToggleColumn(this._diskDevicesColumnView, this._diskDevicesModel, {
-        title: "Stats",
+        title: _("Stats"),
         getValue: (item) => item.stats,
         setValue: (item, value) => {
           item.stats = value;
@@ -1770,7 +1863,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Space Column
       this._appendToggleColumn(this._diskDevicesColumnView, this._diskDevicesModel, {
-        title: "Space",
+        title: _("Space"),
         getValue: (item) => item.space,
         setValue: (item, value) => {
           item.space = value;
@@ -1831,25 +1924,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         parseDiskEntry
       );
 
-      executeCommand([
-        "df",
-        "--output=source,target",
-        "-x",
-        "squashfs",
-        "-x",
-        "tmpfs",
-      ])
-        .then((output) => {
-          const lines = output.split("\n");
-
-          for (let i = 1; i < lines.length - 1; i++) {
-            const line = lines[i].trim();
-            const match = line.match(/^(\S+)\s+(.+)$/);
-            if (!match) {
-              continue;
-            }
-
-            const [, filesystem, mountPoint] = match;
+      this._readMountEntries()
+        .then((entries) => {
+          for (const { filesystem, mountPoint } of entries) {
 
             let statsButton = false;
             let spaceButton = false;
@@ -1947,7 +2024,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           }
         })
         .catch((err) =>
-          console.error("[Resource_Monitor] Error executing df command:", err)
+          console.error("[Resource_Monitor] Error reading mounted disks:", err)
         );
     }
 
@@ -2092,63 +2169,32 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         parseThermalCpuEntry
       );
 
-      // Detect sensors
-      // let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
-      executeCommand([
-        "bash",
-        "-c",
-        'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi',
-      ])
-        .then((output) => {
-          const result = output.trim().split("\n")[0];
+      this._readThermalCpuSensors()
+        .then((sensors) => {
+          for (const sensor of sensors) {
+            let statusButton = false;
 
-          if (result === "EXIST") {
-            // Execute command to detect relevant temperature sensors
-            executeCommand([
-              "bash",
-              "-c",
-              'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname "$i")/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat "${i%_*}_label" 2>/dev/null || basename "${i%_*}")|$i"; fi done',
-            ])
-              .then((inner_output) => {
-                const lines = inner_output.trim().split("\n");
+            for (const tempConfig of cpuTempsArray) {
+              if (sensor.name === tempConfig.name) {
+                statusButton = tempConfig.monitor;
+                break;
+              }
+            }
 
-                for (const line of lines) {
-                  if (!line) continue;
-
-                  const [device, path] = line.trim().split("|");
-                  let statusButton = false;
-
-                  for (const tempConfig of cpuTempsArray) {
-                    if (device === tempConfig.name) {
-                      statusButton = tempConfig.monitor;
-                      break;
-                    }
-                  }
-
-                  // Append the CPU temperature data to the model
-                  this._thermalCpuDevicesModel.append(
-                    new ThermalCpuElement(path, device, statusButton)
-                  );
-                }
-
-                // Save updated CPU temperature array to settings
-                saveArrayToSettings(
-                  this._thermalCpuDevicesModel,
-                  this._settings,
-                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST
-                );
-              })
-              .catch((error) =>
-                console.error(
-                  "[Resource_Monitor] Error fetching sensor details:",
-                  error
-                )
-              );
+            this._thermalCpuDevicesModel.append(
+              new ThermalCpuElement(sensor.device, sensor.name, statusButton)
+            );
           }
+
+          saveArrayToSettings(
+            this._thermalCpuDevicesModel,
+            this._settings,
+            THERMAL_CPU_TEMPERATURE_DEVICES_LIST
+          );
         })
         .catch((error) =>
           console.error(
-            "[Resource_Monitor] Error checking for sensor existence:",
+            "[Resource_Monitor] Error reading CPU thermal sensors:",
             error
           )
         );
@@ -2320,7 +2366,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Display Name Column
       this._appendEditableTextColumn(this._gpuDevicesColumnView, this._gpuDevicesModel, {
-        title: "Display Name",
+        title: _("Display Name"),
         getText: (item) => item.displayName,
         setText: (item, text) => item.setDisplayName(text),
       });
@@ -2347,7 +2393,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Usage Column
       this._appendToggleColumn(this._gpuDevicesColumnView, this._gpuDevicesModel, {
-        title: "Usage Monitor",
+        title: _("Usage Monitor"),
         getValue: (item) => item.usage,
         setValue: (item, value) => {
           item.usage = value;
@@ -2356,7 +2402,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Memory Column
       this._appendToggleColumn(this._gpuDevicesColumnView, this._gpuDevicesModel, {
-        title: "Memory Monitor",
+        title: _("Memory Monitor"),
         getValue: (item) => item.memory,
         setValue: (item, value) => {
           item.memory = value;

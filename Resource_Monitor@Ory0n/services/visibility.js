@@ -1,11 +1,7 @@
 import GLib from "gi://GLib";
 
 export function hasVisibleCpuFrequency(indicator) {
-  return (
-    indicator._cpuFrequencyStatus &&
-    indicator._capabilities.bash &&
-    indicator._capabilities.cpuFrequency
-  );
+  return indicator._cpuFrequencyStatus && indicator._capabilities.cpuFrequency;
 }
 
 export function hasVisibleThermalCpuTemperature(indicator) {

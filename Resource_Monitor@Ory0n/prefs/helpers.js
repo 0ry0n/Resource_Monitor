@@ -1,6 +1,7 @@
 import Gio from "gi://Gio";
 import Gtk from "gi://Gtk?version=4.0";
 import Gdk from "gi://Gdk?version=4.0";
+import { gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
 
 export {
   executeCommand,
@@ -35,11 +36,59 @@ export function connectSwitchButton(settings, settingsName, element) {
   settings.bind(settingsName, element, "active", Gio.SettingsBindFlags.DEFAULT);
 }
 
+function _normalizeThresholdValue(value) {
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function _normalizeColorEntry(colorEntry, separator = " ") {
+  if (typeof colorEntry !== "string") {
+    return "";
+  }
+
+  return colorEntry.includes("undefined")
+    ? colorEntry.replaceAll("undefined", separator)
+    : colorEntry;
+}
+
+function _sortColorEntries(colorsArray, separator) {
+  return [...colorsArray].sort((first, second) => {
+    const [firstThreshold] = _normalizeColorEntry(first, separator).split(separator);
+    const [secondThreshold] = _normalizeColorEntry(second, separator).split(separator);
+    return (
+      _normalizeThresholdValue(firstThreshold) -
+      _normalizeThresholdValue(secondThreshold)
+    );
+  });
+}
+
+function _normalizeAndSortColorEntries(colorsArray, separator = " ") {
+  return _sortColorEntries(
+    colorsArray.map((colorEntry) => _normalizeColorEntry(colorEntry, separator)),
+    separator
+  );
+}
+
+function _rgbaToHex(rgba) {
+  const red = Math.round(rgba.red * 255);
+  const green = Math.round(rgba.green * 255);
+  const blue = Math.round(rgba.blue * 255);
+  return `#${red.toString(16).padStart(2, "0")}${green
+    .toString(16)
+    .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
+}
+
+function _setPreviewMarkup(label, rgba) {
+  label.set_markup(
+    `<span foreground="${_rgbaToHex(rgba)}">${_("Preview")}</span>`
+  );
+}
+
 export function makeColorRow(
   settings,
   settingsName,
   listbox,
-  separator,
+  separator = " ",
   text = "0.0",
   red = 224 / 255,
   green = 27 / 255,
@@ -47,11 +96,23 @@ export function makeColorRow(
   alpha = 1.0
 ) {
   const row = new Gtk.ListBoxRow();
-  const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
+  const box = new Gtk.Box({
+    orientation: Gtk.Orientation.HORIZONTAL,
+    spacing: 8,
+    valign: Gtk.Align.CENTER,
+  });
+
+  const preview = new Gtk.Label({
+    valign: Gtk.Align.CENTER,
+    use_markup: true,
+  });
+  preview.add_css_class("resource-monitor-threshold-preview");
+  _setPreviewMarkup(preview, new Gdk.RGBA({ red, green, blue, alpha }));
+  box.append(preview);
 
   box.append(
     new Gtk.Label({
-      label: "Lower than",
+      label: _("At or above"),
       hexpand: true,
       halign: Gtk.Align.START,
     })
@@ -60,6 +121,7 @@ export function makeColorRow(
   const entry = new Gtk.Entry({
     input_purpose: Gtk.InputPurpose.NUMBER,
     text,
+    width_chars: 7,
     margin_end: 8,
   });
   entry.connect("changed", (widget) => {
@@ -67,7 +129,10 @@ export function makeColorRow(
     let colorsArray = settings.get_strv(settingsName);
 
     if (index >= 0 && index < colorsArray.length) {
-      const [, oldRed, oldGreen, oldBlue] = colorsArray[index].split(separator);
+      const [, oldRed, oldGreen, oldBlue] = _normalizeColorEntry(
+        colorsArray[index],
+        separator
+      ).split(separator);
       colorsArray[index] =
         `${widget.text}${separator}${oldRed}${separator}${oldGreen}${separator}${oldBlue}`;
       settings.set_strv(settingsName, colorsArray);
@@ -85,7 +150,11 @@ export function makeColorRow(
 
     if (index >= 0 && index < colorsArray.length) {
       const rgba = widget.get_rgba();
-      const [threshold] = colorsArray[index].split(separator);
+      _setPreviewMarkup(preview, rgba);
+      const [threshold] = _normalizeColorEntry(
+        colorsArray[index],
+        separator
+      ).split(separator);
       colorsArray[index] =
         `${threshold}${separator}${rgba.red}${separator}${rgba.green}${separator}${rgba.blue}`;
       settings.set_strv(settingsName, colorsArray);
@@ -93,7 +162,10 @@ export function makeColorRow(
   });
   box.append(colorButton);
 
-  const deleteButton = new Gtk.Button({ icon_name: "edit-delete" });
+  const deleteButton = new Gtk.Button({
+    icon_name: "edit-delete",
+    tooltip_text: _("Remove threshold"),
+  });
   deleteButton.connect("clicked", () => {
     const index = row.get_index();
     let colorsArray = settings.get_strv(settingsName);
@@ -117,9 +189,14 @@ export function makeColors(
   settingsName,
   listBox,
   addButton,
-  separator
+  separator = " "
 ) {
-  const colorsArray = settings.get_strv(settingsName);
+  const colorsArray = _normalizeAndSortColorEntries(
+    settings.get_strv(settingsName),
+    separator
+  );
+
+  settings.set_strv(settingsName, colorsArray);
 
   for (const element of colorsArray) {
     const [threshold, red, green, blue] = element.split(separator);
@@ -165,14 +242,14 @@ export function makeThermalColumnView(view, type, onToggle) {
   view.set_model(selection);
 
   const deviceCol = new Gtk.ColumnViewColumn({
-    title: "Device",
+    title: _("Device"),
     factory: createLabelFactory((item) => item.device),
     resizable: true,
   });
   view.append_column(deviceCol);
 
   const nameCol = new Gtk.ColumnViewColumn({
-    title: "Name",
+    title: _("Name"),
     factory: createLabelFactory((item) => item.name),
     resizable: true,
   });
@@ -214,7 +291,7 @@ export function makeThermalColumnView(view, type, onToggle) {
 
   view.append_column(
     new Gtk.ColumnViewColumn({
-      title: "Monitor",
+      title: _("Monitor"),
       factory: monitorFactory,
       resizable: true,
     })

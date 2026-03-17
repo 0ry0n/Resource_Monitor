@@ -18,3 +18,8 @@
 .resource-monitor-column-view {
   background: transparent;
 }
+
+.resource-monitor-threshold-preview {
+  min-width: 4.5em;
+  font-weight: 600;
+}

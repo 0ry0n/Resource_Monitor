@@ -57,6 +57,7 @@ import {
 import { buildMainGui, createMainGui } from "./panel/mainGui.js";
 import {
   detectCapabilities,
+  getThermalCpuSensorDescriptors,
   IssueLogger,
   RefreshTaskRunner,
 } from "./services/runtime.js";
@@ -455,7 +456,7 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     async _refreshThermalCpuSensorPaths() {
-      if (!this._capabilities.bash || !this._capabilities.thermalHwmon) {
+      if (!this._capabilities.thermalHwmon) {
         this._logIssueOnce(
           "thermal-cpu-discovery-unavailable",
           "[Resource_Monitor] CPU thermal sensor discovery is unavailable on this system."
@@ -464,29 +465,58 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       try {
-        const output = await this._executeCommand([
-          "bash",
-          "-c",
-          'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname "$i")/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat "${i%_*}_label" 2>/dev/null || basename "${i%_*}")|$i"; fi done; fi',
-        ]);
+        const decoder = new TextDecoder();
+        const allowedSensorNames = new Set(["coretemp", "k10temp", "zenpower"]);
+        const descriptors = getThermalCpuSensorDescriptors();
 
-        if (this._destroyed || !output) {
+        if (this._destroyed || descriptors.length === 0) {
+          return;
+        }
+
+        const sensorPathByName = new Map();
+        const sensors = await Promise.all(
+          descriptors.map(async (descriptor) => {
+            const chipName = decoder
+              .decode(await this._loadFile(descriptor.namePath))
+              .trim();
+
+            if (!allowedSensorNames.has(chipName)) {
+              return null;
+            }
+
+            let label = descriptor.fallbackLabel;
+            if (GLib.file_test(descriptor.labelPath, GLib.FileTest.EXISTS)) {
+              try {
+                label = decoder.decode(await this._loadFile(descriptor.labelPath)).trim();
+              } catch (error) {
+                if (!this._isCancelledError(error)) {
+                  label = descriptor.fallbackLabel;
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            return {
+              name: `${chipName}: ${label}`,
+              path: descriptor.inputPath,
+            };
+          })
+        );
+
+        sensors.filter(Boolean).forEach((sensor) => {
+          sensorPathByName.set(sensor.name, sensor.path);
+        });
+
+        if (sensorPathByName.size === 0) {
+          this._logIssueOnce(
+            "thermal-cpu-discovery-unavailable",
+            "[Resource_Monitor] CPU thermal sensor discovery is unavailable on this system."
+          );
           return;
         }
 
         this._clearLoggedIssue("thermal-cpu-discovery-unavailable");
-
-        const sensorPathByName = new Map();
-        output
-          .trim()
-          .split("\n")
-          .filter(Boolean)
-          .forEach((line) => {
-            const [name, path] = line.split("|");
-            if (name && path) {
-              sensorPathByName.set(name.trim(), path.trim());
-            }
-          });
 
         let changed = false;
         const nextEntries = this._thermalCpuTemperatureDevices.map((entry) => {
@@ -1741,11 +1771,16 @@ export default class ResourceMonitorExtension extends Extension {
   }
 
   disable() {
-    // Disconnect Signal
-    this._settings.disconnect(this._handlerId);
+    if (this._settings && this._handlerId) {
+      this._settings.disconnect(this._handlerId);
+      this._handlerId = null;
+    }
+
     this._settings = null;
 
-    this._indicator.destroy();
-    this._indicator = null;
+    if (this._indicator) {
+      this._indicator.destroy();
+      this._indicator = null;
+    }
   }
 }
