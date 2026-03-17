@@ -3,48 +3,49 @@
     <schema id="com.github.Ory0n.Resource_Monitor" path="/com/github/Ory0n/Resource_Monitor/">
         <key name="refreshtime" type="i">
             <default>2</default>
-            <summary></summary>
-            <description></description>
+            <range min="1" max="60"/>
+            <summary>Refresh interval in seconds</summary>
+            <description>Controls how often the extension refreshes resource readings in the top bar.</description>
         </key>
         <key name="extensionposition" type="s">
             <default>"right"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Panel position</summary>
+            <description>Chooses whether the indicator is added to the left, center or right area of the GNOME Shell panel.</description>
         </key>
         <key name="decimalsstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show decimal digits</summary>
+            <description>Enables fractional digits for values shown in the panel.</description>
         </key>
         <key name="leftclickstatus" type="s">
             <default>"gnome-system-monitor"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Left click action</summary>
+            <description>Desktop file or command executed when the indicator is left-clicked.</description>
         </key>
         <key name="customleftclickstatus" type="s">
             <default>"custom-program"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Custom left click command</summary>
+            <description>Stores the custom command shown in preferences for the left click action.</description>
         </key>
         <key name="rightclickstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Open preferences on right click</summary>
+            <description>When enabled, right-clicking the indicator opens the extension preferences window.</description>
         </key>
         <key name="iconsstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show icons</summary>
+            <description>Displays symbolic icons next to monitored resources in the panel.</description>
         </key>
         <key name="iconsposition" type="s">
             <default>"right"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Icon position</summary>
+            <description>Controls whether icons are shown to the left or right of their associated values.</description>
         </key>
         <key name="itemsposition" type="as">
             <default>["cpu", "ram", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Resource ordering</summary>
+            <description>Stores the order of resources displayed by the extension.</description>
         </key>
         <key name="cpustatus" type="b">
             <default>true</default>
@@ -53,8 +54,9 @@
         </key>
         <key name="cpuwidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>CPU value width</summary>
+            <description>Reserved width in pixels for the CPU usage label. Zero keeps the label adaptive.</description>
         </key>
         <key name="cpucolors" type="as">
             <default>[]</default>
@@ -68,8 +70,9 @@
         </key>
         <key name="cpufrequencywidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>CPU frequency width</summary>
+            <description>Reserved width in pixels for the CPU frequency label. Zero keeps the label adaptive.</description>
         </key>
         <key name="cpufrequencycolors" type="as">
             <default>[]</default>
@@ -88,8 +91,9 @@
         </key>
         <key name="cpuloadaveragewidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>Load average width</summary>
+            <description>Reserved width in pixels for the load average label. Zero keeps the label adaptive.</description>
         </key>
         <key name="cpuloadaveragecolors" type="as">
             <default>[]</default>
@@ -103,8 +107,9 @@
         </key>
         <key name="ramwidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>RAM value width</summary>
+            <description>Reserved width in pixels for the RAM label. Zero keeps the label adaptive.</description>
         </key>
         <key name="ramcolors" type="as">
             <default>[]</default>
@@ -133,8 +138,9 @@
         </key>
         <key name="ramalertthreshold" type="i">
             <default>10</default>
-            <summary></summary>
-            <description></description>
+            <range min="1" max="99"/>
+            <summary>RAM alert threshold</summary>
+            <description>Minimum available RAM percentage before a low-memory notification is shown.</description>
         </key>
         <key name="swapstatus" type="b">
             <default>false</default>
@@ -143,8 +149,9 @@
         </key>
         <key name="swapwidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>Swap value width</summary>
+            <description>Reserved width in pixels for the swap label. Zero keeps the label adaptive.</description>
         </key>
         <key name="swapcolors" type="as">
             <default>[]</default>
@@ -173,8 +180,9 @@
         </key>
         <key name="swapalertthreshold" type="i">
             <default>10</default>
-            <summary></summary>
-            <description></description>
+            <range min="1" max="99"/>
+            <summary>Swap alert threshold</summary>
+            <description>Minimum available swap percentage before a low-memory notification is shown.</description>
         </key>
         <key name="diskshowdevicename" type="b">
             <default>true</default>
@@ -188,8 +196,9 @@
         </key>
         <key name="diskstatswidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="500"/>
+            <summary>Disk statistics width</summary>
+            <description>Reserved width in pixels for disk throughput values. Zero keeps the labels adaptive.</description>
         </key>
         <key name="diskstatscolors" type="as">
             <default>[]</default>
@@ -213,173 +222,179 @@
         </key>
         <key name="diskspacewidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="500"/>
+            <summary>Disk space width</summary>
+            <description>Reserved width in pixels for disk space values. Zero keeps the labels adaptive.</description>
         </key>
         <key name="diskspacecolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk space color thresholds</summary>
+            <description>Stores threshold and color rules applied to disk space values.</description>
         </key>
         <key name="diskspaceunit" type="s">
             <default>"numeric"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk space display mode</summary>
+            <description>Chooses whether disk space is shown as a numeric value or as a percentage.</description>
         </key>
         <key name="diskspaceunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk space unit</summary>
+            <description>Selects the preferred unit used for disk space values when numeric mode is enabled.</description>
         </key>
         <key name="diskspacemonitor" type="s">
             <default>"used"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk space metric</summary>
+            <description>Chooses whether the extension displays used or free disk space.</description>
         </key>
         <key name="diskdevicesdisplayall" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show all disk devices in preferences</summary>
+            <description>Includes unmounted block devices in the disk configuration list shown in preferences.</description>
         </key>
         <key name="diskdeviceslist" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Configured disk devices</summary>
+            <description>Stores the disk devices enabled for throughput or space monitoring.</description>
         </key>
         <key name="netautohidestatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Auto-hide inactive network entries</summary>
+            <description>Hides Ethernet and Wi-Fi indicators when no active matching NetworkManager connection exists.</description>
         </key>
         <key name="netunit" type="s">
             <default>"bytes"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Network base unit</summary>
+            <description>Displays network traffic in bytes or bits per second.</description>
         </key>
         <key name="netunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Network unit scale</summary>
+            <description>Selects the preferred scale used for network throughput values.</description>
         </key>
         <key name="netethstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show Ethernet traffic</summary>
+            <description>Displays Ethernet download and upload throughput in the panel.</description>
         </key>
         <key name="netethwidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="500"/>
+            <summary>Ethernet width</summary>
+            <description>Reserved width in pixels for Ethernet traffic values. Zero keeps the label adaptive.</description>
         </key>
         <key name="netethcolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Ethernet color thresholds</summary>
+            <description>Stores threshold and color rules applied to Ethernet throughput values.</description>
         </key>
         <key name="netwlanstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show Wi-Fi traffic</summary>
+            <description>Displays Wi-Fi download and upload throughput in the panel.</description>
         </key>
         <key name="netwlanwidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="500"/>
+            <summary>Wi-Fi width</summary>
+            <description>Reserved width in pixels for Wi-Fi traffic values. Zero keeps the label adaptive.</description>
         </key>
         <key name="netwlancolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Wi-Fi color thresholds</summary>
+            <description>Stores threshold and color rules applied to Wi-Fi throughput values.</description>
         </key>
         <key name="thermaltemperatureunit" type="s">
             <default>"c"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Temperature unit</summary>
+            <description>Displays thermal readings in Celsius or Fahrenheit.</description>
         </key>
         <key name="thermalcputemperaturestatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show CPU temperature</summary>
+            <description>Displays averaged CPU thermal readings in the panel.</description>
         </key>
         <key name="thermalcputemperaturewidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>CPU temperature width</summary>
+            <description>Reserved width in pixels for the CPU temperature label. Zero keeps the label adaptive.</description>
         </key>
         <key name="thermalcpucolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>CPU temperature color thresholds</summary>
+            <description>Stores threshold and color rules applied to CPU temperature values.</description>
         </key>
         <key name="thermalcputemperaturedeviceslist" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Configured CPU thermal sensors</summary>
+            <description>Stores the CPU thermal sensors detected and enabled in preferences.</description>
         </key>
         <key name="thermalgputemperaturestatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show GPU temperature</summary>
+            <description>Displays GPU thermal readings for enabled devices in the panel.</description>
         </key>
         <key name="thermalgputemperaturewidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="400"/>
+            <summary>GPU temperature width</summary>
+            <description>Reserved width in pixels for GPU temperature labels. Zero keeps the label adaptive.</description>
         </key>
         <key name="thermalgpucolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>GPU temperature color thresholds</summary>
+            <description>Stores threshold and color rules applied to GPU temperature values.</description>
         </key>
         <key name="thermalgputemperaturedeviceslist" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Configured GPU thermal sensors</summary>
+            <description>Stores the GPU devices enabled for thermal monitoring.</description>
         </key>
         <key name="gpustatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show GPU usage</summary>
+            <description>Displays GPU usage and, when enabled, GPU memory values in the panel.</description>
         </key>
         <key name="gpuwidth" type="i">
             <default>0</default>
-            <summary></summary>
-            <description></description>
+            <range min="0" max="500"/>
+            <summary>GPU usage width</summary>
+            <description>Reserved width in pixels for GPU usage and memory values. Zero keeps the labels adaptive.</description>
         </key>
         <key name="gpucolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>GPU usage color thresholds</summary>
+            <description>Stores threshold and color rules applied to GPU usage values.</description>
         </key>
         <key name="gpumemorycolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>GPU memory color thresholds</summary>
+            <description>Stores threshold and color rules applied to GPU memory values.</description>
         </key>
         <key name="gpumemoryunit" type="s">
             <default>"numeric"</default>
-            <summary></summary>
-            <description></description>
+            <summary>GPU memory display mode</summary>
+            <description>Chooses whether GPU memory is shown as a numeric value or percentage.</description>
         </key>
         <key name="gpumemoryunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>GPU memory unit</summary>
+            <description>Selects the preferred unit used for GPU memory values when numeric mode is enabled.</description>
         </key>
         <key name="gpumemorymonitor" type="s">
             <default>"used"</default>
-            <summary></summary>
-            <description></description>
+            <summary>GPU memory metric</summary>
+            <description>Chooses whether the extension displays used or free GPU memory.</description>
         </key>
         <key name="gpudisplaydevicename" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show GPU display name</summary>
+            <description>Uses the custom GPU display name configured in preferences instead of hiding the label.</description>
         </key>
         <key name="gpudeviceslist" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Configured GPU devices</summary>
+            <description>Stores the GPU devices enabled for usage and memory monitoring.</description>
         </key>
     </schema>
 </schemalist>

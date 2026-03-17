@@ -33,6 +33,40 @@ import {
   Extension,
   gettext as _,
 } from "resource:///org/gnome/shell/extensions/extension.js";
+import {
+  parseDiskEntry,
+  parseGpuEntry,
+  parseThermalCpuEntry,
+  parseThermalGpuEntry,
+  serializeThermalCpuEntry,
+} from "./common.js";
+import {
+  convertTemperature,
+  convertValueToUnit,
+  convertValuesToUnit,
+  getUsageColor,
+  getValueFixed,
+} from "./runtime/metrics.js";
+import {
+  buildCpuUsageSample,
+  parseCpuFrequencyOutput,
+  parseLoadAverageDisplay,
+} from "./runtime/cpu.js";
+import { buildMemoryDisplay } from "./runtime/memory.js";
+import {
+  buildDiskSpaceDisplay,
+  parseDiskSpaceTable,
+  parseDiskStatsEntries,
+} from "./runtime/disk.js";
+import { buildNetworkSample } from "./runtime/network.js";
+import { parseGpuSmiOutput } from "./runtime/gpu.js";
+import {
+  executeCommand as executeRuntimeCommand,
+  loadContents as loadRuntimeContents,
+  loadFile as loadRuntimeFile,
+  readOutput as readRuntimeOutput,
+} from "./runtime/io.js";
+import { buildCpuTemperatureDisplay } from "./runtime/thermal.js";
 
 // Settings
 const REFRESH_TIME = "refreshtime";
@@ -136,6 +170,12 @@ const ResourceMonitor = GObject.registerClass(
 
       this._themeContext = St.ThemeContext.get_for_stage(global.stage);
       this._scaleFactor = 1;
+      this._destroyed = false;
+      this._ioCancellable = new Gio.Cancellable();
+      this._nmClient = null;
+      this._nmClientHandlerIds = [];
+      this._ramAlertActive = false;
+      this._swapAlertActive = false;
       this._themeContextHandlerId = this._themeContext.connect(
         "notify::scale-factor",
         () => {
@@ -187,68 +227,10 @@ const ResourceMonitor = GObject.registerClass(
       this.connect("button-press-event", this._clickManager.bind(this));
 
       if (typeof NM !== "undefined") {
-        NM.Client.new_async(null, (client) => {
-          client.connect(
-            "active-connection-added",
-            this._onActiveConnectionAdded.bind(this)
-          );
-          client.connect(
-            "active-connection-removed",
-            this._onActiveConnectionRemoved.bind(this)
-          );
-
-          this._onActiveConnectionRemoved(client);
-        });
+        this._initNetworkMonitor();
       }
 
-      // Update device path
-      this._executeCommand([
-        "bash",
-        "-c",
-        'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi',
-      ]).then((output) => {
-        let result = output.split("\n")[0];
-        if (result === "EXIST") {
-          this._executeCommand([
-            "bash",
-            "-c",
-            'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname $i)/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*}))-$i"; fi done',
-          ]).then((output) => {
-            let lines = output.split("\n");
-
-            for (let i = 0; i < lines.length - 1; i++) {
-              let line = lines[i];
-              let entry = line.trim().split(/-/);
-
-              let device = entry[0];
-              let path = entry[1];
-
-              for (
-                let i = 0;
-                i < this._thermalCpuTemperatureDevicesList.length;
-                i++
-              ) {
-                let element = this._thermalCpuTemperatureDevicesList[i];
-                let it = element.split(
-                  THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR
-                );
-
-                if (device === it[0]) {
-                  // Update device path
-                  this._thermalCpuTemperatureDevicesList[i] =
-                    it[0] +
-                    THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-                    it[1] +
-                    THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR +
-                    path;
-
-                  break;
-                }
-              }
-            }
-          });
-        }
-      });
+      this._refreshThermalCpuSensorPaths();
 
       this._mainTimer = GLib.timeout_add_seconds(
         GLib.PRIORITY_DEFAULT,
@@ -259,19 +241,119 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     destroy() {
+      this._destroyed = true;
+
       if (this._mainTimer) {
         GLib.source_remove(this._mainTimer);
         this._mainTimer = null;
       }
+
+      this._ioCancellable.cancel();
 
       for (let i = 0; i < this._handlerIdsCount; i++) {
         this._settings.disconnect(this._handlerIds[i]);
         this._handlerIds[i] = 0;
       }
 
+      this._nmClientHandlerIds.forEach((handlerId) => {
+        this._nmClient?.disconnect(handlerId);
+      });
+      this._nmClientHandlerIds = [];
+      this._nmClient = null;
+
       this._themeContext.disconnect(this._themeContextHandlerId);
 
       super.destroy();
+    }
+
+    async _initNetworkMonitor() {
+      try {
+        this._nmClient = await new Promise((resolve, reject) => {
+          NM.Client.new_async(this._ioCancellable, (source, result) => {
+            try {
+              resolve(NM.Client.new_finish(result));
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
+
+        if (this._destroyed || !this._nmClient) {
+          return;
+        }
+
+        this._nmClientHandlerIds.push(
+          this._nmClient.connect(
+            "active-connection-added",
+            this._onActiveConnectionAdded.bind(this)
+          )
+        );
+        this._nmClientHandlerIds.push(
+          this._nmClient.connect(
+            "active-connection-removed",
+            this._onActiveConnectionRemoved.bind(this)
+          )
+        );
+
+        this._onActiveConnectionRemoved(this._nmClient);
+      } catch (error) {
+        if (!this._isCancelledError(error)) {
+          console.error("[Resource_Monitor] Error initializing NM client:", error);
+        }
+      }
+    }
+
+    async _refreshThermalCpuSensorPaths() {
+      try {
+        const output = await this._executeCommand([
+          "bash",
+          "-c",
+          'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname "$i")/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat "${i%_*}_label" 2>/dev/null || basename "${i%_*}")|$i"; fi done; fi',
+        ]);
+
+        if (this._destroyed || !output) {
+          return;
+        }
+
+        const sensorPathByName = new Map();
+        output
+          .trim()
+          .split("\n")
+          .filter(Boolean)
+          .forEach((line) => {
+            const [name, path] = line.split("|");
+            if (name && path) {
+              sensorPathByName.set(name.trim(), path.trim());
+            }
+          });
+
+        let changed = false;
+        const nextEntries = this._thermalCpuTemperatureDevices.map((entry) => {
+          const nextPath = sensorPathByName.get(entry.name) ?? entry.path;
+          if (nextPath !== entry.path) {
+            changed = true;
+          }
+
+          return {
+            ...entry,
+            path: nextPath,
+          };
+        });
+
+        if (changed) {
+          this._settings.set_strv(
+            THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
+            nextEntries.map(serializeThermalCpuEntry)
+          );
+        }
+      } catch (error) {
+        if (!this._isCancelledError(error)) {
+          console.error(
+            "[Resource_Monitor] Error refreshing thermal sensor paths:",
+            error
+          );
+        }
+      }
     }
 
     // GUI
@@ -690,7 +772,10 @@ const ResourceMonitor = GObject.registerClass(
         DISK_SPACE_UNIT_MEASURE
       );
       this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
-      this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
+      this._diskDevices = this._parseSettingsArray(
+        DISK_DEVICES_LIST,
+        parseDiskEntry
+      );
 
       this._netAutoHideStatus =
         this._settings.get_boolean(NET_AUTO_HIDE_STATUS) &&
@@ -716,8 +801,9 @@ const ResourceMonitor = GObject.registerClass(
         this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH) *
         this._scaleFactor;
       this._thermalCpuColors = this._settings.get_strv(THERMAL_CPU_COLORS);
-      this._thermalCpuTemperatureDevicesList = this._settings.get_strv(
-        THERMAL_CPU_TEMPERATURE_DEVICES_LIST
+      this._thermalCpuTemperatureDevices = this._parseSettingsArray(
+        THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
+        parseThermalCpuEntry
       );
       this._thermalGpuTemperatureStatus = this._settings.get_boolean(
         THERMAL_GPU_TEMPERATURE_STATUS
@@ -726,8 +812,9 @@ const ResourceMonitor = GObject.registerClass(
         this._settings.get_int(THERMAL_GPU_TEMPERATURE_WIDTH) *
         this._scaleFactor;
       this._thermalGpuColors = this._settings.get_strv(THERMAL_GPU_COLORS);
-      this._thermalGpuTemperatureDevicesList = this._settings.get_strv(
-        THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+      this._thermalGpuTemperatureDevices = this._parseSettingsArray(
+        THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
+        parseThermalGpuEntry
       );
 
       this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
@@ -742,7 +829,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDisplayDeviceName = this._settings.get_boolean(
         GPU_DISPLAY_DEVICE_NAME
       );
-      this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
+      this._gpuDevices = this._parseSettingsArray(GPU_DEVICES_LIST, parseGpuEntry);
     }
 
     _connectSettingsSignals() {
@@ -1600,26 +1687,18 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _diskDevicesListChanged() {
-      this._diskDevicesList = this._settings.get_strv(DISK_DEVICES_LIST);
+      this._diskDevices = this._parseSettingsArray(DISK_DEVICES_LIST, parseDiskEntry);
 
       this._diskStatsBox.cleanup_elements();
       this._diskSpaceBox.cleanup_elements();
 
-      this._diskDevicesList.forEach((element) => {
-        const it = element.split(DISK_DEVICES_LIST_SEPARATOR);
-
-        const filesystem = it[0];
-        const mountPoint = it[1];
-        const stats = it[2] === "true";
-        const space = it[3] === "true";
-        const displayName = it[4];
-
-        if (stats) {
-          this._diskStatsBox.add_element(filesystem, displayName);
+      this._diskDevices.forEach((device) => {
+        if (device.stats) {
+          this._diskStatsBox.add_element(device.device, device.displayName);
         }
 
-        if (space) {
-          this._diskSpaceBox.add_element(filesystem, displayName);
+        if (device.space) {
+          this._diskSpaceBox.add_element(device.device, device.displayName);
         }
       });
 
@@ -1791,11 +1870,15 @@ const ResourceMonitor = GObject.registerClass(
       if (this._thermalCpuTemperatureStatus) {
         this._refreshCpuTemperatureValue();
       }
+      if (this._thermalGpuTemperatureStatus) {
+        this._refreshGpuValue();
+      }
     }
 
     _thermalCpuTemperatureDevicesListChanged() {
-      this._thermalCpuTemperatureDevicesList = this._settings.get_strv(
-        THERMAL_CPU_TEMPERATURE_DEVICES_LIST
+      this._thermalCpuTemperatureDevices = this._parseSettingsArray(
+        THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
+        parseThermalCpuEntry
       );
 
       if (this._thermalCpuTemperatureStatus) {
@@ -1836,8 +1919,9 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _thermalGpuTemperatureDevicesListChanged() {
-      this._thermalGpuTemperatureDevicesList = this._settings.get_strv(
-        THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+      this._thermalGpuTemperatureDevices = this._parseSettingsArray(
+        THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
+        parseThermalGpuEntry
       );
 
       this._gpuDevicesListChanged();
@@ -1912,26 +1996,23 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _gpuDevicesListChanged() {
-      this._gpuDevicesList = this._settings.get_strv(GPU_DEVICES_LIST);
+      this._gpuDevices = this._parseSettingsArray(GPU_DEVICES_LIST, parseGpuEntry);
 
       this._gpuBox.cleanup_elements();
 
-      this._gpuDevicesList.forEach((element) => {
-        const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
-
-        const uuid = it[0];
-        const name = it[1];
-        const usage = it[2] === "true" && this._gpuStatus;
-        const memory = it[3] === "true" && this._gpuStatus;
-        const displayName = this._gpuDisplayDeviceName ? it[4] : null;
+      this._gpuDevices.forEach((device) => {
+        const uuid = device.device;
+        const usage = device.usage && this._gpuStatus;
+        const memory = device.memory && this._gpuStatus;
+        const displayName = this._gpuDisplayDeviceName
+          ? device.displayName
+          : null;
         let thermal = false;
 
         if (this._thermalGpuTemperatureStatus) {
-          this._thermalGpuTemperatureDevicesList.forEach((element) => {
-            const it = element.split(GPU_DEVICES_LIST_SEPARATOR);
-
-            if (uuid === it[0]) {
-              thermal = it[2] === "true";
+          this._thermalGpuTemperatureDevices.forEach((thermalDevice) => {
+            if (uuid === thermalDevice.device) {
+              thermal = thermalDevice.monitor;
             }
           });
         }
@@ -2106,96 +2187,93 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDevicesListChanged();
     }
 
+    _parseSettingsArray(key, parser) {
+      return this._settings
+        .get_strv(key)
+        .map((entry) => {
+          try {
+            return parser(entry);
+          } catch (error) {
+            console.error(
+              `[Resource_Monitor] Error parsing settings entry for ${key}:`,
+              error
+            );
+            return null;
+          }
+        })
+        .filter(Boolean);
+    }
+
+    _isCancelledError(error) {
+      if (!error) {
+        return false;
+      }
+
+      if (error instanceof GLib.Error) {
+        return error.matches(Gio.io_error_quark(), Gio.IOErrorEnum.CANCELLED);
+      }
+
+      return error.code === Gio.IOErrorEnum.CANCELLED;
+    }
+
+    _applyMemoryDisplay(display, options) {
+      const {
+        alertEnabled,
+        alertThreshold,
+        alertActive,
+        setAlertActive,
+        title,
+        message,
+        valueLabel,
+        unitLabel,
+        colors,
+      } = options;
+
+      if (
+        alertEnabled &&
+        display.total > 0 &&
+        (100 * display.available) / display.total < alertThreshold
+      ) {
+        if (!alertActive) {
+          Main.notify(title, message);
+          setAlertActive(true);
+        }
+      } else {
+        setAlertActive(false);
+      }
+
+      valueLabel.style = this._getUsageColor(display.value, colors);
+      valueLabel.text = `${this._getValueFixed(display.value)}`;
+      unitLabel.text = display.unit;
+    }
+
     // ==================
     // HELPER FUNCTIONS
     // ==================
 
     // Determines the color based on the value and thresholds
     _getUsageColor(value, colors) {
-      if (!colors || colors.length === 0) return "";
-
-      const val = Array.isArray(value) ? Math.max(...value) : value;
-
-      for (const colorItem of colors) {
-        const [threshold, rRaw, gRaw, bRaw] = colorItem
-          .split(COLOR_LIST_SEPARATOR)
-          .map(Number);
-
-        if (val <= threshold) {
-          const r = Math.round(rRaw > 1 ? rRaw : rRaw * 255);
-          const g = Math.round(gRaw > 1 ? gRaw : gRaw * 255);
-          const b = Math.round(bRaw > 1 ? bRaw : bRaw * 255);
-          return `color: rgb(${r}, ${g}, ${b});`;
-        }
-      }
-      return "";
+      return getUsageColor(value, colors, COLOR_LIST_SEPARATOR);
     }
 
     // Decimal precision
     _getValueFixed(value) {
-      return this._decimalsStatus ? value.toFixed(1) : value.toFixed(0);
+      return getValueFixed(value, this._decimalsStatus);
     }
 
     // Conversion for a single value (KB, MB, GB or Hz)
     _convertValueToUnit(value, unitMeasure, isHertz = false) {
-      const factor = 1000;
-      const unitSuffixes = isHertz
-        ? ["KHz", "MHz", "GHz", "THz"]
-        : ["KB", "MB", "GB", "TB"];
-
-      let unit = isHertz ? "KHz" : "KB";
-
-      switch (unitMeasure) {
-        case "k": break;
-        case "m": value /= factor; unit = unitSuffixes[1]; break;
-        case "g": value /= factor ** 2; unit = unitSuffixes[2]; break;
-        case "t": value /= factor ** 3; unit = unitSuffixes[3]; break;
-        case "auto":
-        default:
-          let exp = 0;
-          for (let i = 1; i <= 3; i++) {
-            if (value >= factor ** i) {
-              exp = i;
-            }
-          }
-          value /= factor ** exp;
-          unit = unitSuffixes[exp];
-          break;
-      }
-      return [value, unit];
+      return convertValueToUnit(value, unitMeasure, isHertz);
     }
 
     // Conversion of array of values (network/disk)
     _convertValuesToUnit(values, unitMeasure, isBits = false) {
-      const factor = 1024;
-      const unitSuffixes = isBits
-        ? ["b", "k", "m", "g", "t"]
-        : ["B", "K", "M", "G", "T"];
-
-      let exponent = 0;
-
-      const normalizedUnit = isBits ? unitMeasure : unitMeasure?.toUpperCase();
-
-      if (unitMeasure && unitSuffixes.includes(normalizedUnit)) {
-        exponent = unitSuffixes.indexOf(normalizedUnit);
-      } else {
-        while (values.some(v => v >= factor ** (exponent + 1)) && exponent < 4) {
-          exponent++;
-        }
-      }
-
-      const unit = unitSuffixes[exponent];
-      return {
-        values: values.map(v => v / factor ** exponent),
-        unit
-      };
+      return convertValuesToUnit(values, unitMeasure, isBits);
     }
 
     // Temperature conversion
     _convertTemperature(tempC) {
-      return this._thermalTemperatureUnit === "f"
-        ? [tempC * 1.8 + 32, "°F"]
-        : [tempC, "°C"];
+      return convertTemperature(tempC, this._thermalTemperatureUnit);
     }
 
     // ==================
@@ -2205,32 +2283,18 @@ const ResourceMonitor = GObject.registerClass(
     _refreshCpuValue() {
       this._loadFile("/proc/stat")
         .then((contents) => {
-          const lines = new TextDecoder().decode(contents).split("\n");
-
-          // Parse the first line for CPU statistics
-          const entry = lines[0].trim().split(/\s+/);
-          const idle = parseInt(entry[4], 10);
-          let cpuTot = 0;
-
-          // Sum the user, nice, system, and idle times
-          for (let i = 1; i <= 4; i++) {
-            const value = parseInt(entry[i], 10);
-            if (!isNaN(value)) cpuTot += value;
-          }
-
-          const delta = cpuTot - (this._cpuTotOld || 0);
-          const deltaIdle = idle - (this._cpuIdleOld || 0);
-          const cpuCurr = delta ? (100 * (delta - deltaIdle)) / delta : 0;
-
-          // Update previous totals
-          this._cpuTotOld = cpuTot;
-          this._cpuIdleOld = idle;
+          const { usage, sample } = buildCpuUsageSample(contents, {
+            total: this._cpuTotOld,
+            idle: this._cpuIdleOld,
+          });
+          this._cpuTotOld = sample.total;
+          this._cpuIdleOld = sample.idle;
 
           // Set CPU usage color based on thresholds
-          this._cpuValue.style = this._getUsageColor(cpuCurr, this._cpuColors);
+          this._cpuValue.style = this._getUsageColor(usage, this._cpuColors);
 
           // Update CPU usage display with optional decimal precision
-          this._cpuValue.text = `${this._getValueFixed(cpuCurr)}`;
+          this._cpuValue.text = `${this._getValueFixed(usage)}`;
         })
         .catch((error) =>
           console.error("[Resource_Monitor] Error reading cpu:", error)
@@ -2240,64 +2304,28 @@ const ResourceMonitor = GObject.registerClass(
     _refreshRamValue() {
       this._loadFile("/proc/meminfo")
         .then((contents) => {
-          const lines = new TextDecoder().decode(contents).split("\n");
-
-          let total = 0;
-          let available = 0;
-
-          for (const line of lines) {
-            if (line.startsWith("MemTotal")) {
-              const match = line.match(/^MemTotal:\s*(\d+)\s*kB$/);
-              if (match) total = parseInt(match[1], 10);
-            } else if (line.startsWith("MemAvailable")) {
-              const match = line.match(/^MemAvailable:\s*(\d+)\s*kB$/);
-              if (match) available = parseInt(match[1], 10);
+          this._applyMemoryDisplay(
+            buildMemoryDisplay(contents, {
+              totalKey: "MemTotal",
+              availableKey: "MemAvailable",
+              monitor: this._ramMonitor,
+              unitType: this._ramUnitType,
+              unitMeasure: this._ramUnitMeasure,
+            }),
+            {
+              alertEnabled: this._ramAlert,
+              alertThreshold: this._ramAlertThreshold,
+              alertActive: this._ramAlertActive,
+              setAlertActive: (value) => {
+                this._ramAlertActive = value;
+              },
+              title: "Resource Monitor - Low Memory Alert",
+              message: `Available RAM has dropped below ${this._ramAlertThreshold}%. Please take action to free up memory.`,
+              valueLabel: this._ramValue,
+              unitLabel: this._ramUnit,
+              colors: this._ramColors,
             }
-            if (total && available) break; // Exit loop if both values are found
-          }
-
-          const used = total - available;
-
-          // Trigger low memory alert if needed
-          if (
-            this._ramAlert &&
-            (100 * available) / total < this._ramAlertThreshold
-          ) {
-            Main.notify(
-              "Resource Monitor - Low Memory Alert",
-              `Available RAM has dropped below ${this._ramAlertThreshold}%. Please take action to free up memory.`
-            );
-          }
-
-          let value = 0;
-          let unit = "KB";
-
-          // Determine display value based on _ramMonitor setting
-          switch (this._ramMonitor) {
-            case "free":
-              value = available;
-              break;
-            case "used":
-            default:
-              value = used;
-              break;
-          }
-
-          // Apply unit conversions or percentage formatting
-          if (this._ramUnitType === "perc") {
-            const percentValue = (100 * value) / total;
-            this._ramValue.style = this._getUsageColor(percentValue, this._ramColors);
-            this._ramValue.text = `${this._getValueFixed(percentValue)}`;
-            this._ramUnit.text = "%";
-          } else {
-            [value, unit] = this._convertValueToUnit(
-              value,
-              this._ramUnitMeasure
-            );
-            this._ramValue.style = this._getUsageColor(value, this._ramColors);
-            this._ramValue.text = `${this._getValueFixed(value)}`;
-            this._ramUnit.text = unit;
-          }
+          );
         })
         .catch((error) =>
           console.error("[Resource_Monitor] Error reading ram:", error)
@@ -2307,70 +2335,28 @@ const ResourceMonitor = GObject.registerClass(
     _refreshSwapValue() {
       this._loadFile("/proc/meminfo")
         .then((contents) => {
-          const lines = new TextDecoder().decode(contents).split("\n");
-
-          let total = 0;
-          let available = 0;
-
-          for (const line of lines) {
-            if (line.startsWith("SwapTotal")) {
-              const match = line.match(/^SwapTotal:\s*(\d+)\s*kB$/);
-              if (match) total = parseInt(match[1], 10);
-            } else if (line.startsWith("SwapFree")) {
-              const match = line.match(/^SwapFree:\s*(\d+)\s*kB$/);
-              if (match) available = parseInt(match[1], 10);
+          this._applyMemoryDisplay(
+            buildMemoryDisplay(contents, {
+              totalKey: "SwapTotal",
+              availableKey: "SwapFree",
+              monitor: this._swapMonitor,
+              unitType: this._swapUnitType,
+              unitMeasure: this._swapUnitMeasure,
+            }),
+            {
+              alertEnabled: this._swapAlert,
+              alertThreshold: this._swapAlertThreshold,
+              alertActive: this._swapAlertActive,
+              setAlertActive: (value) => {
+                this._swapAlertActive = value;
+              },
+              title: "Resource Monitor - Low Memory Alert",
+              message: `Available SWAP has dropped below ${this._swapAlertThreshold}%. Please take action to free up memory.`,
+              valueLabel: this._swapValue,
+              unitLabel: this._swapUnit,
+              colors: this._swapColors,
             }
-            if (total && available) break; // Exit loop if both values are found
-          }
-
-          const used = total - available;
-
-          // Trigger low memory alert if needed
-          if (
-            this._swapAlert &&
-            (100 * available) / total < this._swapAlertThreshold
-          ) {
-            Main.notify(
-              "Resource Monitor - Low Memory Alert",
-              `Available SWAP has dropped below ${this._swapAlertThreshold}%. Please take action to free up memory.`
-            );
-          }
-
-          let value = 0;
-          let unit = "KB";
-
-          // Determine display value based on _swapMonitor setting
-          switch (this._swapMonitor) {
-            case "free":
-              value = available;
-              break;
-            case "used":
-            default:
-              value = used;
-              break;
-          }
-
-          // Apply unit conversions or percentage formatting
-          if (this._swapUnitType === "perc") {
-            const percentValue = (100 * value) / total;
-            this._swapValue.style = this._getUsageColor(
-              percentValue,
-              this._swapColors
-            );
-            this._swapValue.text = `${this._getValueFixed(percentValue)}`;
-            this._swapUnit.text = "%";
-          } else {
-            [value, unit] = this._convertValueToUnit(
-              value,
-              this._swapUnitMeasure
-            );
-            this._swapValue.style = this._getUsageColor(
-              value,
-              this._swapColors
-            );
-            this._swapValue.text = `${this._getValueFixed(value)}`;
-            this._swapUnit.text = unit;
-          }
+          );
         })
         .catch((error) =>
           console.error("[Resource_Monitor] Error reading swap:", error)
@@ -2380,7 +2366,7 @@ const ResourceMonitor = GObject.registerClass(
     _refreshDiskStatsValue() {
       this._loadFile("/proc/diskstats")
         .then((contents) => {
-          const lines = new TextDecoder().decode(contents).split("\n");
+          const entries = parseDiskStatsEntries(contents);
           const idle = GLib.get_monotonic_time() / 1000;
 
           const processEntry = (filesystem, rwTot, rw) => {
@@ -2423,17 +2409,10 @@ const ResourceMonitor = GObject.registerClass(
               let rw = [0, 0];
               const filesystem = "single";
 
-              lines.forEach((line) => {
-                const entry = line.trim().split(/\s+/);
-                if (
-                  entry[2] &&
-                  !/^loop/.test(entry[2]) &&
-                  this._diskStatsBox.get_filesystem(entry[2])
-                ) {
-                  // sector is 512 bytes
-                  // 1 kilobyte = 2 sectors
-                  rwTot[0] += parseInt(entry[5], 10) / 2; // Read sectors -> KB
-                  rwTot[1] += parseInt(entry[9], 10) / 2; // Write sectors -> KB
+              entries.forEach((entry) => {
+                if (this._diskStatsBox.get_filesystem(entry.device)) {
+                  rwTot[0] += entry.readKilobytes;
+                  rwTot[1] += entry.writeKilobytes;
                 }
               });
 
@@ -2443,29 +2422,17 @@ const ResourceMonitor = GObject.registerClass(
 
             case "multiple":
             default:
-              lines.forEach((line) => {
-                const entry = line.trim().split(/\s+/);
-                if (entry[2] && !/^loop/.test(entry[2])) {
-                  const filesystem = this._diskStatsBox.get_filesystem(
-                    entry[2]
-                  );
-                  if (filesystem) {
-                    let rwTot = [
-                      // sector is 512 bytes
-                      // 1 kilobyte = 2 sectors
-                      parseInt(entry[5], 10) / 2, // Read sectors -> KB
-                      parseInt(entry[9], 10) / 2, // Write sectors -> KB
-                    ];
-                    let rw = [0, 0];
-                    processEntry(filesystem, rwTot, rw);
-                  } else {
-                    this._diskStatsBox.update_element_value(
-                      filesystem,
-                      "--|--",
-                      "",
-                      ""
-                    );
-                  }
+              entries.forEach((entry) => {
+                const filesystem = this._diskStatsBox.get_filesystem(
+                  entry.device
+                );
+                if (filesystem) {
+                  let rwTot = [
+                    entry.readKilobytes,
+                    entry.writeKilobytes,
+                  ];
+                  let rw = [0, 0];
+                  processEntry(filesystem, rwTot, rw);
                 }
               });
               break;
@@ -2477,52 +2444,32 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _refreshDiskSpaceValue() {
-      this._executeCommand(["df", "-BKB", "-x", "squashfs", "-x", "tmpfs"])
+      this._executeCommand([
+        "df",
+        "--output=source,used,avail,pcent",
+        "-B1K",
+        "-x",
+        "squashfs",
+        "-x",
+        "tmpfs",
+      ])
         .then((contents) => {
-          const lines = contents.split("\n");
+          parseDiskSpaceTable(contents).forEach((entry) => {
+            const display = buildDiskSpaceDisplay(entry, {
+              monitor: this._diskSpaceMonitor,
+              unitType: this._diskSpaceUnitType,
+              unitMeasure: this._diskSpaceUnitMeasure,
+            });
 
-          // Exclude the header line
-          for (let i = 1; i < lines.length - 1; i++) {
-            const line = lines[i].trim();
-            const entry = line.split(/\s+/);
-
-            const filesystem = entry[0];
-            let value = 0;
-            let unit = "KB";
-
-            if (this._diskSpaceUnitType === "perc") {
-              const usedPercent = parseInt(entry[4].slice(0, -1), 10);
-              value =
-                this._diskSpaceMonitor === "free"
-                  ? 100 - usedPercent
-                  : usedPercent;
-
-              this._diskSpaceBox.update_element_value(
-                filesystem,
-                `${value}`,
-                "%",
-                this._getUsageColor(value, this._diskSpaceColors)
-              );
-            } else {
-              // Numeric mode: parse and format value in selected unit
-              const sizeInKB =
-                this._diskSpaceMonitor === "free"
-                  ? parseInt(entry[3].slice(0, -2), 10)
-                  : parseInt(entry[2].slice(0, -2), 10);
-
-              [value, unit] = this._convertValueToUnit(
-                sizeInKB,
-                this._diskSpaceUnitMeasure
-              );
-
-              this._diskSpaceBox.update_element_value(
-                filesystem,
-                `${this._getValueFixed(value)}`,
-                unit,
-                this._getUsageColor(value, this._diskSpaceColors)
-              );
-            }
-          }
+            this._diskSpaceBox.update_element_value(
+              entry.filesystem,
+              display.isPercent
+                ? `${display.value}`
+                : `${this._getValueFixed(display.value)}`,
+              display.unit,
+              this._getUsageColor(display.value, this._diskSpaceColors)
+            );
+          });
         })
         .catch((error) =>
           console.error("[Resource_Monitor] Error reading disk space:", error)
@@ -2532,55 +2479,25 @@ const ResourceMonitor = GObject.registerClass(
     _refreshEthValue() {
       this._loadFile("/proc/net/dev")
         .then((contents) => {
-          const lines = new TextDecoder().decode(contents).split("\n");
-
-          let duTot = [0, 0];
-          let du = [0, 0];
-
-          // Exclude the first two header lines
-          for (let i = 2; i < lines.length - 1; i++) {
-            const line = lines[i].trim();
-            const [iface, data] = line.split(":").map((s) => s.trim());
-
-            // Match ethernet interfaces only
-            if (/^(eth[0-9]+|en[a-z0-9]*)$/.test(iface)) {
-              const values = data.split(/\s+/);
-              duTot[0] += parseInt(values[0], 10); // Received bytes
-              duTot[1] += parseInt(values[8], 10); // Transmitted bytes
-            }
-          }
-
-          const idle = GLib.get_monotonic_time() / 1000;
-          const delta = (idle - (this._ethIdleOld || idle)) / 1000;
-          this._ethIdleOld = idle;
-
-          // True = bits, False = bytes
-          const factor = this._netUnit === "bits" ? 8 : 1;
-
-          if (delta > 0) {
-            for (let i = 0; i < 2; i++) {
-              du[i] =
-                ((duTot[i] - (this._duTotEthOld[i] || 0)) * factor) / delta;
-              this._duTotEthOld[i] = duTot[i];
-            }
-
-            // Convert units based on user setting or auto-detect
-            const result = this._convertValuesToUnit(
-              du,
-              this._netUnitMeasure,
-              this._netUnit === "bits"
-            );
-            du = result.values;
-            this._ethUnit.text = result.unit;
-          }
+          const sample = buildNetworkSample(contents, {
+            pattern: /^(eth[0-9]+|en[a-z0-9]*)$/,
+            unit: this._netUnit,
+            unitMeasure: this._netUnitMeasure,
+            previousTotals: this._duTotEthOld,
+            previousIdle: this._ethIdleOld,
+            currentIdle: GLib.get_monotonic_time() / 1000,
+          });
+          this._duTotEthOld = sample.totals;
+          this._ethIdleOld = sample.idle;
+          this._ethUnit.text = sample.unit;
 
           // Set color based on thresholds
-          this._ethValue.style = this._getUsageColor(du, this._netEthColors);
+          this._ethValue.style = this._getUsageColor(sample.values, this._netEthColors);
 
           // Display the download/upload values with appropriate decimal places
           this._ethValue.text = `${this._getValueFixed(
-            du[0]
-          )}|${this._getValueFixed(du[1])}`;
+            sample.values[0]
+          )}|${this._getValueFixed(sample.values[1])}`;
         })
         .catch((error) =>
           console.error("[Resource_Monitor] Error reading eth:", error)
@@ -2590,55 +2507,25 @@ const ResourceMonitor = GObject.registerClass(
     _refreshWlanValue() {
       this._loadFile("/proc/net/dev")
         .then((contents) => {
-          const lines = new TextDecoder().decode(contents).split("\n");
-
-          let duTot = [0, 0];
-          let du = [0, 0];
-
-          // Exclude the first two header lines
-          for (let i = 2; i < lines.length - 1; i++) {
-            const line = lines[i].trim();
-            const [iface, data] = line.split(":").map((s) => s.trim());
-
-            // Match wlan interfaces only
-            if (/^(wlan[0-9]+|wl[a-z0-9]*)$/.test(iface)) {
-              const values = data.split(/\s+/);
-              duTot[0] += parseInt(values[0], 10); // Received bytes
-              duTot[1] += parseInt(values[8], 10); // Transmitted bytes
-            }
-          }
-
-          const idle = GLib.get_monotonic_time() / 1000;
-          const delta = (idle - (this._wlanIdleOld || idle)) / 1000;
-          this._wlanIdleOld = idle;
-
-          // True = bits, False = bytes
-          const factor = this._netUnit === "bits" ? 8 : 1;
-
-          if (delta > 0) {
-            for (let i = 0; i < 2; i++) {
-              du[i] =
-                ((duTot[i] - (this._duTotWlanOld[i] || 0)) * factor) / delta;
-              this._duTotWlanOld[i] = duTot[i];
-            }
-
-            // Convert units based on user setting or auto-detect
-            const result = this._convertValuesToUnit(
-              du,
-              this._netUnitMeasure,
-              this._netUnit === "bits"
-            );
-            du = result.values;
-            this._wlanUnit.text = result.unit;
-          }
+          const sample = buildNetworkSample(contents, {
+            pattern: /^(wlan[0-9]+|wl[a-z0-9]*)$/,
+            unit: this._netUnit,
+            unitMeasure: this._netUnitMeasure,
+            previousTotals: this._duTotWlanOld,
+            previousIdle: this._wlanIdleOld,
+            currentIdle: GLib.get_monotonic_time() / 1000,
+          });
+          this._duTotWlanOld = sample.totals;
+          this._wlanIdleOld = sample.idle;
+          this._wlanUnit.text = sample.unit;
 
           // Set color based on thresholds
-          this._wlanValue.style = this._getUsageColor(du, this._netWlanColors);
+          this._wlanValue.style = this._getUsageColor(sample.values, this._netWlanColors);
 
           // Display the download/upload values with appropriate decimal places
           this._wlanValue.text = `${this._getValueFixed(
-            du[0]
-          )}|${this._getValueFixed(du[1])}`;
+            sample.values[0]
+          )}|${this._getValueFixed(sample.values[1])}`;
         })
         .catch((error) =>
           console.error("[Resource_Monitor] Error reading wlan:", error)
@@ -2652,20 +2539,9 @@ const ResourceMonitor = GObject.registerClass(
         "cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
       ])
         .then((contents) => {
-          const lines = contents.split("\n");
-
-          // Calculate the maximum frequency in the list
-          let maxFrequency = Math.max(
-            ...lines
-              .map((line) => parseInt(line.trim(), 10))
-              .filter(Number.isFinite)
-          );
-
-          // Convert frequency to desired unit and format the output
-          const [value, unit] = this._convertValueToUnit(
-            maxFrequency,
-            this._cpuFrequencyUnitMeasure,
-            true
+          const { value, unit } = parseCpuFrequencyOutput(
+            contents,
+            this._cpuFrequencyUnitMeasure
           );
 
           this._cpuFrequencyValue.style = this._getUsageColor(
@@ -2683,22 +2559,16 @@ const ResourceMonitor = GObject.registerClass(
     _refreshCpuLoadAverageValue() {
       this._loadFile("/proc/loadavg")
         .then((contents) => {
-          const line = new TextDecoder().decode(contents);
-
-          const [l0, l1, l2] = line
-            .trim()
-            .split(/\s+/)
-            .slice(0, 3)
-            .map(parseFloat);
+          const display = parseLoadAverageDisplay(contents);
 
           // Set color based on load average values
           this._cpuLoadAverageValue.style = this._getUsageColor(
-            l0,
+            display.values[0],
             this._cpuLoadAverageColors
           );
 
           // Display load average values
-          this._cpuLoadAverageValue.text = `${l0} ${l1} ${l2}`;
+          this._cpuLoadAverageValue.text = display.text;
         })
         .catch((error) =>
           console.error(
@@ -2709,62 +2579,43 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _refreshCpuTemperatureValue() {
-      if (this._thermalCpuTemperatureDevicesList.length > 0) {
-        this._thermalCpuTemperatureDevicesList.forEach((element) => {
-          const [, status, path] = element.split(
-            THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR
-          );
+      const activeSensors = this._thermalCpuTemperatureDevices.filter(
+        (sensor) =>
+          sensor.monitor &&
+          sensor.path &&
+          GLib.file_test(sensor.path, GLib.FileTest.EXISTS)
+      );
 
-          // Skip if the sensor is inactive
-          if (status === "false" || !GLib.file_test(path, GLib.FileTest.EXISTS))
-            return;
+      if (activeSensors.length > 0) {
+        Promise.allSettled(activeSensors.map((sensor) => this._loadFile(sensor.path)))
+          .then((results) => {
+            const display = buildCpuTemperatureDisplay(
+              results,
+              this._thermalTemperatureUnit
+            );
 
-          this._loadFile(path)
-            .then((contents) => {
-              const temperature = parseInt(
-                new TextDecoder().decode(contents),
-                10
-              );
+            if (!display) {
+              this._cpuTemperatureValue.text = "--";
+              return;
+            }
 
-              if (!isNaN(temperature)) {
-                this._cpuTemperatures += temperature / 1000;
-                this._cpuTemperaturesReadings++;
-              }
-
-              // Process the final average once all readings are completed
-              if (
-                this._cpuTemperaturesReadings >=
-                this._thermalCpuTemperatureDevicesList.length
-              ) {
-                const avg =
-                  this._cpuTemperatures / this._cpuTemperaturesReadings;
-
-                // Convert temperature to desired unit
-                const [value, unit] = this._convertTemperature(avg);
-
-                this._cpuTemperatureValue.text = `${this._getValueFixed(
-                  value
-                )}`;
-                this._cpuTemperatureUnit.text = unit;
-
-                // Apply color based on thresholds
-                this._cpuTemperatureValue.style = this._getUsageColor(
-                  value,
-                  this._thermalCpuColors
-                );
-
-                // Reset totals
-                this._cpuTemperatures = 0;
-                this._cpuTemperaturesReadings = 0;
-              }
-            })
-            .catch((error) => {
+            this._cpuTemperatureValue.text = `${this._getValueFixed(
+              display.value
+            )}`;
+            this._cpuTemperatureUnit.text = display.unit;
+            this._cpuTemperatureValue.style = this._getUsageColor(
+              display.value,
+              this._thermalCpuColors
+            );
+          })
+          .catch((error) => {
+            if (!this._isCancelledError(error)) {
               console.error(
                 "[Resource_Monitor] Error reading cpu thermal:",
                 error
               );
-            });
-        });
+            }
+          });
       } else {
         this._cpuTemperatureValue.text = "--";
       }
@@ -2777,82 +2628,33 @@ const ResourceMonitor = GObject.registerClass(
         "--format=csv,noheader",
       ])
         .then((contents) => {
-          const lines = contents.trim().split("\n");
+          const entries = parseGpuSmiOutput(contents, {
+            memoryMonitor: this._gpuMemoryMonitor,
+            memoryUnitType: this._gpuMemoryUnitType,
+            memoryUnitMeasure: this._gpuMemoryUnitMeasure,
+            temperatureUnit: this._thermalTemperatureUnit,
+          });
 
-          lines.forEach((line) => {
-            const [
-              uuid,
-              memoryTotalStr,
-              memoryUsedStr,
-              memoryFreeStr,
-              usageStr,
-              temperatureStr,
-            ] = line.trim().split(/,\s/);
-
-            const usage = parseInt(usageStr.slice(0, -1), 10);
-            let memoryTotal =
-              parseInt(memoryTotalStr.slice(0, -4), 10) * 1024 * 1.024;
-            let memoryUsed =
-              parseInt(memoryUsedStr.slice(0, -4), 10) * 1024 * 1.024;
-            let memoryFree =
-              parseInt(memoryFreeStr.slice(0, -4), 10) * 1024 * 1.024;
-            const temperature = parseInt(temperatureStr, 10);
-
-            // GPU utilization
+          entries.forEach((entry) => {
             this._gpuBox.update_element_value(
-              uuid,
-              `${usage}`,
+              entry.uuid,
+              `${entry.usage}`,
               "%",
-              this._getUsageColor(usage, this._gpuColors)
+              this._getUsageColor(entry.usage, this._gpuColors)
             );
 
-            // GPU memory
-            let memoryValue;
-            let memoryUnit = "KB";
-
-            // Determine display value based on _gpuMemoryMonitor setting
-            switch (this._gpuMemoryMonitor) {
-              case "free":
-                memoryValue = memoryFree;
-                break;
-              case "used":
-              default:
-                memoryValue = memoryUsed;
-                break;
-            }
-
-            // Apply unit conversions or percentage formatting
-            if (this._gpuMemoryUnitType === "perc") {
-              const percentValue = (100 * memoryValue) / memoryTotal;
-              this._gpuBox.update_element_memory_value(
-                uuid,
-                `${this._getValueFixed(percentValue)}`,
-                "%",
-                this._getUsageColor(percentValue, this._gpuMemoryColors)
-              );
-            } else {
-              [memoryValue, memoryUnit] = this._convertValueToUnit(
-                memoryValue,
-                this._gpuMemoryUnitMeasure
-              );
-
-              this._gpuBox.update_element_memory_value(
-                uuid,
-                `${this._getValueFixed(memoryValue)}`,
-                memoryUnit,
-                this._getUsageColor(memoryValue, this._gpuMemoryColors)
-              );
-            }
-
-            // GPU Thermal
-            // Convert temperature to desired unit
-            const [tempValue, tempUnit] = this._convertTemperature(temperature);
-
             this._gpuBox.update_element_thermal_value(
-              uuid,
-              `${this._getValueFixed(tempValue)}`,
-              tempUnit,
-              this._getUsageColor(tempValue, this._thermalGpuColors)
+              entry.uuid,
+              `${this._getValueFixed(entry.temperatureValue)}`,
+              entry.temperatureUnit,
+              this._getUsageColor(entry.temperatureValue, this._thermalGpuColors)
+            );
+
+            this._gpuBox.update_element_memory_value(
+              entry.uuid,
+              `${this._getValueFixed(entry.memoryValue)}`,
+              entry.memoryUnit,
+              this._getUsageColor(entry.memoryValue, this._gpuMemoryColors)
             );
           });
         })
@@ -2891,67 +2693,20 @@ const ResourceMonitor = GObject.registerClass(
       }
     }
 
-    _loadContents(file, cancellable = null) {
-      return new Promise((resolve, reject) => {
-        file.load_contents_async(cancellable, (source_object, res) => {
-          try {
-            const [ok, contents, etag_out] =
-              source_object.load_contents_finish(res);
-            if (ok) {
-              resolve(contents);
-            } else {
-              reject(new Error("Failed to load contents"));
-            }
-          } catch (error) {
-            reject(
-              new Error(`Error in load_contents_finish: ${error.message}`)
-            );
-          }
-        });
-      });
+    _loadContents(file, cancellable = this._ioCancellable) {
+      return loadRuntimeContents(file, cancellable);
     }
 
-    async _loadFile(path, cancellable = null) {
-      try {
-        const file = Gio.File.new_for_path(path);
-        const contents = await this._loadContents(file, cancellable);
-        return contents;
-      } catch (error) {
-        console.error("[Resource_Monitor] Load File Error:", error);
-      }
+    async _loadFile(path, cancellable = this._ioCancellable) {
+      return loadRuntimeFile(path, cancellable);
     }
 
-    _readOutput(proc, cancellable = null) {
-      return new Promise((resolve, reject) => {
-        proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
-          try {
-            const [ok, stdout, stderr] =
-              source_object.communicate_utf8_finish(res);
-            if (ok) {
-              resolve(stdout);
-            } else {
-              reject(new Error(`Process failed with error: ${stderr}`));
-            }
-          } catch (error) {
-            reject(
-              new Error(`Error in communicate_utf8_finish: ${error.message}`)
-            );
-          }
-        });
-      });
+    _readOutput(proc, cancellable = this._ioCancellable) {
+      return readRuntimeOutput(proc, cancellable);
     }
 
-    async _executeCommand(command, cancellable = null) {
-      try {
-        const proc = Gio.Subprocess.new(
-          command,
-          Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-        );
-        const output = await this._readOutput(proc, cancellable);
-        return output;
-      } catch (error) {
-        console.error("[Resource_Monitor] Execute Command Error:", error);
-      }
+    async _executeCommand(command, cancellable = this._ioCancellable) {
+      return executeRuntimeCommand(command, cancellable);
     }
   }
 );

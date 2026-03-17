@@ -1,0 +1,22 @@
+name: Validate
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install GLib Tools
+        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin
+
+      - name: Validate Patch Formatting
+        run: git diff --check
+
+      - name: Compile GSettings Schema
+        run: glib-compile-schemas Resource_Monitor@Ory0n/schemas

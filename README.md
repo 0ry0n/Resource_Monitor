@@ -29,6 +29,28 @@ Resource_Monitor is a GNOME Shell extension that provides real-time monitoring o
 3. Move the `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/`.
 4. Activate the extension using GNOME Extensions.
 
+## Development
+
+The repository now includes a small maintenance workflow for local development.
+
+- `make schema`
+  Compiles the GSettings schema locally.
+- `make validate`
+  Runs schema compilation and checks the git diff for whitespace issues.
+- `make package`
+  Builds a distributable zip archive in `build/`.
+- `make install`
+  Installs the extension into `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/`.
+
+## Release Workflow
+
+GitHub Actions now includes:
+
+- `Validate`
+  Compiles schemas and checks the patch formatting on pushes and pull requests.
+- `Release`
+  Builds the extension zip on demand and automatically attaches it to GitHub releases for tags matching `v*`.
+
 ## Preferences
 
 | Global Preferences                        | CPU Preferences                     | RAM Preferences                     |
