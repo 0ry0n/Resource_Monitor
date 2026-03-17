@@ -16,13 +16,50 @@ export function parseGpuSmiOutput(contents, options) {
         memoryFreeStr,
         usageStr,
         temperatureStr,
-      ] = line.trim().split(/,\s/);
+      ] = line.trim().split(/,\s*/);
 
-      const usage = parseInt(usageStr.slice(0, -1), 10);
-      const memoryTotal = parseInt(memoryTotalStr.slice(0, -4), 10) * 1024 * 1.024;
-      const memoryUsed = parseInt(memoryUsedStr.slice(0, -4), 10) * 1024 * 1.024;
-      const memoryFree = parseInt(memoryFreeStr.slice(0, -4), 10) * 1024 * 1.024;
-      const rawTemperature = parseInt(temperatureStr, 10);
+      if (
+        !uuid ||
+        !memoryTotalStr ||
+        !memoryUsedStr ||
+        !memoryFreeStr ||
+        !usageStr ||
+        !temperatureStr
+      ) {
+        return null;
+      }
+
+      const memoryTotalMatch = memoryTotalStr.match(/(\d+)/);
+      const memoryUsedMatch = memoryUsedStr.match(/(\d+)/);
+      const memoryFreeMatch = memoryFreeStr.match(/(\d+)/);
+      const usageMatch = usageStr.match(/(\d+)/);
+      const temperatureMatch = temperatureStr.match(/(-?\d+)/);
+
+      if (
+        !memoryTotalMatch ||
+        !memoryUsedMatch ||
+        !memoryFreeMatch ||
+        !usageMatch ||
+        !temperatureMatch
+      ) {
+        return null;
+      }
+
+      const usage = parseInt(usageMatch[1], 10);
+      const memoryTotal = parseInt(memoryTotalMatch[1], 10) * 1024 * 1.024;
+      const memoryUsed = parseInt(memoryUsedMatch[1], 10) * 1024 * 1.024;
+      const memoryFree = parseInt(memoryFreeMatch[1], 10) * 1024 * 1.024;
+      const rawTemperature = parseInt(temperatureMatch[1], 10);
+
+      if (
+        !Number.isFinite(usage) ||
+        !Number.isFinite(memoryTotal) ||
+        !Number.isFinite(memoryUsed) ||
+        !Number.isFinite(memoryFree) ||
+        !Number.isFinite(rawTemperature)
+      ) {
+        return null;
+      }
 
       let memoryValue = memoryMonitor === "free" ? memoryFree : memoryUsed;
       let memoryUnit = "KB";
@@ -50,5 +87,6 @@ export function parseGpuSmiOutput(contents, options) {
         temperatureValue,
         temperatureUnit: temperatureDisplayUnit,
       };
-    });
+    })
+    .filter(Boolean);
 }

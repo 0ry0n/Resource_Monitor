@@ -19,6 +19,7 @@
  * along with Resource_Monitor. If not, see <http://www.gnu.org/licenses/>.
  */
 
+import Adw from "gi://Adw";
 import Gdk from "gi://Gdk?version=4.0";
 import Gio from "gi://Gio";
 import GObject from "gi://GObject";
@@ -41,15 +42,11 @@ import {
   createLabelFactory,
   executeCommand,
   loadFile,
-  makeColorRow,
   makeColors,
   makeThermalColumnView,
   parseSettingsArray,
   replaceSignalHandler,
-  ResourceMonitorBuilderScope,
   saveArrayToSettings,
-  loadContents,
-  readOutput,
 } from "./prefs/helpers.js";
 import {
   DiskElement,
@@ -116,7 +113,6 @@ const DISK_SPACE_UNIT_MEASURE = "diskspaceunitmeasure";
 const DISK_SPACE_MONITOR = "diskspacemonitor";
 const DISK_DEVICES_DISPLAY_ALL = "diskdevicesdisplayall";
 const DISK_DEVICES_LIST = "diskdeviceslist";
-const DISK_DEVICES_LIST_SEPARATOR = " ";
 
 const NET_AUTO_HIDE_STATUS = "netautohidestatus";
 const NET_UNIT = "netunit";
@@ -137,7 +133,6 @@ const THERMAL_GPU_TEMPERATURE_STATUS = "thermalgputemperaturestatus";
 const THERMAL_GPU_TEMPERATURE_WIDTH = "thermalgputemperaturewidth";
 const THERMAL_GPU_COLORS = "thermalgpucolors";
 const THERMAL_GPU_TEMPERATURE_DEVICES_LIST = "thermalgputemperaturedeviceslist";
-const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = "-";
 
 const GPU_STATUS = "gpustatus";
 const GPU_WIDTH = "gpuwidth";
@@ -148,76 +143,9 @@ const GPU_MEMORY_UNIT_MEASURE = "gpumemoryunitmeasure";
 const GPU_MEMORY_MONITOR = "gpumemorymonitor";
 const GPU_DISPLAY_DEVICE_NAME = "gpudisplaydevicename";
 const GPU_DEVICES_LIST = "gpudeviceslist";
-const GPU_DEVICES_LIST_SEPARATOR = ":";
 
 const ResourceMonitorPrefsWidget = GObject.registerClass(
   class ResourceMonitorPrefsWidget extends GObject.Object {
-    _replaceSignalHandler(widget, propertyName, signalName, callback) {
-      replaceSignalHandler(widget, propertyName, signalName, callback);
-    }
-
-    _parseSettingsArray(settings, key, parser) {
-      return parseSettingsArray(settings, key, parser);
-    }
-
-    _connectSpinButton(settings, settingsName, element) {
-      connectSpinButton(settings, settingsName, element);
-    }
-
-    _connectComboBox(settings, settingsName, element) {
-      connectComboBox(settings, settingsName, element);
-    }
-
-    _connectSwitchButton(settings, settingsName, element) {
-      connectSwitchButton(settings, settingsName, element);
-    }
-
-    _makeColorRow(
-      settings,
-      settingsName,
-      listbox,
-      text = "0.0",
-      red = 224 / 255,
-      green = 27 / 255,
-      blue = 36 / 255,
-      alpha = 1.0
-    ) {
-      return makeColorRow(
-        settings,
-        settingsName,
-        listbox,
-        COLOR_LIST_SEPARATOR,
-        text,
-        red,
-        green,
-        blue,
-        alpha
-      );
-    }
-
-    _makeColors(settings, settingsName, listBox, addButton) {
-      makeColors(
-        settings,
-        settingsName,
-        listBox,
-        addButton,
-        COLOR_LIST_SEPARATOR
-      );
-    }
-
-    // Function to create a reusable label factory
-    _createLabelFactory(getTextCallback) {
-      return createLabelFactory(getTextCallback);
-    }
-
-    _makeThermalColumnView(view, type) {
-      return makeThermalColumnView(view, type);
-    }
-
-    _saveArrayToSettings(model, settings, key) {
-      saveArrayToSettings(model, settings, key);
-    }
-
     _init({ settings, dir, metadata }) {
       this._settings = settings;
       this._dir = dir;
@@ -231,15 +159,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._provider,
         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
       );
-
-      // Gtk Builder
-      this._builder = new Gtk.Builder();
-      this._builder.set_scope(new ResourceMonitorBuilderScope());
-      this._builder.set_translation_domain(this._metadata["gettext-domain"]);
-      this._builder.add_from_file(this._dir.get_path() + "/prefs.ui");
-
-      // PREFS
-      this.notebook = this._builder.get_object("main_notebook");
 
       // GLOBAL FRAME
       this._buildGlobal();
@@ -266,61 +185,1140 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._buildGpu();
     }
 
-    _buildGlobal() {
-      this._secondsSpinbutton = this._builder.get_object("seconds_spinbutton");
-      this._extensionPositionCombobox = this._builder.get_object(
-        "extension_position_combobox"
+    _takeWidget(widget) {
+      const parent = widget?.get_parent?.();
+      if (!parent) {
+        return widget;
+      }
+
+      if (typeof parent.remove === "function") {
+        parent.remove(widget);
+      } else if (typeof parent.set_child === "function") {
+        parent.set_child(null);
+      }
+
+      return widget;
+    }
+
+    _createActionRow(title, subtitle, suffix) {
+      const row = new Adw.ActionRow({
+        title,
+        subtitle,
+      });
+
+      row.add_suffix(this._takeWidget(suffix));
+      if (row.set_activatable_widget) {
+        row.set_activatable_widget(suffix);
+      }
+
+      return row;
+    }
+
+    _createSectionPage(title) {
+      return new Adw.PreferencesPage({
+        name: title.toLowerCase(),
+        title,
+      });
+    }
+
+    _createSettingsGroup(title, description = null) {
+      return new Adw.PreferencesGroup({
+        title,
+        description,
+      });
+    }
+
+    _createSwitch() {
+      return new Gtk.Switch({
+        valign: Gtk.Align.CENTER,
+      });
+    }
+
+    _createSpinButton({ upper, lower = 0, step = 1, page = 10 }) {
+      return new Gtk.SpinButton({
+        adjustment: new Gtk.Adjustment({
+          lower,
+          upper,
+          step_increment: step,
+          page_increment: page,
+        }),
+        numeric: true,
+        valign: Gtk.Align.CENTER,
+      });
+    }
+
+    _createComboBox(items) {
+      const widget = new Gtk.ComboBoxText({
+        valign: Gtk.Align.CENTER,
+      });
+
+      for (const [id, label] of items) {
+        widget.append(id, label);
+      }
+
+      return widget;
+    }
+
+    _createListBox() {
+      return new Gtk.ListBox({
+        selection_mode: Gtk.SelectionMode.NONE,
+        hexpand: true,
+      });
+    }
+
+    _createColumnView() {
+      return new Gtk.ColumnView({
+        hexpand: true,
+        vexpand: true,
+        reorderable: false,
+        show_column_separators: true,
+      });
+    }
+
+    _createIconButton(iconName) {
+      return new Gtk.Button({
+        icon_name: iconName,
+        valign: Gtk.Align.CENTER,
+      });
+    }
+
+    _createEntry(inputPurpose = Gtk.InputPurpose.FREE_FORM) {
+      return new Gtk.Entry({
+        input_purpose: inputPurpose,
+        hexpand: true,
+      });
+    }
+
+    _createCheckButton(label, group = null) {
+      return new Gtk.CheckButton({
+        label,
+        group,
+        halign: Gtk.Align.START,
+      });
+    }
+
+    _setWidgetsSensitive(widgets, sensitive) {
+      for (const widget of widgets) {
+        widget.sensitive = sensitive;
+      }
+    }
+
+    _bindToggleSensitivity(toggle, widgets, callback = null) {
+      toggle.connect("state-set", (button) => {
+        this._setWidgetsSensitive(widgets, button.active);
+        callback?.(button.active);
+      });
+    }
+
+    _initializeToggleControlledSection(toggle, widgets) {
+      this._bindToggleSensitivity(toggle, widgets);
+      this._setWidgetsSensitive(widgets, toggle.active);
+    }
+
+    _initializeUsageMonitor({
+      display,
+      width,
+      unit,
+      unitMeasure,
+      monitor,
+      alert,
+      threshold,
+      statusKey,
+      widthKey,
+      unitKey,
+      unitMeasureKey,
+      monitorKey,
+      alertKey,
+      thresholdKey,
+      colorsKey,
+      colorsListbox,
+      colorsAddButton,
+    }) {
+      connectSwitchButton(this._settings, statusKey, display);
+      connectSpinButton(this._settings, widthKey, width);
+      connectComboBox(this._settings, unitKey, unit);
+      connectComboBox(this._settings, unitMeasureKey, unitMeasure);
+      connectComboBox(this._settings, monitorKey, monitor);
+      connectSwitchButton(this._settings, alertKey, alert);
+      connectSpinButton(this._settings, thresholdKey, threshold);
+
+      const controlledWidgets = [width, unit, unitMeasure, monitor, alert];
+      this._bindToggleSensitivity(display, controlledWidgets, (active) => {
+        threshold.sensitive = active && alert.active;
+      });
+      this._setWidgetsSensitive(controlledWidgets, display.active);
+
+      this._bindToggleSensitivity(alert, [], (active) => {
+        threshold.sensitive = display.active && active;
+      });
+      threshold.sensitive = display.active && alert.active;
+
+      makeColors(
+        this._settings,
+        colorsKey,
+        colorsListbox,
+        colorsAddButton
       );
-      this._extensionLeftClickRadioButtonSM = this._builder.get_object(
-        "extension_left_click_radiobutton_sm"
+    }
+
+    _appendEditableTextColumn(view, model, { title, getText, setText }) {
+      const factory = new Gtk.SignalListItemFactory();
+      factory.connect("setup", (factoryObject, listItem) => {
+        listItem.set_child(new Gtk.Entry());
+      });
+      factory.connect("bind", (factoryObject, listItem) => {
+        const item = listItem.get_item();
+        const entry = listItem.get_child();
+        entry.set_text(getText(item));
+
+        replaceSignalHandler(
+          entry,
+          "_resourceMonitorChangedHandlerId",
+          "changed",
+          (widget) => {
+            const [found, index] = model.find(item);
+            if (!found) {
+              return;
+            }
+
+            setText(item, widget.text);
+
+            const normalized = getText(item);
+            if (normalized !== widget.text) {
+              widget.text = normalized;
+            }
+
+            model.splice(index, 1, [item]);
+          }
+        );
+      });
+      factory.connect("unbind", (factoryObject, listItem) => {
+        const entry = listItem.get_child();
+        if (entry?._resourceMonitorChangedHandlerId) {
+          entry.disconnect(entry._resourceMonitorChangedHandlerId);
+          entry._resourceMonitorChangedHandlerId = null;
+        }
+      });
+
+      view.append_column(
+        new Gtk.ColumnViewColumn({
+          title: _(title),
+          factory,
+          resizable: true,
+        })
       );
-      this._extensionLeftClickRadioButtonU = this._builder.get_object(
-        "extension_left_click_radiobutton_u"
+    }
+
+    _appendToggleColumn(view, model, { title, getValue, setValue, sensitive }) {
+      const factory = new Gtk.SignalListItemFactory();
+      factory.connect("setup", (factoryObject, listItem) => {
+        listItem.set_child(new Gtk.CheckButton({ halign: Gtk.Align.CENTER }));
+      });
+      factory.connect("bind", (factoryObject, listItem) => {
+        const item = listItem.get_item();
+        const toggle = listItem.get_child();
+        toggle.set_active(getValue(item));
+        toggle.sensitive = sensitive ? sensitive(item) : true;
+
+        replaceSignalHandler(
+          toggle,
+          "_resourceMonitorToggleHandlerId",
+          "toggled",
+          (widget) => {
+            const [found, index] = model.find(item);
+            if (!found) {
+              return;
+            }
+
+            setValue(item, widget.active);
+            model.splice(index, 1, [item]);
+          }
+        );
+      });
+      factory.connect("unbind", (factoryObject, listItem) => {
+        const toggle = listItem.get_child();
+        if (toggle?._resourceMonitorToggleHandlerId) {
+          toggle.disconnect(toggle._resourceMonitorToggleHandlerId);
+          toggle._resourceMonitorToggleHandlerId = null;
+        }
+      });
+
+      view.append_column(
+        new Gtk.ColumnViewColumn({
+          title: _(title),
+          factory,
+          resizable: true,
+        })
       );
-      this._extensionLeftClickRadioButtonCustom = this._builder.get_object(
-        "extension_left_click_radiobutton_custom"
-      );
-      this._extensionLeftClickEntryCustom = this._builder.get_object(
-        "extension_left_click_entry_custom"
-      );
-      this._extensionRightClickPrefs = this._builder.get_object(
-        "extension_right_click_prefs"
-      );
-      this._decimalsDisplay = this._builder.get_object("decimals_display");
-      this._iconsDisplay = this._builder.get_object("icons_display");
-      this._iconsPositionCombobox = this._builder.get_object(
-        "icons_position_combobox"
-      );
-      this._itemsPositionListbox = this._builder.get_object(
-        "items_position_listbox"
+    }
+
+    _prepareEmbeddedWidget(widget, cssClasses = []) {
+      const embeddedWidget = this._takeWidget(widget);
+
+      embeddedWidget.margin_top = 0;
+      embeddedWidget.margin_bottom = 0;
+      embeddedWidget.margin_start = 0;
+      embeddedWidget.margin_end = 0;
+      embeddedWidget.hexpand = true;
+
+      for (const cssClass of cssClasses) {
+        embeddedWidget.add_css_class(cssClass);
+      }
+
+      return embeddedWidget;
+    }
+
+    _wrapEmbeddedWidget(widget, cssClasses = []) {
+      const container = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        hexpand: true,
+        margin_top: 6,
+        margin_bottom: 6,
+        margin_start: 6,
+        margin_end: 6,
+      });
+      container.add_css_class("embedded-widget");
+
+      const embeddedWidget = this._prepareEmbeddedWidget(widget, cssClasses);
+      container.append(embeddedWidget);
+
+      return container;
+    }
+
+    _createColumnViewContainer(view, minHeight = 240) {
+      const container = new Gtk.ScrolledWindow({
+        hscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+        vscrollbar_policy: Gtk.PolicyType.AUTOMATIC,
+        min_content_height: minHeight,
+        hexpand: true,
+        vexpand: true,
+        has_frame: true,
+      });
+      container.add_css_class("embedded-widget");
+      container.set_child(
+        this._prepareEmbeddedWidget(view, ["resource-monitor-column-view"])
       );
 
-      this._connectSpinButton(
+      return container;
+    }
+
+    _createListGroup(title, description, addButton, listbox) {
+      const group = this._createSettingsGroup(title, description);
+
+      const addRow = new Adw.ActionRow({
+        title: _("Threshold Colors"),
+        subtitle: _("Add, remove, and reorder value thresholds."),
+      });
+      addRow.add_suffix(this._takeWidget(addButton));
+      if (addRow.set_activatable_widget) {
+        addRow.set_activatable_widget(addButton);
+      }
+
+      group.add(addRow);
+      group.add(
+        this._wrapEmbeddedWidget(listbox, ["boxed-list", "resource-monitor-list"])
+      );
+
+      return group;
+    }
+
+    _buildNativeGlobalPage(title) {
+      const page = this._createSectionPage(title);
+
+      const generalGroup = this._createSettingsGroup(_("General"));
+      generalGroup.add(
+        this._createActionRow(
+          _("Refresh Interval"),
+          _("Controls how often resource values are updated."),
+          this._secondsSpinbutton
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Panel Position"),
+          _("Choose where the indicator appears in the top bar."),
+          this._extensionPositionCombobox
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Open Preferences on Right Click"),
+          _("Show the preferences window when the indicator is right-clicked."),
+          this._extensionRightClickPrefs
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Show Decimal Digits"),
+          _("Enable fractional digits in the panel values."),
+          this._decimalsDisplay
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Show Icons"),
+          _("Display symbolic icons next to monitored resources."),
+          this._iconsDisplay
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Icon Position"),
+          _("Choose whether icons appear before or after the values."),
+          this._iconsPositionCombobox
+        )
+      );
+      page.add(generalGroup);
+
+      const launchGroup = new Adw.PreferencesGroup({
+        title: _("Launch Action"),
+        description: _("Choose what happens when the indicator is left-clicked."),
+      });
+      launchGroup.add(
+        this._wrapEmbeddedWidget(this._extensionLeftClickRadioButtonSM.get_parent())
+      );
+      page.add(launchGroup);
+
+      const orderingGroup = new Adw.PreferencesGroup({
+        title: _("Items Order"),
+        description: _("Reorder how resources appear in the panel."),
+      });
+      orderingGroup.add(
+        this._wrapEmbeddedWidget(
+          this._itemsPositionListbox,
+          ["boxed-list", "resource-monitor-list"]
+        )
+      );
+      page.add(orderingGroup);
+
+      return page;
+    }
+
+    _buildNativeCpuPage(title) {
+      const page = this._createSectionPage(title);
+
+      const usageGroup = this._createSettingsGroup(
+        _("Usage"),
+        _("Configure the main CPU usage indicator shown in the panel.")
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show CPU usage in the top bar."),
+          this._cpuDisplay
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for the CPU value."),
+          this._cpuWidthSpinbutton
+        )
+      );
+      page.add(usageGroup);
+      page.add(
+        this._createListGroup(
+          _("Usage Colors"),
+          _("Manage threshold colors for CPU usage."),
+          this._cpuColorsAddButton,
+          this._cpuColorsListbox
+        )
+      );
+
+      const frequencyGroup = this._createSettingsGroup(
+        _("Frequency"),
+        _("Control how CPU frequency is displayed.")
+      );
+      frequencyGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show the current CPU frequency in the panel."),
+          this._cpuFrequencyDisplay
+        )
+      );
+      frequencyGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for the frequency value."),
+          this._cpuFrequencyWidthSpinbutton
+        )
+      );
+      frequencyGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how CPU frequency is formatted."),
+          this._cpuFrequencyUnitMeasureCombobox
+        )
+      );
+      page.add(frequencyGroup);
+      page.add(
+        this._createListGroup(
+          _("Frequency Colors"),
+          _("Manage threshold colors for CPU frequency."),
+          this._cpuFrequencyColorsAddButton,
+          this._cpuFrequencyColorsListbox
+        )
+      );
+
+      const loadAverageGroup = this._createSettingsGroup(
+        _("Load Average"),
+        _("Control how system load average is shown.")
+      );
+      loadAverageGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show the load average in the panel."),
+          this._cpuLoadAverageDisplay
+        )
+      );
+      loadAverageGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for the load average value."),
+          this._cpuLoadAverageWidthSpinbutton
+        )
+      );
+      page.add(loadAverageGroup);
+      page.add(
+        this._createListGroup(
+          _("Load Average Colors"),
+          _("Manage threshold colors for load average."),
+          this._cpuLoadAverageColorsAddButton,
+          this._cpuLoadAverageColorsListbox
+        )
+      );
+
+      return page;
+    }
+
+    _buildNativeRamPage(title) {
+      const page = this._createSectionPage(title);
+
+      const monitorGroup = this._createSettingsGroup(
+        _("Memory"),
+        _("Configure how RAM usage is presented in the panel.")
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show RAM usage in the top bar."),
+          this._ramDisplay
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for the RAM value."),
+          this._ramWidthSpinbutton
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Unit"),
+          _("Choose whether to show percentages or numeric values."),
+          this._ramUnitCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how numeric RAM values are formatted."),
+          this._ramUnitMeasureCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Monitor"),
+          _("Choose whether the indicator tracks used or free memory."),
+          this._ramMonitorCombobox
+        )
+      );
+      page.add(monitorGroup);
+      page.add(
+        this._createListGroup(
+          _("Memory Colors"),
+          _("Manage threshold colors for RAM usage."),
+          this._ramColorsAddButton,
+          this._ramColorsListbox
+        )
+      );
+
+      const alertGroup = this._createSettingsGroup(
+        _("Alert"),
+        _("Configure the low-memory warning threshold.")
+      );
+      alertGroup.add(
+        this._createActionRow(
+          _("Enable Alert"),
+          _("Notify when available memory drops below the configured limit."),
+          this._ramAlert
+        )
+      );
+      alertGroup.add(
+        this._createActionRow(
+          _("Threshold"),
+          _("Trigger the alert when free memory is lower than this percentage."),
+          this._ramAlertThresholdSpinbutton
+        )
+      );
+      page.add(alertGroup);
+
+      return page;
+    }
+
+    _buildNativeSwapPage(title) {
+      const page = this._createSectionPage(title);
+
+      const monitorGroup = this._createSettingsGroup(
+        _("Swap"),
+        _("Configure how swap usage is presented in the panel.")
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show swap usage in the top bar."),
+          this._swapDisplay
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for the swap value."),
+          this._swapWidthSpinbutton
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Unit"),
+          _("Choose whether to show percentages or numeric values."),
+          this._swapUnitCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how numeric swap values are formatted."),
+          this._swapUnitMeasureCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Monitor"),
+          _("Choose whether the indicator tracks used or free swap."),
+          this._swapMonitorCombobox
+        )
+      );
+      page.add(monitorGroup);
+      page.add(
+        this._createListGroup(
+          _("Swap Colors"),
+          _("Manage threshold colors for swap usage."),
+          this._swapColorsAddButton,
+          this._swapColorsListbox
+        )
+      );
+
+      const alertGroup = this._createSettingsGroup(
+        _("Alert"),
+        _("Configure the low-swap warning threshold.")
+      );
+      alertGroup.add(
+        this._createActionRow(
+          _("Enable Alert"),
+          _("Notify when available swap drops below the configured limit."),
+          this._swapAlert
+        )
+      );
+      alertGroup.add(
+        this._createActionRow(
+          _("Threshold"),
+          _("Trigger the alert when free swap is lower than this percentage."),
+          this._swapAlertThresholdSpinbutton
+        )
+      );
+      page.add(alertGroup);
+
+      return page;
+    }
+
+    _buildNativeNetPage(title) {
+      const page = this._createSectionPage(title);
+
+      const commonGroup = this._createSettingsGroup(
+        _("Common"),
+        _("Configure shared network display settings.")
+      );
+      commonGroup.add(
+        this._createActionRow(
+          _("Auto Hide"),
+          _("Hide network indicators when there is no traffic."),
+          this._netAutoHide
+        )
+      );
+      commonGroup.add(
+        this._createActionRow(
+          _("Unit"),
+          _("Choose whether throughput is displayed in bytes or bits."),
+          this._netUnitCombobox
+        )
+      );
+      commonGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how network throughput values are formatted."),
+          this._netUnitMeasureCombobox
+        )
+      );
+      page.add(commonGroup);
+
+      const ethernetGroup = this._createSettingsGroup(
+        _("Ethernet"),
+        _("Configure the wired network indicator.")
+      );
+      ethernetGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show Ethernet traffic in the panel."),
+          this._netEthDisplay
+        )
+      );
+      ethernetGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for Ethernet throughput."),
+          this._netEthWidthSpinbutton
+        )
+      );
+      page.add(ethernetGroup);
+      page.add(
+        this._createListGroup(
+          _("Ethernet Colors"),
+          _("Manage threshold colors for Ethernet throughput."),
+          this._netEthColorsAddButton,
+          this._netEthColorsListbox
+        )
+      );
+
+      const wirelessGroup = this._createSettingsGroup(
+        _("Wireless"),
+        _("Configure the Wi-Fi network indicator.")
+      );
+      wirelessGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show Wi-Fi traffic in the panel."),
+          this._netWlanDisplay
+        )
+      );
+      wirelessGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for Wi-Fi throughput."),
+          this._netWlanWidthSpinbutton
+        )
+      );
+      page.add(wirelessGroup);
+      page.add(
+        this._createListGroup(
+          _("Wireless Colors"),
+          _("Manage threshold colors for Wi-Fi throughput."),
+          this._netWlanColorsAddButton,
+          this._netWlanColorsListbox
+        )
+      );
+
+      return page;
+    }
+
+    _buildNativeDiskPage(title) {
+      const page = this._createSectionPage(title);
+
+      const commonGroup = this._createSettingsGroup(
+        _("Common"),
+        _("Configure shared disk indicator settings.")
+      );
+      commonGroup.add(
+        this._createActionRow(
+          _("Show Device Name"),
+          _("Display the configured disk label in the panel."),
+          this._diskShowDeviceName
+        )
+      );
+      page.add(commonGroup);
+
+      const statsGroup = this._createSettingsGroup(
+        _("Statistics"),
+        _("Configure disk activity indicators.")
+      );
+      statsGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show disk activity statistics in the top bar."),
+          this._diskStatsDisplay
+        )
+      );
+      statsGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for disk activity values."),
+          this._diskStatsWidthSpinbutton
+        )
+      );
+      statsGroup.add(
+        this._createActionRow(
+          _("Mode"),
+          _("Choose whether disk activity is displayed as a single or multiple values."),
+          this._diskStatsModeCombobox
+        )
+      );
+      statsGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how disk activity values are formatted."),
+          this._diskStatsUnitMeasureCombobox
+        )
+      );
+      page.add(statsGroup);
+      page.add(
+        this._createListGroup(
+          _("Statistics Colors"),
+          _("Manage threshold colors for disk activity."),
+          this._diskStatsColorsAddButton,
+          this._diskStatsColorsListbox
+        )
+      );
+
+      const spaceGroup = this._createSettingsGroup(
+        _("Space"),
+        _("Configure disk space indicators.")
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show disk space usage in the top bar."),
+          this._diskSpaceDisplay
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for disk space values."),
+          this._diskSpaceWidthSpinbutton
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Unit"),
+          _("Choose whether to show percentages or numeric values."),
+          this._diskSpaceUnitCombobox
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how numeric disk space values are formatted."),
+          this._diskSpaceUnitMeasureCombobox
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Monitor"),
+          _("Choose whether the indicator tracks used or free space."),
+          this._diskSpaceMonitorCombobox
+        )
+      );
+      page.add(spaceGroup);
+      page.add(
+        this._createListGroup(
+          _("Space Colors"),
+          _("Manage threshold colors for disk space usage."),
+          this._diskSpaceColorsAddButton,
+          this._diskSpaceColorsListbox
+        )
+      );
+
+      const devicesGroup = this._createSettingsGroup(
+        _("Devices"),
+        _("Choose which disks participate in the panel indicators.")
+      );
+      devicesGroup.add(
+        this._createActionRow(
+          _("Display All Devices"),
+          _("Include every detected device in the statistics list."),
+          this._diskDevicesDisplayAll
+        )
+      );
+      devicesGroup.add(this._createColumnViewContainer(this._diskDevicesColumnView));
+      page.add(devicesGroup);
+
+      return page;
+    }
+
+    _buildNativeThermalPage(title) {
+      const page = this._createSectionPage(title);
+
+      const commonGroup = this._createSettingsGroup(
+        _("Common"),
+        _("Configure shared temperature display settings.")
+      );
+      commonGroup.add(
+        this._createActionRow(
+          _("Unit"),
+          _("Choose whether temperatures are displayed in Celsius or Fahrenheit."),
+          this._thermalUnitCombobox
+        )
+      );
+      page.add(commonGroup);
+
+      const cpuGroup = this._createSettingsGroup(
+        _("CPU Temperature"),
+        _("Configure the CPU temperature indicator.")
+      );
+      cpuGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show CPU temperature in the top bar."),
+          this._thermalCpuDisplay
+        )
+      );
+      cpuGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for CPU temperature values."),
+          this._thermalCpuWidthSpinbutton
+        )
+      );
+      page.add(cpuGroup);
+      page.add(
+        this._createListGroup(
+          _("CPU Temperature Colors"),
+          _("Manage threshold colors for CPU temperature."),
+          this._thermalCpuColorsAddButton,
+          this._thermalCpuColorsListbox
+        )
+      );
+
+      const cpuDevicesGroup = this._createSettingsGroup(
+        _("CPU Sensors"),
+        _("Choose which CPU thermal sensors are monitored.")
+      );
+      cpuDevicesGroup.add(
+        this._createColumnViewContainer(this._thermalCpuDevicesColumnView)
+      );
+      page.add(cpuDevicesGroup);
+
+      const gpuGroup = this._createSettingsGroup(
+        _("GPU Temperature"),
+        _("Configure the GPU temperature indicator.")
+      );
+      gpuGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show GPU temperature in the top bar."),
+          this._thermalGpuDisplay
+        )
+      );
+      gpuGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for GPU temperature values."),
+          this._thermalGpuWidthSpinbutton
+        )
+      );
+      page.add(gpuGroup);
+      page.add(
+        this._createListGroup(
+          _("GPU Temperature Colors"),
+          _("Manage threshold colors for GPU temperature."),
+          this._thermalGpuColorsAddButton,
+          this._thermalGpuColorsListbox
+        )
+      );
+
+      const gpuDevicesGroup = this._createSettingsGroup(
+        _("GPU Sensors"),
+        _("Choose which GPU thermal sensors are monitored.")
+      );
+      gpuDevicesGroup.add(
+        this._createColumnViewContainer(this._thermalGpuDevicesColumnView)
+      );
+      page.add(gpuDevicesGroup);
+
+      return page;
+    }
+
+    _buildNativeGpuPage(title) {
+      const page = this._createSectionPage(title);
+
+      const usageGroup = this._createSettingsGroup(
+        _("Usage"),
+        _("Configure the GPU usage indicator.")
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Display"),
+          _("Show GPU usage in the top bar."),
+          this._gpuDisplay
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Width"),
+          _("Reserve a fixed amount of space for GPU usage values."),
+          this._gpuWidthSpinbutton
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Display Device Name"),
+          _("Show the selected GPU name alongside panel values."),
+          this._gpuDisplayDeviceName
+        )
+      );
+      page.add(usageGroup);
+      page.add(
+        this._createListGroup(
+          _("Usage Colors"),
+          _("Manage threshold colors for GPU usage."),
+          this._gpuColorsAddButton,
+          this._gpuColorsListbox
+        )
+      );
+
+      const memoryGroup = this._createSettingsGroup(
+        _("Memory"),
+        _("Configure the GPU memory indicator.")
+      );
+      memoryGroup.add(
+        this._createActionRow(
+          _("Unit"),
+          _("Choose whether to show percentages or numeric values."),
+          this._gpuMemoryUnitCombobox
+        )
+      );
+      memoryGroup.add(
+        this._createActionRow(
+          _("Unit of Measure"),
+          _("Choose how numeric GPU memory values are formatted."),
+          this._gpuMemoryUnitMeasureCombobox
+        )
+      );
+      memoryGroup.add(
+        this._createActionRow(
+          _("Monitor"),
+          _("Choose whether the indicator tracks used or free GPU memory."),
+          this._gpuMemoryMonitorCombobox
+        )
+      );
+      page.add(memoryGroup);
+      page.add(
+        this._createListGroup(
+          _("Memory Colors"),
+          _("Manage threshold colors for GPU memory."),
+          this._gpuMemoryColorsAddButton,
+          this._gpuMemoryColorsListbox
+        )
+      );
+
+      const devicesGroup = this._createSettingsGroup(
+        _("Devices"),
+        _("Choose which GPUs contribute usage and memory indicators.")
+      );
+      devicesGroup.add(this._createColumnViewContainer(this._gpuDevicesColumnView));
+      page.add(devicesGroup);
+
+      return page;
+    }
+
+    fillPreferencesWindow(window) {
+      window.set_default_size(980, 760);
+
+      if (window.set_search_enabled) {
+        window.set_search_enabled(false);
+      }
+
+      window.add(this._buildNativeGlobalPage("Global"));
+      window.add(this._buildNativeCpuPage("Cpu"));
+      window.add(this._buildNativeRamPage("Ram"));
+      window.add(this._buildNativeSwapPage("Swap"));
+      window.add(this._buildNativeDiskPage("Disk"));
+      window.add(this._buildNativeNetPage("Net"));
+      window.add(this._buildNativeThermalPage("Thermal"));
+      window.add(this._buildNativeGpuPage("Gpu"));
+    }
+
+    _buildGlobal() {
+      this._secondsSpinbutton = this._createSpinButton({
+        upper: 10,
+        step: 1,
+        page: 1,
+      });
+      this._extensionPositionCombobox = this._createComboBox([
+        ["left", _("Left")],
+        ["center", _("Center")],
+        ["right", _("Right")],
+      ]);
+      this._extensionLeftClickRadioButtonSM = this._createCheckButton(
+        _("Launch GNOME System Monitor")
+      );
+      this._extensionLeftClickRadioButtonU = this._createCheckButton(
+        _("Launch GNOME Usage"),
+        this._extensionLeftClickRadioButtonSM
+      );
+      this._extensionLeftClickRadioButtonCustom = this._createCheckButton(
+        _("Custom program"),
+        this._extensionLeftClickRadioButtonSM
+      );
+      this._extensionLeftClickEntryCustom = this._createEntry(
+        Gtk.InputPurpose.TERMINAL
+      );
+      this._extensionLeftClickBox = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 12,
+        hexpand: true,
+      });
+      this._extensionLeftClickBox.append(this._extensionLeftClickRadioButtonSM);
+      this._extensionLeftClickBox.append(this._extensionLeftClickRadioButtonU);
+      this._extensionLeftClickBox.append(
+        this._extensionLeftClickRadioButtonCustom
+      );
+      this._extensionLeftClickBox.append(this._extensionLeftClickEntryCustom);
+      this._extensionRightClickPrefs = this._createSwitch();
+      this._decimalsDisplay = this._createSwitch();
+      this._iconsDisplay = this._createSwitch();
+      this._iconsPositionCombobox = this._createComboBox([
+        ["left", _("Left")],
+        ["right", _("Right")],
+      ]);
+      this._itemsPositionListbox = this._createListBox();
+      this._itemsPositionListbox.add_css_class("boxed-list");
+
+      connectSpinButton(
         this._settings,
         REFRESH_TIME,
         this._secondsSpinbutton
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         EXTENSION_POSITION,
         this._extensionPositionCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         RIGHT_CLICK_STATUS,
         this._extensionRightClickPrefs
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         DECIMALS_STATUS,
         this._decimalsDisplay
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         ICONS_STATUS,
         this._iconsDisplay
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         ICONS_POSITION,
         this._iconsPositionCombobox
@@ -381,7 +1379,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const row = new Gtk.ListBoxRow();
         const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
 
-        const up = new Gtk.Button({ icon_name: "go-up" });
+        const up = new Gtk.Button({
+          icon_name: "go-up",
+          tooltip_text: _("Move Up"),
+        });
         up.connect("clicked", (button) => {
           const index = row.get_index();
           if (index > 0) {
@@ -395,7 +1396,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             this._settings.set_strv(ITEMS_POSITION, itemsPositionArray);
           }
         });
-        const down = new Gtk.Button({ icon_name: "go-down" });
+        const down = new Gtk.Button({
+          icon_name: "go-down",
+          tooltip_text: _("Move Down"),
+        });
         down.connect("clicked", (button) => {
           const index = row.get_index();
           if (index < itemsPositionArray.length - 1) {
@@ -427,96 +1431,74 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildCpu() {
-      this._cpuDisplay = this._builder.get_object("cpu_display");
-      this._cpuWidthSpinbutton = this._builder.get_object(
-        "cpu_width_spinbutton"
-      );
-      this._cpuColorsAddButton = this._builder.get_object(
-        "cpu_colors_add_button"
-      );
-      this._cpuColorsListbox = this._builder.get_object("cpu_colors_listbox");
-      this._cpuFrequencyDisplay = this._builder.get_object(
-        "cpu_frequency_display"
-      );
-      this._cpuFrequencyWidthSpinbutton = this._builder.get_object(
-        "cpu_frequency_width_spinbutton"
-      );
-      this._cpuFrequencyColorsAddButton = this._builder.get_object(
-        "cpu_frequency_colors_add_button"
-      );
-      this._cpuFrequencyColorsListbox = this._builder.get_object(
-        "cpu_frequency_colors_listbox"
-      );
-      this._cpuFrequencyUnitMeasureCombobox = this._builder.get_object(
-        "cpu_frequency_unit_measure_combobox"
-      );
-      this._cpuLoadAverageDisplay = this._builder.get_object(
-        "cpu_loadaverage_display"
-      );
-      this._cpuLoadAverageWidthSpinbutton = this._builder.get_object(
-        "cpu_loadaverage_width_spinbutton"
-      );
-      this._cpuLoadAverageColorsAddButton = this._builder.get_object(
-        "cpu_load_average_colors_add_button"
-      );
-      this._cpuLoadAverageColorsListbox = this._builder.get_object(
-        "cpu_load_average_colors_listbox"
-      );
+      this._cpuDisplay = this._createSwitch();
+      this._cpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._cpuColorsAddButton = this._createIconButton("list-add");
+      this._cpuColorsListbox = this._createListBox();
+      this._cpuFrequencyDisplay = this._createSwitch();
+      this._cpuFrequencyWidthSpinbutton = this._createSpinButton({
+        upper: 500,
+      });
+      this._cpuFrequencyColorsAddButton = this._createIconButton("list-add");
+      this._cpuFrequencyColorsListbox = this._createListBox();
+      this._cpuFrequencyUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["k", _("KHz")],
+        ["m", _("MHz")],
+        ["g", _("GHz")],
+      ]);
+      this._cpuLoadAverageDisplay = this._createSwitch();
+      this._cpuLoadAverageWidthSpinbutton = this._createSpinButton({
+        upper: 500,
+      });
+      this._cpuLoadAverageColorsAddButton = this._createIconButton("list-add");
+      this._cpuLoadAverageColorsListbox = this._createListBox();
 
-      this._connectSwitchButton(this._settings, CPU_STATUS, this._cpuDisplay);
-      this._connectSpinButton(
+      connectSwitchButton(this._settings, CPU_STATUS, this._cpuDisplay);
+      connectSpinButton(
         this._settings,
         CPU_WIDTH,
         this._cpuWidthSpinbutton
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         CPU_FREQUENCY_STATUS,
         this._cpuFrequencyDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         CPU_FREQUENCY_WIDTH,
         this._cpuFrequencyWidthSpinbutton
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         CPU_FREQUENCY_UNIT_MEASURE,
         this._cpuFrequencyUnitMeasureCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         CPU_LOADAVERAGE_STATUS,
         this._cpuLoadAverageDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         CPU_LOADAVERAGE_WIDTH,
         this._cpuLoadAverageWidthSpinbutton
       );
 
-      this._cpuDisplay.connect("state-set", (button) => {
-        this._cpuWidthSpinbutton.sensitive = button.active;
-      });
-      this._cpuWidthSpinbutton.sensitive = this._cpuDisplay.active;
-
-      this._cpuFrequencyDisplay.connect("state-set", (button) => {
-        this._cpuFrequencyWidthSpinbutton.sensitive = button.active;
-        this._cpuFrequencyUnitMeasureCombobox.sensitive = button.active;
-      });
-      this._cpuFrequencyWidthSpinbutton.sensitive =
-        this._cpuFrequencyDisplay.active;
-      this._cpuFrequencyUnitMeasureCombobox.sensitive =
-        this._cpuFrequencyDisplay.active;
-
-      this._cpuLoadAverageDisplay.connect("state-set", (button) => {
-        this._cpuLoadAverageWidthSpinbutton.sensitive = button.active;
-      });
-      this._cpuLoadAverageWidthSpinbutton.sensitive =
-        this._cpuLoadAverageDisplay.active;
+      this._initializeToggleControlledSection(this._cpuDisplay, [
+        this._cpuWidthSpinbutton,
+      ]);
+      this._initializeToggleControlledSection(this._cpuFrequencyDisplay, [
+        this._cpuFrequencyWidthSpinbutton,
+        this._cpuFrequencyUnitMeasureCombobox,
+      ]);
+      this._initializeToggleControlledSection(this._cpuLoadAverageDisplay, [
+        this._cpuLoadAverageWidthSpinbutton,
+      ]);
 
       // Cpu Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         CPU_COLORS,
         this._cpuColorsListbox,
@@ -524,7 +1506,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Frequency Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         CPU_FREQUENCY_COLORS,
         this._cpuFrequencyColorsListbox,
@@ -532,7 +1514,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Load Average Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         CPU_LOADAVERAGE_COLORS,
         this._cpuLoadAverageColorsListbox,
@@ -541,274 +1523,203 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildRam() {
-      this._ramDisplay = this._builder.get_object("ram_display");
-      this._ramWidthSpinbutton = this._builder.get_object(
-        "ram_width_spinbutton"
-      );
-      this._ramColorsAddButton = this._builder.get_object(
-        "ram_colors_add_button"
-      );
-      this._ramColorsListbox = this._builder.get_object("ram_colors_listbox");
-      this._ramUnitCombobox = this._builder.get_object("ram_unit_combobox");
-      this._ramUnitMeasureCombobox = this._builder.get_object(
-        "ram_unit_measure_combobox"
-      );
-      this._ramMonitorCombobox = this._builder.get_object(
-        "ram_monitor_combobox"
-      );
-      this._ramAlert = this._builder.get_object("ram_alert");
-      this._ramAlertThresholdSpinbutton = this._builder.get_object(
-        "ram_alert_threshold_spinbutton"
-      );
-
-      this._connectSwitchButton(this._settings, RAM_STATUS, this._ramDisplay);
-      this._connectSpinButton(
-        this._settings,
-        RAM_WIDTH,
-        this._ramWidthSpinbutton
-      );
-      this._connectComboBox(this._settings, RAM_UNIT, this._ramUnitCombobox);
-      this._connectComboBox(
-        this._settings,
-        RAM_UNIT_MEASURE,
-        this._ramUnitMeasureCombobox
-      );
-      this._connectComboBox(
-        this._settings,
-        RAM_MONITOR,
-        this._ramMonitorCombobox
-      );
-      this._connectSwitchButton(this._settings, RAM_ALERT, this._ramAlert);
-      this._connectSpinButton(
-        this._settings,
-        RAM_ALERT_THRESHOLD,
-        this._ramAlertThresholdSpinbutton
-      );
-
-      this._ramDisplay.connect("state-set", (button) => {
-        this._ramWidthSpinbutton.sensitive = button.active;
-        this._ramUnitCombobox.sensitive = button.active;
-        this._ramUnitMeasureCombobox.sensitive = button.active;
-        this._ramMonitorCombobox.sensitive = button.active;
-        this._ramAlert.sensitive = button.active;
-        this._ramAlertThresholdSpinbutton.sensitive = button.active;
+      this._ramDisplay = this._createSwitch();
+      this._ramWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._ramColorsAddButton = this._createIconButton("list-add");
+      this._ramColorsListbox = this._createListBox();
+      this._ramUnitCombobox = this._createComboBox([
+        ["numeric", _("Numeric")],
+        ["perc", "%"],
+      ]);
+      this._ramUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ]);
+      this._ramMonitorCombobox = this._createComboBox([
+        ["used", _("Used Memory")],
+        ["free", _("Free Memory")],
+      ]);
+      this._ramAlert = this._createSwitch();
+      this._ramAlertThresholdSpinbutton = this._createSpinButton({
+        upper: 100,
       });
-      this._ramWidthSpinbutton.sensitive = this._ramDisplay.active;
-      this._ramUnitCombobox.sensitive = this._ramDisplay.active;
-      this._ramUnitMeasureCombobox.sensitive = this._ramDisplay.active;
-      this._ramMonitorCombobox.sensitive = this._ramDisplay.active;
-      this._ramAlert.sensitive = this._ramDisplay.active;
-      this._ramAlertThresholdSpinbutton.sensitive = this._ramAlert.active;
 
-      this._ramAlert.connect("state-set", (button) => {
-        this._ramAlertThresholdSpinbutton.sensitive = button.active;
+      this._initializeUsageMonitor({
+        display: this._ramDisplay,
+        width: this._ramWidthSpinbutton,
+        unit: this._ramUnitCombobox,
+        unitMeasure: this._ramUnitMeasureCombobox,
+        monitor: this._ramMonitorCombobox,
+        alert: this._ramAlert,
+        threshold: this._ramAlertThresholdSpinbutton,
+        statusKey: RAM_STATUS,
+        widthKey: RAM_WIDTH,
+        unitKey: RAM_UNIT,
+        unitMeasureKey: RAM_UNIT_MEASURE,
+        monitorKey: RAM_MONITOR,
+        alertKey: RAM_ALERT,
+        thresholdKey: RAM_ALERT_THRESHOLD,
+        colorsKey: RAM_COLORS,
+        colorsListbox: this._ramColorsListbox,
+        colorsAddButton: this._ramColorsAddButton,
       });
-      this._ramAlertThresholdSpinbutton.sensitive = this._ramAlert.active;
-
-      // Colors
-      this._makeColors(
-        this._settings,
-        RAM_COLORS,
-        this._ramColorsListbox,
-        this._ramColorsAddButton
-      );
     }
 
     _buildSwap() {
-      this._swapDisplay = this._builder.get_object("swap_display");
-      this._swapWidthSpinbutton = this._builder.get_object(
-        "swap_width_spinbutton"
-      );
-      this._swapColorsAddButton = this._builder.get_object(
-        "swap_colors_add_button"
-      );
-      this._swapColorsListbox = this._builder.get_object("swap_colors_listbox");
-      this._swapUnitCombobox = this._builder.get_object("swap_unit_combobox");
-      this._swapUnitMeasureCombobox = this._builder.get_object(
-        "swap_unit_measure_combobox"
-      );
-      this._swapMonitorCombobox = this._builder.get_object(
-        "swap_monitor_combobox"
-      );
-      this._swapAlert = this._builder.get_object("swap_alert");
-      this._swapAlertThresholdSpinbutton = this._builder.get_object(
-        "swap_alert_threshold_spinbutton"
-      );
-
-      this._connectSwitchButton(this._settings, SWAP_STATUS, this._swapDisplay);
-      this._connectSpinButton(
-        this._settings,
-        SWAP_WIDTH,
-        this._swapWidthSpinbutton
-      );
-      this._connectComboBox(this._settings, SWAP_UNIT, this._swapUnitCombobox);
-      this._connectComboBox(
-        this._settings,
-        SWAP_UNIT_MEASURE,
-        this._swapUnitMeasureCombobox
-      );
-      this._connectComboBox(
-        this._settings,
-        SWAP_MONITOR,
-        this._swapMonitorCombobox
-      );
-      this._connectSwitchButton(this._settings, SWAP_ALERT, this._swapAlert);
-      this._connectSpinButton(
-        this._settings,
-        SWAP_ALERT_THRESHOLD,
-        this._swapAlertThresholdSpinbutton
-      );
-
-      this._swapDisplay.connect("state-set", (button) => {
-        this._swapWidthSpinbutton.sensitive = button.active;
-        this._swapUnitCombobox.sensitive = button.active;
-        this._swapUnitMeasureCombobox.sensitive = button.active;
-        this._swapMonitorCombobox.sensitive = button.active;
-        this._swapAlert.sensitive = button.active;
-        this._swapAlertThresholdSpinbutton.sensitive = button.active;
+      this._swapDisplay = this._createSwitch();
+      this._swapWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._swapColorsAddButton = this._createIconButton("list-add");
+      this._swapColorsListbox = this._createListBox();
+      this._swapUnitCombobox = this._createComboBox([
+        ["numeric", _("Numeric")],
+        ["perc", "%"],
+      ]);
+      this._swapUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ]);
+      this._swapMonitorCombobox = this._createComboBox([
+        ["used", _("Used Memory")],
+        ["free", _("Free Memory")],
+      ]);
+      this._swapAlert = this._createSwitch();
+      this._swapAlertThresholdSpinbutton = this._createSpinButton({
+        upper: 100,
       });
-      this._swapWidthSpinbutton.sensitive = this._swapDisplay.active;
-      this._swapUnitCombobox.sensitive = this._swapDisplay.active;
-      this._swapUnitMeasureCombobox.sensitive = this._swapDisplay.active;
-      this._swapMonitorCombobox.sensitive = this._swapDisplay.active;
-      this._swapAlert.sensitive = this._swapDisplay.active;
-      this._swapAlertThresholdSpinbutton.sensitive = this._swapAlert.active;
 
-      this._swapAlert.connect("state-set", (button) => {
-        this._swapAlertThresholdSpinbutton.sensitive = button.active;
+      this._initializeUsageMonitor({
+        display: this._swapDisplay,
+        width: this._swapWidthSpinbutton,
+        unit: this._swapUnitCombobox,
+        unitMeasure: this._swapUnitMeasureCombobox,
+        monitor: this._swapMonitorCombobox,
+        alert: this._swapAlert,
+        threshold: this._swapAlertThresholdSpinbutton,
+        statusKey: SWAP_STATUS,
+        widthKey: SWAP_WIDTH,
+        unitKey: SWAP_UNIT,
+        unitMeasureKey: SWAP_UNIT_MEASURE,
+        monitorKey: SWAP_MONITOR,
+        alertKey: SWAP_ALERT,
+        thresholdKey: SWAP_ALERT_THRESHOLD,
+        colorsKey: SWAP_COLORS,
+        colorsListbox: this._swapColorsListbox,
+        colorsAddButton: this._swapColorsAddButton,
       });
-      this._swapAlertThresholdSpinbutton.sensitive = this._swapAlert.active;
-
-      // Colors
-      this._makeColors(
-        this._settings,
-        SWAP_COLORS,
-        this._swapColorsListbox,
-        this._swapColorsAddButton
-      );
     }
 
     _buildDisk() {
-      this._diskShowDeviceName = this._builder.get_object("disk_show_device_name");
-      this._diskStatsDisplay = this._builder.get_object("disk_stats_display");
-      this._diskStatsWidthSpinbutton = this._builder.get_object(
-        "disk_stats_width_spinbutton"
-      );
-      this._diskStatsColorsAddButton = this._builder.get_object(
-        "disk_stats_colors_add_button"
-      );
-      this._diskStatsColorsListbox = this._builder.get_object(
-        "disk_stats_colors_listbox"
-      );
-      this._diskStatsModeCombobox = this._builder.get_object(
-        "disk_stats_mode_combobox"
-      );
-      this._diskStatsUnitMeasureCombobox = this._builder.get_object(
-        "disk_stats_unit_measure_combobox"
-      );
-      this._diskSpaceDisplay = this._builder.get_object("disk_space_display");
-      this._diskSpaceWidthSpinbutton = this._builder.get_object(
-        "disk_space_width_spinbutton"
-      );
-      this._diskSpaceColorsAddButton = this._builder.get_object(
-        "disk_space_colors_add_button"
-      );
-      this._diskSpaceColorsListbox = this._builder.get_object(
-        "disk_space_colors_listbox"
-      );
-      this._diskSpaceUnitCombobox = this._builder.get_object(
-        "disk_space_unit_combobox"
-      );
-      this._diskSpaceUnitMeasureCombobox = this._builder.get_object(
-        "disk_space_unit_measure_combobox"
-      );
-      this._diskSpaceMonitorCombobox = this._builder.get_object(
-        "disk_space_monitor_combobox"
-      );
-      this._diskDevicesDisplayAll = this._builder.get_object(
-        "disk_devices_display_all"
-      );
-      this._diskDevicesColumnView = this._builder.get_object(
-        "disk_devices_columnview"
-      );
+      this._diskShowDeviceName = this._createSwitch();
+      this._diskStatsDisplay = this._createSwitch();
+      this._diskStatsWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._diskStatsColorsAddButton = this._createIconButton("list-add");
+      this._diskStatsColorsListbox = this._createListBox();
+      this._diskStatsModeCombobox = this._createComboBox([
+        ["single", _("Single Mode")],
+        ["multiple", _("Multiple Mode")],
+      ]);
+      this._diskStatsUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ]);
+      this._diskSpaceDisplay = this._createSwitch();
+      this._diskSpaceWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._diskSpaceColorsAddButton = this._createIconButton("list-add");
+      this._diskSpaceColorsListbox = this._createListBox();
+      this._diskSpaceUnitCombobox = this._createComboBox([
+        ["numeric", _("Numeric")],
+        ["perc", "%"],
+      ]);
+      this._diskSpaceUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ]);
+      this._diskSpaceMonitorCombobox = this._createComboBox([
+        ["used", _("Used Space")],
+        ["free", _("Free Space")],
+      ]);
+      this._diskDevicesDisplayAll = this._createSwitch();
+      this._diskDevicesColumnView = this._createColumnView();
 
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         DISK_SHOW_DEVICE_NAME,
         this._diskShowDeviceName
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         DISK_STATS_STATUS,
         this._diskStatsDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         DISK_STATS_WIDTH,
         this._diskStatsWidthSpinbutton
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         DISK_STATS_MODE,
         this._diskStatsModeCombobox
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         DISK_STATS_UNIT_MEASURE,
         this._diskStatsUnitMeasureCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         DISK_SPACE_STATUS,
         this._diskSpaceDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         DISK_SPACE_WIDTH,
         this._diskSpaceWidthSpinbutton
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         DISK_SPACE_UNIT,
         this._diskSpaceUnitCombobox
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         DISK_SPACE_UNIT_MEASURE,
         this._diskSpaceUnitMeasureCombobox
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         DISK_SPACE_MONITOR,
         this._diskSpaceMonitorCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         DISK_DEVICES_DISPLAY_ALL,
         this._diskDevicesDisplayAll
       );
 
-      this._diskStatsDisplay.connect("state-set", (button) => {
-        this._diskStatsWidthSpinbutton.sensitive = button.active;
-        this._diskStatsModeCombobox.sensitive = button.active;
-        this._diskStatsUnitMeasureCombobox.sensitive = button.active;
-      });
-      this._diskStatsWidthSpinbutton.sensitive = this._diskStatsDisplay.active;
-      this._diskStatsModeCombobox.sensitive = this._diskStatsDisplay.active;
-      this._diskStatsUnitMeasureCombobox.sensitive =
-        this._diskStatsDisplay.active;
-
-      this._diskSpaceDisplay.connect("state-set", (button) => {
-        this._diskSpaceWidthSpinbutton.sensitive = button.active;
-        this._diskSpaceUnitCombobox.sensitive = button.active;
-        this._diskSpaceMonitorCombobox.sensitive = button.active;
-        this._diskSpaceUnitMeasureCombobox.sensitive = button.active;
-      });
-      this._diskSpaceWidthSpinbutton.sensitive = this._diskSpaceDisplay.active;
-      this._diskSpaceUnitCombobox.sensitive = this._diskSpaceDisplay.active;
-      this._diskSpaceMonitorCombobox.sensitive = this._diskSpaceDisplay.active;
-      this._diskSpaceUnitMeasureCombobox.sensitive =
-        this._diskSpaceDisplay.active;
+      this._initializeToggleControlledSection(this._diskStatsDisplay, [
+        this._diskStatsWidthSpinbutton,
+        this._diskStatsModeCombobox,
+        this._diskStatsUnitMeasureCombobox,
+      ]);
+      this._initializeToggleControlledSection(this._diskSpaceDisplay, [
+        this._diskSpaceWidthSpinbutton,
+        this._diskSpaceUnitCombobox,
+        this._diskSpaceMonitorCombobox,
+        this._diskSpaceUnitMeasureCombobox,
+      ]);
 
       // ColumnView
       this._diskDevicesModel = new Gio.ListStore({
@@ -820,153 +1731,52 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._diskDevicesColumnView.set_model(selection);
 
       // Display Name Column
-      const displayNameFactory = new Gtk.SignalListItemFactory();
-      displayNameFactory.connect("setup", (factory, listItem) => {
-        const label = new Gtk.Entry();
-        listItem.set_child(label);
-      });
-      displayNameFactory.connect("bind", (factory, listItem) => {
-        const item = listItem.get_item();
-        const label = listItem.get_child();
-        label.set_text(item.displayName);
-        this._replaceSignalHandler(
-          label,
-          "_resourceMonitorChangedHandlerId",
-          "changed",
-          (entry) => {
-            const [found, index] = this._diskDevicesModel.find(item);
-
-            if (found) {
-              item.setDisplayName(entry.text);
-
-              if (item.displayName !== entry.text) {
-                entry.text = item.displayName;
-              }
-
-              this._diskDevicesModel.splice(index, 1, [item]);
-            }
-          }
-        );
-      });
-      displayNameFactory.connect("unbind", (factory, listItem) => {
-        const label = listItem.get_child();
-        if (label?._resourceMonitorChangedHandlerId) {
-          label.disconnect(label._resourceMonitorChangedHandlerId);
-          label._resourceMonitorChangedHandlerId = null;
-        }
-      });
-
-      const displayNameCol = new Gtk.ColumnViewColumn({
+      this._appendEditableTextColumn(this._diskDevicesColumnView, this._diskDevicesModel, {
         title: "Display Name",
-        factory: displayNameFactory,
-        resizable: true,
+        getText: (item) => item.displayName,
+        setText: (item, text) => item.setDisplayName(text),
       });
-      this._diskDevicesColumnView.append_column(displayNameCol);
 
       // Device Column
-      const deviceFactory = this._createLabelFactory((item) => item.device);
+      const deviceFactory = createLabelFactory((item) => item.device);
 
       const deviceCol = new Gtk.ColumnViewColumn({
-        title: "Device",
+        title: _("Device"),
         factory: deviceFactory,
         resizable: true,
       });
       this._diskDevicesColumnView.append_column(deviceCol);
 
       // Mount Point Column
-      const mountPointFactory = this._createLabelFactory(
+      const mountPointFactory = createLabelFactory(
         (item) => item.mountPoint
       );
 
       const mountPointCol = new Gtk.ColumnViewColumn({
-        title: "Mount Point",
+        title: _("Mount Point"),
         factory: mountPointFactory,
         resizable: true,
       });
       this._diskDevicesColumnView.append_column(mountPointCol);
 
       // Stats Column
-      const statsFactory = new Gtk.SignalListItemFactory();
-      statsFactory.connect("setup", (factory, listItem) => {
-        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
-        listItem.set_child(toggle);
-      });
-      statsFactory.connect("bind", (factory, listItem) => {
-        const item = listItem.get_item();
-        const toggle = listItem.get_child();
-
-        // Set the initial state of the toggle button
-        toggle.set_active(item.stats);
-
-        this._replaceSignalHandler(
-          toggle,
-          "_resourceMonitorToggleHandlerId",
-          "toggled",
-          (toggleButton) => {
-            const [found, index] = this._diskDevicesModel.find(item);
-            if (found) {
-              item.stats = toggleButton.active;
-              this._diskDevicesModel.splice(index, 1, [item]);
-            }
-          }
-        );
-      });
-      statsFactory.connect("unbind", (factory, listItem) => {
-        const toggle = listItem.get_child();
-        if (toggle?._resourceMonitorToggleHandlerId) {
-          toggle.disconnect(toggle._resourceMonitorToggleHandlerId);
-          toggle._resourceMonitorToggleHandlerId = null;
-        }
-      });
-
-      const statsCol = new Gtk.ColumnViewColumn({
+      this._appendToggleColumn(this._diskDevicesColumnView, this._diskDevicesModel, {
         title: "Stats",
-        factory: statsFactory,
-        resizable: true,
+        getValue: (item) => item.stats,
+        setValue: (item, value) => {
+          item.stats = value;
+        },
       });
-      this._diskDevicesColumnView.append_column(statsCol);
 
       // Space Column
-      const spaceFactory = new Gtk.SignalListItemFactory();
-      spaceFactory.connect("setup", (factory, listItem) => {
-        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
-        listItem.set_child(toggle);
-      });
-      spaceFactory.connect("bind", (factory, listItem) => {
-        const item = listItem.get_item();
-        const toggle = listItem.get_child();
-
-        // Set the initial state of the toggle button
-        toggle.set_active(item.space);
-        toggle.sensitive = item.mountPoint !== "";
-
-        this._replaceSignalHandler(
-          toggle,
-          "_resourceMonitorToggleHandlerId",
-          "toggled",
-          (toggleButton) => {
-            const [found, index] = this._diskDevicesModel.find(item);
-            if (found) {
-              item.space = toggleButton.active;
-              this._diskDevicesModel.splice(index, 1, [item]);
-            }
-          }
-        );
-      });
-      spaceFactory.connect("unbind", (factory, listItem) => {
-        const toggle = listItem.get_child();
-        if (toggle?._resourceMonitorToggleHandlerId) {
-          toggle.disconnect(toggle._resourceMonitorToggleHandlerId);
-          toggle._resourceMonitorToggleHandlerId = null;
-        }
-      });
-
-      const spaceCol = new Gtk.ColumnViewColumn({
+      this._appendToggleColumn(this._diskDevicesColumnView, this._diskDevicesModel, {
         title: "Space",
-        factory: spaceFactory,
-        resizable: true,
+        getValue: (item) => item.space,
+        setValue: (item, value) => {
+          item.space = value;
+        },
+        sensitive: (item) => item.mountPoint !== "",
       });
-      this._diskDevicesColumnView.append_column(spaceCol);
 
       // Display All
       this._diskDevicesDisplayAll.connect("state-set", (button) => {
@@ -987,7 +1797,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._diskDevicesModel.connect(
         "items-changed",
         () => {
-          this._saveArrayToSettings(
+          saveArrayToSettings(
             this._diskDevicesModel,
             this._settings,
             DISK_DEVICES_LIST
@@ -996,7 +1806,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Stats Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         DISK_STATS_COLORS,
         this._diskStatsColorsListbox,
@@ -1004,7 +1814,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Space Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         DISK_SPACE_COLORS,
         this._diskSpaceColorsListbox,
@@ -1015,13 +1825,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     _readDiskDevices(settings, model, loadAll) {
       model.remove_all();
 
-      const disksArray = this._parseSettingsArray(
+      const disksArray = parseSettingsArray(
         settings,
         DISK_DEVICES_LIST,
         parseDiskEntry
       );
 
-      this._executeCommand([
+      executeCommand([
         "df",
         "--output=source,target",
         "-x",
@@ -1071,7 +1881,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
           if (loadAll) {
             // Load additional devices from /proc/diskstats if needed
-            this._loadFile("/proc/diskstats")
+            loadFile("/proc/diskstats")
               .then((contents) => {
                 const lines = new TextDecoder().decode(contents).split("\n");
 
@@ -1123,7 +1933,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 }
 
                 // Save updated disksArray to settings
-                this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+                saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
               })
               .catch((err) =>
                 console.error(
@@ -1133,7 +1943,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               );
           } else {
             // Save updated disksArray to settings
-            this._saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+            saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
           }
         })
         .catch((err) =>
@@ -1142,76 +1952,69 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildNet() {
-      this._netAutoHide = this._builder.get_object("net_auto_hide");
-      this._netUnitCombobox = this._builder.get_object("net_unit_combobox");
-      this._netUnitMeasureCombobox = this._builder.get_object(
-        "net_unit_measure_combobox"
-      );
-      this._netEthDisplay = this._builder.get_object("net_eth_display");
-      this._netEthWidthSpinbutton = this._builder.get_object(
-        "net_eth_width_spinbutton"
-      );
-      this._netEthColorsAddButton = this._builder.get_object(
-        "net_eth_colors_add_button"
-      );
-      this._netEthColorsListbox = this._builder.get_object(
-        "net_eth_colors_listbox"
-      );
-      this._netWlanDisplay = this._builder.get_object("net_wlan_display");
-      this._netWlanWidthSpinbutton = this._builder.get_object(
-        "net_wlan_width_spinbutton"
-      );
-      this._netWlanColorsAddButton = this._builder.get_object(
-        "net_wlan_colors_add_button"
-      );
-      this._netWlanColorsListbox = this._builder.get_object(
-        "net_wlan_colors_listbox"
-      );
+      this._netAutoHide = this._createSwitch();
+      this._netUnitCombobox = this._createComboBox([
+        ["bytes", _("Bps")],
+        ["bits", _("bps")],
+      ]);
+      this._netUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["b", _("Byte/Bit")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ]);
+      this._netEthDisplay = this._createSwitch();
+      this._netEthWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._netEthColorsAddButton = this._createIconButton("list-add");
+      this._netEthColorsListbox = this._createListBox();
+      this._netWlanDisplay = this._createSwitch();
+      this._netWlanWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._netWlanColorsAddButton = this._createIconButton("list-add");
+      this._netWlanColorsListbox = this._createListBox();
 
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         NET_AUTO_HIDE_STATUS,
         this._netAutoHide
       );
-      this._connectComboBox(this._settings, NET_UNIT, this._netUnitCombobox);
-      this._connectComboBox(
+      connectComboBox(this._settings, NET_UNIT, this._netUnitCombobox);
+      connectComboBox(
         this._settings,
         NET_UNIT_MEASURE,
         this._netUnitMeasureCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         NET_ETH_STATUS,
         this._netEthDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         NET_ETH_WIDTH,
         this._netEthWidthSpinbutton
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         NET_WLAN_STATUS,
         this._netWlanDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         NET_WLAN_WIDTH,
         this._netWlanWidthSpinbutton
       );
 
-      this._netEthDisplay.connect("state-set", (button) => {
-        this._netEthWidthSpinbutton.sensitive = button.active;
-      });
-      this._netEthWidthSpinbutton.sensitive = this._netEthDisplay.active;
-
-      this._netWlanDisplay.connect("state-set", (button) => {
-        this._netWlanWidthSpinbutton.sensitive = button.active;
-      });
-      this._netWlanWidthSpinbutton.sensitive = this._netWlanDisplay.active;
+      this._initializeToggleControlledSection(this._netEthDisplay, [
+        this._netEthWidthSpinbutton,
+      ]);
+      this._initializeToggleControlledSection(this._netWlanDisplay, [
+        this._netWlanWidthSpinbutton,
+      ]);
 
       // Eth Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         NET_ETH_COLORS,
         this._netEthColorsListbox,
@@ -1219,7 +2022,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Wlan Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         NET_WLAN_COLORS,
         this._netWlanColorsListbox,
@@ -1228,82 +2031,62 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildThermal() {
-      this._thermalUnitCombobox = this._builder.get_object(
-        "thermal_unit_combobox"
-      );
-      this._thermalCpuDisplay = this._builder.get_object("thermal_cpu_display");
-      this._thermalCpuWidthSpinbutton = this._builder.get_object(
-        "thermal_cpu_width_spinbutton"
-      );
-      this._thermalCpuColorsAddButton = this._builder.get_object(
-        "thermal_cpu_colors_add_button"
-      );
-      this._thermalCpuColorsListbox = this._builder.get_object(
-        "thermal_cpu_colors_listbox"
-      );
-      this._thermalCpuDevicesColumnView = this._builder.get_object(
-        "thermal_cpu_devices_columnview"
-      );
-      this._thermalGpuDisplay = this._builder.get_object("thermal_gpu_display");
-      this._thermalGpuWidthSpinbutton = this._builder.get_object(
-        "thermal_gpu_width_spinbutton"
-      );
-      this._thermalGpuColorsAddButton = this._builder.get_object(
-        "thermal_gpu_colors_add_button"
-      );
-      this._thermalGpuColorsListbox = this._builder.get_object(
-        "thermal_gpu_colors_listbox"
-      );
-      this._thermalGpuDevicesColumnView = this._builder.get_object(
-        "thermal_gpu_devices_columnview"
-      );
+      this._thermalUnitCombobox = this._createComboBox([
+        ["c", _("°C")],
+        ["f", _("°F")],
+      ]);
+      this._thermalCpuDisplay = this._createSwitch();
+      this._thermalCpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._thermalCpuColorsAddButton = this._createIconButton("list-add");
+      this._thermalCpuColorsListbox = this._createListBox();
+      this._thermalCpuDevicesColumnView = this._createColumnView();
+      this._thermalGpuDisplay = this._createSwitch();
+      this._thermalGpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._thermalGpuColorsAddButton = this._createIconButton("list-add");
+      this._thermalGpuColorsListbox = this._createListBox();
+      this._thermalGpuDevicesColumnView = this._createColumnView();
 
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         THERMAL_TEMPERATURE_UNIT,
         this._thermalUnitCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         THERMAL_CPU_TEMPERATURE_STATUS,
         this._thermalCpuDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         THERMAL_CPU_TEMPERATURE_WIDTH,
         this._thermalCpuWidthSpinbutton
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         THERMAL_GPU_TEMPERATURE_STATUS,
         this._thermalGpuDisplay
       );
-      this._connectSpinButton(
+      connectSpinButton(
         this._settings,
         THERMAL_GPU_TEMPERATURE_WIDTH,
         this._thermalGpuWidthSpinbutton
       );
 
-      this._thermalCpuDisplay.connect("state-set", (button) => {
-        this._thermalCpuWidthSpinbutton.sensitive = button.active;
-      });
-      this._thermalCpuWidthSpinbutton.sensitive =
-        this._thermalCpuDisplay.active;
-
-      this._thermalGpuDisplay.connect("state-set", (button) => {
-        this._thermalGpuWidthSpinbutton.sensitive = button.active;
-      });
-      this._thermalGpuWidthSpinbutton.sensitive =
-        this._thermalGpuDisplay.active;
+      this._initializeToggleControlledSection(this._thermalCpuDisplay, [
+        this._thermalCpuWidthSpinbutton,
+      ]);
+      this._initializeToggleControlledSection(this._thermalGpuDisplay, [
+        this._thermalGpuWidthSpinbutton,
+      ]);
 
       // CPU
       // ColumnView
-      this._thermalCpuDevicesModel = this._makeThermalColumnView(
+      this._thermalCpuDevicesModel = makeThermalColumnView(
         this._thermalCpuDevicesColumnView,
         ThermalCpuElement
       );
 
-      let cpuTempsArray = this._parseSettingsArray(
+      let cpuTempsArray = parseSettingsArray(
         this._settings,
         THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
         parseThermalCpuEntry
@@ -1311,7 +2094,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // Detect sensors
       // let command = 'for i in /sys/class/hwmon/hwmon*/temp*_input; do echo "$(<$(dirname $i)/name): $(cat ${i%_*}_label 2>/dev/null || echo $(basename ${i%_*})) $(readlink -f $i)"; done';
-      this._executeCommand([
+      executeCommand([
         "bash",
         "-c",
         'if ls /sys/class/hwmon/hwmon*/temp*_input 1>/dev/null 2>&1; then echo "EXIST"; fi',
@@ -1321,7 +2104,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
           if (result === "EXIST") {
             // Execute command to detect relevant temperature sensors
-            this._executeCommand([
+            executeCommand([
               "bash",
               "-c",
               'for i in /sys/class/hwmon/hwmon*/temp*_input; do NAME="$(<$(dirname "$i")/name)"; if [[ "$NAME" == "coretemp" ]] || [[ "$NAME" == "k10temp" ]] || [[ "$NAME" == "zenpower" ]]; then echo "$NAME: $(cat "${i%_*}_label" 2>/dev/null || basename "${i%_*}")|$i"; fi done',
@@ -1349,7 +2132,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 }
 
                 // Save updated CPU temperature array to settings
-                this._saveArrayToSettings(
+                saveArrayToSettings(
                   this._thermalCpuDevicesModel,
                   this._settings,
                   THERMAL_CPU_TEMPERATURE_DEVICES_LIST
@@ -1374,7 +2157,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalCpuDevicesModel.connect(
         "items-changed",
         () => {
-          this._saveArrayToSettings(
+          saveArrayToSettings(
             this._thermalCpuDevicesModel,
             this._settings,
             THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
@@ -1383,7 +2166,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         THERMAL_CPU_COLORS,
         this._thermalCpuColorsListbox,
@@ -1392,19 +2175,19 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // GPU
       // ColumnView
-      this._thermalGpuDevicesModel = this._makeThermalColumnView(
+      this._thermalGpuDevicesModel = makeThermalColumnView(
         this._thermalGpuDevicesColumnView,
         ThermalGpuElement
       );
 
-      let gpuTempsArray = this._parseSettingsArray(
+      let gpuTempsArray = parseSettingsArray(
         this._settings,
         THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
         parseThermalGpuEntry
       );
 
       // NVIDIA GPU detection
-      this._executeCommand(["nvidia-smi", "-L"])
+      executeCommand(["nvidia-smi", "-L"])
         .then((output) => {
           const lines = output.trim().split("\n");
 
@@ -1432,7 +2215,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           }
 
           // Save updated GPU temperatures to settings
-          this._saveArrayToSettings(
+          saveArrayToSettings(
             this._thermalGpuDevicesModel,
             this._settings,
             THERMAL_GPU_TEMPERATURE_DEVICES_LIST
@@ -1449,7 +2232,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalGpuDevicesModel.connect(
         "items-changed",
         () => {
-          this._saveArrayToSettings(
+          saveArrayToSettings(
             this._thermalGpuDevicesModel,
             this._settings,
             THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
@@ -1458,7 +2241,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         THERMAL_GPU_COLORS,
         this._thermalGpuColorsListbox,
@@ -1467,75 +2250,64 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildGpu() {
-      this._gpuDisplay = this._builder.get_object("gpu_display");
-      this._gpuWidthSpinbutton = this._builder.get_object(
-        "gpu_width_spinbutton"
-      );
-      this._gpuColorsAddButton = this._builder.get_object(
-        "gpu_colors_add_button"
-      );
-      this._gpuColorsListbox = this._builder.get_object("gpu_colors_listbox");
-      this._gpuMemoryColorsAddButton = this._builder.get_object(
-        "gpu_memory_colors_add_button"
-      );
-      this._gpuMemoryColorsListbox = this._builder.get_object(
-        "gpu_memory_colors_listbox"
-      );
-      this._gpuMemoryUnitCombobox = this._builder.get_object(
-        "gpu_memory_unit_combobox"
-      );
-      this._gpuMemoryUnitMeasureCombobox = this._builder.get_object(
-        "gpu_memory_unit_measure_combobox"
-      );
-      this._gpuMemoryMonitorCombobox = this._builder.get_object(
-        "gpu_memory_monitor_combobox"
-      );
-      this._gpuDisplayDeviceName = this._builder.get_object(
-        "gpu_display_device_name"
-      );
-      this._gpuDevicesColumnView = this._builder.get_object(
-        "gpu_devices_columnview"
-      );
+      this._gpuDisplay = this._createSwitch();
+      this._gpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._gpuColorsAddButton = this._createIconButton("list-add");
+      this._gpuColorsListbox = this._createListBox();
+      this._gpuMemoryColorsAddButton = this._createIconButton("list-add");
+      this._gpuMemoryColorsListbox = this._createListBox();
+      this._gpuMemoryUnitCombobox = this._createComboBox([
+        ["numeric", _("Numeric")],
+        ["perc", "%"],
+      ]);
+      this._gpuMemoryUnitMeasureCombobox = this._createComboBox([
+        ["auto", _("Auto")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ]);
+      this._gpuMemoryMonitorCombobox = this._createComboBox([
+        ["used", _("Used Memory")],
+        ["free", _("Free Memory")],
+      ]);
+      this._gpuDisplayDeviceName = this._createSwitch();
+      this._gpuDevicesColumnView = this._createColumnView();
 
-      this._connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
-      this._connectSpinButton(
+      connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
+      connectSpinButton(
         this._settings,
         GPU_WIDTH,
         this._gpuWidthSpinbutton
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         GPU_MEMORY_UNIT,
         this._gpuMemoryUnitCombobox
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         GPU_MEMORY_UNIT_MEASURE,
         this._gpuMemoryUnitMeasureCombobox
       );
-      this._connectComboBox(
+      connectComboBox(
         this._settings,
         GPU_MEMORY_MONITOR,
         this._gpuMemoryMonitorCombobox
       );
-      this._connectSwitchButton(
+      connectSwitchButton(
         this._settings,
         GPU_DISPLAY_DEVICE_NAME,
         this._gpuDisplayDeviceName
       );
 
-      this._gpuDisplay.connect("state-set", (button) => {
-        this._gpuWidthSpinbutton.sensitive = button.active;
-        this._gpuMemoryUnitCombobox.sensitive = button.active;
-        this._gpuMemoryUnitMeasureCombobox.sensitive = button.active;
-        this._gpuMemoryMonitorCombobox.sensitive = button.active;
-        this._gpuDisplayDeviceName.sensitive = button.active;
-      });
-      this._gpuWidthSpinbutton.sensitive = this._gpuDisplay.active;
-      this._gpuMemoryUnitCombobox.sensitive = this._gpuDisplay.active;
-      this._gpuMemoryUnitMeasureCombobox.sensitive = this._gpuDisplay.active;
-      this._gpuMemoryMonitorCombobox.sensitive = this._gpuDisplay.active;
-      this._gpuDisplayDeviceName.sensitive = this._gpuDisplay.active;
+      this._initializeToggleControlledSection(this._gpuDisplay, [
+        this._gpuWidthSpinbutton,
+        this._gpuMemoryUnitCombobox,
+        this._gpuMemoryUnitMeasureCombobox,
+        this._gpuMemoryMonitorCombobox,
+        this._gpuDisplayDeviceName,
+      ]);
 
       // ColumnView
       this._gpuDevicesModel = new Gio.ListStore({
@@ -1547,159 +2319,58 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuDevicesColumnView.set_model(selection);
 
       // Display Name Column
-      const displayNameFactory = new Gtk.SignalListItemFactory();
-      displayNameFactory.connect("setup", (factory, listItem) => {
-        const label = new Gtk.Entry();
-        listItem.set_child(label);
-      });
-      displayNameFactory.connect("bind", (factory, listItem) => {
-        const item = listItem.get_item();
-        const label = listItem.get_child();
-        label.set_text(item.displayName);
-        this._replaceSignalHandler(
-          label,
-          "_resourceMonitorChangedHandlerId",
-          "changed",
-          (entry) => {
-            const [found, index] = this._gpuDevicesModel.find(item);
-
-            if (found) {
-              item.setDisplayName(entry.text);
-
-              if (item.displayName !== entry.text) {
-                entry.text = item.displayName;
-              }
-
-              this._gpuDevicesModel.splice(index, 1, [item]);
-            }
-          }
-        );
-      });
-      displayNameFactory.connect("unbind", (factory, listItem) => {
-        const label = listItem.get_child();
-        if (label?._resourceMonitorChangedHandlerId) {
-          label.disconnect(label._resourceMonitorChangedHandlerId);
-          label._resourceMonitorChangedHandlerId = null;
-        }
-      });
-
-      const displayNameCol = new Gtk.ColumnViewColumn({
+      this._appendEditableTextColumn(this._gpuDevicesColumnView, this._gpuDevicesModel, {
         title: "Display Name",
-        factory: displayNameFactory,
-        resizable: true,
+        getText: (item) => item.displayName,
+        setText: (item, text) => item.setDisplayName(text),
       });
-      this._gpuDevicesColumnView.append_column(displayNameCol);
 
       // Device Column
-      const deviceFactory = this._createLabelFactory((item) => item.device);
+      const deviceFactory = createLabelFactory((item) => item.device);
 
       const deviceCol = new Gtk.ColumnViewColumn({
-        title: "Device",
+        title: _("Device"),
         factory: deviceFactory,
         resizable: true,
       });
       this._gpuDevicesColumnView.append_column(deviceCol);
 
       // Name Column
-      const nameFactory = this._createLabelFactory((item) => item.name);
+      const nameFactory = createLabelFactory((item) => item.name);
 
       const nameCol = new Gtk.ColumnViewColumn({
-        title: "Name",
+        title: _("Name"),
         factory: nameFactory,
         resizable: true,
       });
       this._gpuDevicesColumnView.append_column(nameCol);
 
       // Usage Column
-      const usageFactory = new Gtk.SignalListItemFactory();
-      usageFactory.connect("setup", (factory, listItem) => {
-        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
-        listItem.set_child(toggle);
-      });
-      usageFactory.connect("bind", (factory, listItem) => {
-        const item = listItem.get_item();
-        const toggle = listItem.get_child();
-
-        // Set the initial state of the toggle button
-        toggle.set_active(item.usage);
-
-        this._replaceSignalHandler(
-          toggle,
-          "_resourceMonitorToggleHandlerId",
-          "toggled",
-          (toggleButton) => {
-            const [found, index] = this._gpuDevicesModel.find(item);
-            if (found) {
-              item.usage = toggleButton.active;
-              this._gpuDevicesModel.splice(index, 1, [item]);
-            }
-          }
-        );
-      });
-      usageFactory.connect("unbind", (factory, listItem) => {
-        const toggle = listItem.get_child();
-        if (toggle?._resourceMonitorToggleHandlerId) {
-          toggle.disconnect(toggle._resourceMonitorToggleHandlerId);
-          toggle._resourceMonitorToggleHandlerId = null;
-        }
-      });
-
-      const usageCol = new Gtk.ColumnViewColumn({
+      this._appendToggleColumn(this._gpuDevicesColumnView, this._gpuDevicesModel, {
         title: "Usage Monitor",
-        factory: usageFactory,
-        resizable: true,
+        getValue: (item) => item.usage,
+        setValue: (item, value) => {
+          item.usage = value;
+        },
       });
-      this._gpuDevicesColumnView.append_column(usageCol);
 
       // Memory Column
-      const memoryFactory = new Gtk.SignalListItemFactory();
-      memoryFactory.connect("setup", (factory, listItem) => {
-        const toggle = new Gtk.CheckButton({ halign: Gtk.Align.CENTER });
-        listItem.set_child(toggle);
-      });
-      memoryFactory.connect("bind", (factory, listItem) => {
-        const item = listItem.get_item();
-        const toggle = listItem.get_child();
-
-        // Set the initial state of the toggle button
-        toggle.set_active(item.memory);
-
-        this._replaceSignalHandler(
-          toggle,
-          "_resourceMonitorToggleHandlerId",
-          "toggled",
-          (toggleButton) => {
-            const [found, index] = this._gpuDevicesModel.find(item);
-            if (found) {
-              item.memory = toggleButton.active;
-              this._gpuDevicesModel.splice(index, 1, [item]);
-            }
-          }
-        );
-      });
-      memoryFactory.connect("unbind", (factory, listItem) => {
-        const toggle = listItem.get_child();
-        if (toggle?._resourceMonitorToggleHandlerId) {
-          toggle.disconnect(toggle._resourceMonitorToggleHandlerId);
-          toggle._resourceMonitorToggleHandlerId = null;
-        }
-      });
-
-      const memoryCol = new Gtk.ColumnViewColumn({
+      this._appendToggleColumn(this._gpuDevicesColumnView, this._gpuDevicesModel, {
         title: "Memory Monitor",
-        factory: memoryFactory,
-        resizable: true,
+        getValue: (item) => item.memory,
+        setValue: (item, value) => {
+          item.memory = value;
+        },
       });
-      this._gpuDevicesColumnView.append_column(memoryCol);
 
-      let gpuDevicesArray = this._parseSettingsArray(
+      let gpuDevicesArray = parseSettingsArray(
         this._settings,
         GPU_DEVICES_LIST,
         parseGpuEntry
       );
 
       // NVIDIA GPU detection
-      this._executeCommand(["nvidia-smi", "-L"])
+      executeCommand(["nvidia-smi", "-L"])
         .then((output) => {
           const lines = output.trim().split("\n");
 
@@ -1731,7 +2402,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           }
 
           // Save updated GPU array to settings
-          this._saveArrayToSettings(
+          saveArrayToSettings(
             this._gpuDevicesModel,
             this._settings,
             GPU_DEVICES_LIST
@@ -1748,7 +2419,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuDevicesModel.connect(
         "items-changed",
         () => {
-          this._saveArrayToSettings(
+          saveArrayToSettings(
             this._gpuDevicesModel,
             this._settings,
             GPU_DEVICES_LIST
@@ -1757,7 +2428,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Gpu Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         GPU_COLORS,
         this._gpuColorsListbox,
@@ -1765,7 +2436,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       // Memory Colors
-      this._makeColors(
+      makeColors(
         this._settings,
         GPU_MEMORY_COLORS,
         this._gpuMemoryColorsListbox,
@@ -1773,32 +2444,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
     }
 
-    _loadContents(file, cancellable = null) {
-      return loadContents(file, cancellable);
-    }
-
-    async _loadFile(path, cancellable = null) {
-      return loadFile(path, cancellable);
-    }
-
-    _readOutput(proc, cancellable = null) {
-      return readOutput(proc, cancellable);
-    }
-
-    async _executeCommand(command, cancellable = null) {
-      return executeCommand(command, cancellable);
-    }
   }
 );
 
 export default class ResourceMonitorExtensionPreferences extends ExtensionPreferences {
-  getPreferencesWidget() {
+  fillPreferencesWindow(window) {
     const widget = new ResourceMonitorPrefsWidget({
       settings: this.getSettings(),
       dir: this.dir,
       metadata: this.metadata,
     });
 
-    return widget.notebook;
+    widget.fillPreferencesWindow(window);
   }
 }

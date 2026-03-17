@@ -19,6 +19,7 @@
  */
 
 import GObject from "gi://GObject";
+import Atk from "gi://Atk";
 import St from "gi://St";
 import Gio from "gi://Gio";
 import Clutter from "gi://Clutter";
@@ -28,6 +29,7 @@ import NM from "gi://NM";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
+import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import * as Util from "resource:///org/gnome/shell/misc/util.js";
 import {
   Extension,
@@ -41,32 +43,51 @@ import {
   serializeThermalCpuEntry,
 } from "./common.js";
 import {
-  convertTemperature,
   convertValueToUnit,
   convertValuesToUnit,
   getUsageColor,
   getValueFixed,
 } from "./runtime/metrics.js";
 import {
-  buildCpuUsageSample,
-  parseCpuFrequencyOutput,
-  parseLoadAverageDisplay,
-} from "./runtime/cpu.js";
-import { buildMemoryDisplay } from "./runtime/memory.js";
-import {
-  buildDiskSpaceDisplay,
-  parseDiskSpaceTable,
-  parseDiskStatsEntries,
-} from "./runtime/disk.js";
-import { buildNetworkSample } from "./runtime/network.js";
-import { parseGpuSmiOutput } from "./runtime/gpu.js";
-import {
   executeCommand as executeRuntimeCommand,
   loadContents as loadRuntimeContents,
   loadFile as loadRuntimeFile,
   readOutput as readRuntimeOutput,
 } from "./runtime/io.js";
-import { buildCpuTemperatureDisplay } from "./runtime/thermal.js";
+import { buildMainGui, createMainGui } from "./panel/mainGui.js";
+import {
+  detectCapabilities,
+  IssueLogger,
+  RefreshTaskRunner,
+} from "./services/runtime.js";
+import {
+  connectSettingsSignals,
+  initializeSettings,
+  refreshGui,
+} from "./services/settings.js";
+import { parseSettingsArray } from "./utils/settings.js";
+import {
+  hasVisibleCpuFrequency,
+  hasVisibleGpu,
+  hasVisibleThermalCpuTemperature,
+  syncCpuFrequencyVisibility,
+  syncGpuVisibility,
+  syncThermalCpuVisibility,
+} from "./services/visibility.js";
+import {
+  refreshCpuLoadAverageValue,
+  refreshCpuFrequencyValue,
+  refreshCpuTemperatureValue,
+  refreshCpuValue,
+  refreshDiskSpaceValue,
+  refreshDiskStatsValue,
+  refreshEthValue,
+  refreshGpuValue,
+  refreshHandler,
+  refreshRamValue,
+  refreshSwapValue,
+  refreshWlanValue,
+} from "./services/refreshers.js";
 
 // Settings
 const REFRESH_TIME = "refreshtime";
@@ -158,6 +179,87 @@ const GPU_DISPLAY_DEVICE_NAME = "gpudisplaydevicename";
 const GPU_DEVICES_LIST = "gpudeviceslist";
 const GPU_DEVICES_LIST_SEPARATOR = ":";
 
+const SETTINGS_KEYS = {
+  REFRESH_TIME,
+  DECIMALS_STATUS,
+  LEFT_CLICK_STATUS,
+  RIGHT_CLICK_STATUS,
+  ICONS_STATUS,
+  ICONS_POSITION,
+  ITEMS_POSITION,
+  CPU_STATUS,
+  CPU_WIDTH,
+  CPU_COLORS,
+  CPU_FREQUENCY_STATUS,
+  CPU_FREQUENCY_WIDTH,
+  CPU_FREQUENCY_COLORS,
+  CPU_FREQUENCY_UNIT_MEASURE,
+  CPU_LOADAVERAGE_STATUS,
+  CPU_LOADAVERAGE_WIDTH,
+  CPU_LOADAVERAGE_COLORS,
+  RAM_STATUS,
+  RAM_WIDTH,
+  RAM_COLORS,
+  RAM_UNIT,
+  RAM_UNIT_MEASURE,
+  RAM_MONITOR,
+  RAM_ALERT,
+  RAM_ALERT_THRESHOLD,
+  SWAP_STATUS,
+  SWAP_WIDTH,
+  SWAP_COLORS,
+  SWAP_UNIT,
+  SWAP_UNIT_MEASURE,
+  SWAP_MONITOR,
+  SWAP_ALERT,
+  SWAP_ALERT_THRESHOLD,
+  DISK_SHOW_DEVICE_NAME,
+  DISK_STATS_STATUS,
+  DISK_STATS_WIDTH,
+  DISK_STATS_COLORS,
+  DISK_STATS_MODE,
+  DISK_STATS_UNIT_MEASURE,
+  DISK_SPACE_STATUS,
+  DISK_SPACE_WIDTH,
+  DISK_SPACE_COLORS,
+  DISK_SPACE_UNIT,
+  DISK_SPACE_UNIT_MEASURE,
+  DISK_SPACE_MONITOR,
+  DISK_DEVICES_LIST,
+  NET_AUTO_HIDE_STATUS,
+  NET_UNIT,
+  NET_UNIT_MEASURE,
+  NET_ETH_STATUS,
+  NET_ETH_WIDTH,
+  NET_ETH_COLORS,
+  NET_WLAN_STATUS,
+  NET_WLAN_WIDTH,
+  NET_WLAN_COLORS,
+  THERMAL_TEMPERATURE_UNIT,
+  THERMAL_CPU_TEMPERATURE_STATUS,
+  THERMAL_CPU_TEMPERATURE_WIDTH,
+  THERMAL_CPU_COLORS,
+  THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
+  THERMAL_GPU_TEMPERATURE_STATUS,
+  THERMAL_GPU_TEMPERATURE_WIDTH,
+  THERMAL_GPU_COLORS,
+  THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
+  GPU_STATUS,
+  GPU_WIDTH,
+  GPU_COLORS,
+  GPU_MEMORY_COLORS,
+  GPU_MEMORY_UNIT,
+  GPU_MEMORY_UNIT_MEASURE,
+  GPU_MEMORY_MONITOR,
+  GPU_DISPLAY_DEVICE_NAME,
+  GPU_DEVICES_LIST,
+  parseDiskEntry,
+  parseThermalCpuEntry,
+  parseThermalGpuEntry,
+  parseGpuEntry,
+  NM,
+};
+
 const ResourceMonitor = GObject.registerClass(
   class ResourceMonitor extends PanelMenu.Button {
     _init({ settings, openPreferences, path, metadata }) {
@@ -172,6 +274,9 @@ const ResourceMonitor = GObject.registerClass(
       this._scaleFactor = 1;
       this._destroyed = false;
       this._ioCancellable = new Gio.Cancellable();
+      this._refreshTaskRunner = new RefreshTaskRunner();
+      this._issueLogger = new IssueLogger();
+      this._capabilities = detectCapabilities();
       this._nmClient = null;
       this._nmClientHandlerIds = [];
       this._ramAlertActive = false;
@@ -217,6 +322,8 @@ const ResourceMonitor = GObject.registerClass(
       this._cpuTemperaturesReadings = 0;
 
       this._createMainGui();
+      this._setupAccessibility();
+      this._setupMenu();
 
       this._initSettings();
 
@@ -225,6 +332,7 @@ const ResourceMonitor = GObject.registerClass(
       this._connectSettingsSignals();
 
       this.connect("button-press-event", this._clickManager.bind(this));
+      this.connect("key-press-event", this._onKeyPressEvent.bind(this));
 
       if (typeof NM !== "undefined") {
         this._initNetworkMonitor();
@@ -238,6 +346,49 @@ const ResourceMonitor = GObject.registerClass(
         this._refreshHandler.bind(this)
       );
       this._refreshHandler();
+    }
+
+    _setupAccessibility() {
+      const accessibleName = this._metadata?.name || "Resource Monitor";
+
+      this.accessible_name = accessibleName;
+      this.accessible_role = Atk.Role.PUSH_BUTTON;
+
+      if (typeof this.set_accessible_name === "function") {
+        this.set_accessible_name(accessibleName);
+      }
+
+      if (typeof this.set_tooltip_text === "function") {
+        this.set_tooltip_text(
+          _(
+            "Left click launches the configured action. Right click opens preferences."
+          )
+        );
+      } else {
+        this.tooltip_text = _(
+          "Left click launches the configured action. Right click opens preferences."
+        );
+      }
+
+      if (this._box) {
+        this._box.accessible_name = accessibleName;
+      }
+    }
+
+    _setupMenu() {
+      this.menu.removeAll();
+
+      const refreshItem = new PopupMenu.PopupMenuItem(_("Refresh Now"));
+      refreshItem.connect("activate", () => {
+        this._refreshHandler();
+      });
+      this.menu.addMenuItem(refreshItem);
+
+      const preferencesItem = new PopupMenu.PopupMenuItem(_("Preferences"));
+      preferencesItem.connect("activate", () => {
+        this._openPreferences();
+      });
+      this.menu.addMenuItem(preferencesItem);
     }
 
     destroy() {
@@ -304,6 +455,14 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     async _refreshThermalCpuSensorPaths() {
+      if (!this._capabilities.bash || !this._capabilities.thermalHwmon) {
+        this._logIssueOnce(
+          "thermal-cpu-discovery-unavailable",
+          "[Resource_Monitor] CPU thermal sensor discovery is unavailable on this system."
+        );
+        return;
+      }
+
       try {
         const output = await this._executeCommand([
           "bash",
@@ -314,6 +473,8 @@ const ResourceMonitor = GObject.registerClass(
         if (this._destroyed || !output) {
           return;
         }
+
+        this._clearLoggedIssue("thermal-cpu-discovery-unavailable");
 
         const sensorPathByName = new Map();
         output
@@ -348,8 +509,9 @@ const ResourceMonitor = GObject.registerClass(
         }
       } catch (error) {
         if (!this._isCancelledError(error)) {
-          console.error(
-            "[Resource_Monitor] Error refreshing thermal sensor paths:",
+          this._logIssueOnce(
+            "thermal-cpu-discovery-error",
+            "[Resource_Monitor] Error refreshing thermal sensor paths.",
             error
           );
         }
@@ -358,782 +520,20 @@ const ResourceMonitor = GObject.registerClass(
 
     // GUI
     _createMainGui() {
-      this._box = new St.BoxLayout();
-
-      // Icon
-      this._cpuIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(this._path + "/icons/cpu-symbolic.svg"),
-        style_class: "system-status-icon",
-      });
-
-      this._ramIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(this._path + "/icons/ram-symbolic.svg"),
-        style_class: "system-status-icon",
-      });
-
-      this._swapIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(this._path + "/icons/swap-symbolic.svg"),
-        style_class: "system-status-icon",
-      });
-
-      this._diskStatsIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(
-          this._path + "/icons/disk-stats-symbolic.svg"
-        ),
-        style_class: "system-status-icon",
-      });
-
-      this._diskSpaceIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(
-          this._path + "/icons/disk-space-symbolic.svg"
-        ),
-        style_class: "system-status-icon",
-      });
-
-      this._ethIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(this._path + "/icons/eth-symbolic.svg"),
-        style_class: "system-status-icon",
-      });
-
-      this._wlanIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(this._path + "/icons/wlan-symbolic.svg"),
-        style_class: "system-status-icon",
-      });
-
-      this._gpuIcon = new St.Icon({
-        gicon: Gio.icon_new_for_string(this._path + "/icons/gpu-symbolic.svg"),
-        style_class: "system-status-icon",
-      });
-
-      // Unit
-      this._cpuTemperatureUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "°C",
-      });
-      this._cpuTemperatureUnit.set_style("padding-left: 0.125em;");
-
-      this._cpuFrequencyUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "KHz",
-      });
-      this._cpuFrequencyUnit.set_style("padding-left: 0.125em;");
-
-      this._cpuUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "%",
-      });
-      this._cpuUnit.set_style("padding-left: 0.125em;");
-
-      this._ramUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: this._ramUnitType ? "%" : "KB",
-      });
-      this._ramUnit.set_style("padding-left: 0.125em;");
-
-      this._swapUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: this._swapUnitType ? "%" : "KB",
-      });
-      this._swapUnit.set_style("padding-left: 0.125em;");
-
-      this._ethUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "K",
-      });
-      this._ethUnit.set_style("padding-left: 0.125em;");
-
-      this._wlanUnit = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "K",
-      });
-      this._wlanUnit.set_style("padding-left: 0.125em;");
-
-      // Value
-      this._cpuValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._cpuValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._ramValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._ramValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._swapValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._swapValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._diskStatsBox = new DiskContainerStats();
-      this._diskSpaceBox = new DiskContainerSpace();
-
-      this._ethValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--|--",
-      });
-      this._ethValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._wlanValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--|--",
-      });
-      this._wlanValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._cpuTemperatureBracketStart = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "[",
-      });
-      this._cpuTemperatureValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._cpuTemperatureValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-      this._cpuTemperatureBracketEnd = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "]",
-      });
-
-      this._cpuFrequencyBracketStart = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "[",
-      });
-      this._cpuFrequencyValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._cpuFrequencyValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-      this._cpuFrequencyBracketEnd = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "]",
-      });
-
-      this._cpuLoadAverageBracketStart = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "[",
-      });
-      this._cpuLoadAverageValue = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._cpuLoadAverageValue.clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-      this._cpuLoadAverageBracketEnd = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "]",
-      });
-
-      this._gpuBox = new GpuContainer();
+      createMainGui(this);
     }
 
     _buildMainGui() {
-      // Apply prefs settings
-      this._refreshGui();
-
-      switch (this._iconsPosition) {
-        case "left":
-          this._itemsPosition.forEach((element) => {
-            switch (element) {
-              case "cpu":
-                this._box.add_child(this._cpuIcon);
-                this._box.add_child(this._cpuValue);
-                this._box.add_child(this._cpuUnit);
-
-                this._box.add_child(this._cpuTemperatureBracketStart);
-                this._box.add_child(this._cpuTemperatureValue);
-                this._box.add_child(this._cpuTemperatureUnit);
-                this._box.add_child(this._cpuTemperatureBracketEnd);
-                this._box.add_child(this._cpuFrequencyBracketStart);
-                this._box.add_child(this._cpuFrequencyValue);
-                this._box.add_child(this._cpuFrequencyUnit);
-                this._box.add_child(this._cpuFrequencyBracketEnd);
-                this._box.add_child(this._cpuLoadAverageBracketStart);
-                this._box.add_child(this._cpuLoadAverageValue);
-                this._box.add_child(this._cpuLoadAverageBracketEnd);
-
-                break;
-
-              case "ram":
-                this._box.add_child(this._ramIcon);
-                this._box.add_child(this._ramValue);
-                this._box.add_child(this._ramUnit);
-
-                break;
-
-              case "swap":
-                this._box.add_child(this._swapIcon);
-                this._box.add_child(this._swapValue);
-                this._box.add_child(this._swapUnit);
-
-                break;
-
-              case "stats":
-                this._box.add_child(this._diskStatsIcon);
-                this._box.add_child(this._diskStatsBox);
-
-                break;
-
-              case "space":
-                this._box.add_child(this._diskSpaceIcon);
-                this._box.add_child(this._diskSpaceBox);
-
-                break;
-
-              case "eth":
-                this._box.add_child(this._ethIcon);
-                this._box.add_child(this._ethValue);
-                this._box.add_child(this._ethUnit);
-
-                break;
-
-              case "wlan":
-                this._box.add_child(this._wlanIcon);
-                this._box.add_child(this._wlanValue);
-                this._box.add_child(this._wlanUnit);
-
-                break;
-
-              case "gpu":
-                this._box.add_child(this._gpuIcon);
-                this._box.add_child(this._gpuBox);
-
-                break;
-
-              default:
-                break;
-            }
-          });
-
-          break;
-
-        case "right":
-
-        default:
-          this._itemsPosition.forEach((element) => {
-            switch (element) {
-              case "cpu":
-                this._box.add_child(this._cpuValue);
-                this._box.add_child(this._cpuUnit);
-
-                this._box.add_child(this._cpuTemperatureBracketStart);
-                this._box.add_child(this._cpuTemperatureValue);
-                this._box.add_child(this._cpuTemperatureUnit);
-                this._box.add_child(this._cpuTemperatureBracketEnd);
-                this._box.add_child(this._cpuFrequencyBracketStart);
-                this._box.add_child(this._cpuFrequencyValue);
-                this._box.add_child(this._cpuFrequencyUnit);
-                this._box.add_child(this._cpuFrequencyBracketEnd);
-                this._box.add_child(this._cpuLoadAverageBracketStart);
-                this._box.add_child(this._cpuLoadAverageValue);
-                this._box.add_child(this._cpuLoadAverageBracketEnd);
-                this._box.add_child(this._cpuIcon);
-
-                break;
-
-              case "ram":
-                this._box.add_child(this._ramValue);
-                this._box.add_child(this._ramUnit);
-                this._box.add_child(this._ramIcon);
-
-                break;
-
-              case "swap":
-                this._box.add_child(this._swapValue);
-                this._box.add_child(this._swapUnit);
-                this._box.add_child(this._swapIcon);
-
-                break;
-
-              case "stats":
-                this._box.add_child(this._diskStatsBox);
-                this._box.add_child(this._diskStatsIcon);
-
-                break;
-
-              case "space":
-                this._box.add_child(this._diskSpaceBox);
-                this._box.add_child(this._diskSpaceIcon);
-
-                break;
-
-              case "eth":
-                this._box.add_child(this._ethValue);
-                this._box.add_child(this._ethUnit);
-                this._box.add_child(this._ethIcon);
-
-                break;
-
-              case "wlan":
-                this._box.add_child(this._wlanValue);
-                this._box.add_child(this._wlanUnit);
-                this._box.add_child(this._wlanIcon);
-
-                break;
-
-              case "gpu":
-                this._box.add_child(this._gpuBox);
-                this._box.add_child(this._gpuIcon);
-
-                break;
-
-              default:
-                break;
-            }
-          });
-
-          break;
-      }
-
-      this.add_child(this._box);
+      buildMainGui(this);
     }
 
     // SETTINGS
     _initSettings() {
-      this._refreshTime = this._settings.get_int(REFRESH_TIME);
-      this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
-      this._leftClickStatus = this._settings.get_string(LEFT_CLICK_STATUS);
-      this._rightClickStatus = this._settings.get_boolean(RIGHT_CLICK_STATUS);
-
-      this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
-      this._iconsPosition = this._settings.get_string(ICONS_POSITION);
-
-      this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
-
-      this._cpuStatus = this._settings.get_boolean(CPU_STATUS);
-      this._cpuWidth = this._settings.get_int(CPU_WIDTH) * this._scaleFactor;
-      this._cpuColors = this._settings.get_strv(CPU_COLORS);
-      this._cpuFrequencyStatus =
-        this._settings.get_boolean(CPU_FREQUENCY_STATUS);
-      this._cpuFrequencyWidth =
-        this._settings.get_int(CPU_FREQUENCY_WIDTH) * this._scaleFactor;
-      this._cpuFrequencyColors = this._settings.get_strv(CPU_FREQUENCY_COLORS);
-      this._cpuFrequencyUnitMeasure = this._settings.get_string(
-        CPU_FREQUENCY_UNIT_MEASURE
-      );
-      this._cpuLoadAverageStatus = this._settings.get_boolean(
-        CPU_LOADAVERAGE_STATUS
-      );
-      this._cpuLoadAverageWidth =
-        this._settings.get_int(CPU_LOADAVERAGE_WIDTH) * this._scaleFactor;
-      this._cpuLoadAverageColors = this._settings.get_strv(
-        CPU_LOADAVERAGE_COLORS
-      );
-
-      this._ramStatus = this._settings.get_boolean(RAM_STATUS);
-      this._ramWidth = this._settings.get_int(RAM_WIDTH) * this._scaleFactor;
-      this._ramColors = this._settings.get_strv(RAM_COLORS);
-      this._ramUnitType = this._settings.get_string(RAM_UNIT);
-      this._ramUnitMeasure = this._settings.get_string(RAM_UNIT_MEASURE);
-      this._ramMonitor = this._settings.get_string(RAM_MONITOR);
-      this._ramAlert = this._settings.get_boolean(RAM_ALERT);
-      this._ramAlertThreshold = this._settings.get_int(RAM_ALERT_THRESHOLD);
-
-      this._swapStatus = this._settings.get_boolean(SWAP_STATUS);
-      this._swapWidth = this._settings.get_int(SWAP_WIDTH) * this._scaleFactor;
-      this._swapColors = this._settings.get_strv(SWAP_COLORS);
-      this._swapUnitType = this._settings.get_string(SWAP_UNIT);
-      this._swapUnitMeasure = this._settings.get_string(SWAP_UNIT_MEASURE);
-      this._swapMonitor = this._settings.get_string(SWAP_MONITOR);
-      this._swapAlert = this._settings.get_boolean(SWAP_ALERT);
-      this._swapAlertThreshold = this._settings.get_int(SWAP_ALERT_THRESHOLD);
-
-      this._diskShowDeviceName = this._settings.get_boolean(DISK_SHOW_DEVICE_NAME);
-      this._diskStatsStatus = this._settings.get_boolean(DISK_STATS_STATUS);
-      this._diskStatsWidth =
-        this._settings.get_int(DISK_STATS_WIDTH) * this._scaleFactor;
-      this._diskStatsColors = this._settings.get_strv(DISK_STATS_COLORS);
-      this._diskStatsMode = this._settings.get_string(DISK_STATS_MODE);
-      this._diskStatsUnitMeasure = this._settings.get_string(
-        DISK_STATS_UNIT_MEASURE
-      );
-      this._diskSpaceStatus = this._settings.get_boolean(DISK_SPACE_STATUS);
-      this._diskSpaceWidth =
-        this._settings.get_int(DISK_SPACE_WIDTH) * this._scaleFactor;
-      this._diskSpaceColors = this._settings.get_strv(DISK_SPACE_COLORS);
-      this._diskSpaceUnitType = this._settings.get_string(DISK_SPACE_UNIT);
-      this._diskSpaceUnitMeasure = this._settings.get_string(
-        DISK_SPACE_UNIT_MEASURE
-      );
-      this._diskSpaceMonitor = this._settings.get_string(DISK_SPACE_MONITOR);
-      this._diskDevices = this._parseSettingsArray(
-        DISK_DEVICES_LIST,
-        parseDiskEntry
-      );
-
-      this._netAutoHideStatus =
-        this._settings.get_boolean(NET_AUTO_HIDE_STATUS) &&
-        typeof NM !== "undefined";
-      this._netUnit = this._settings.get_string(NET_UNIT);
-      this._netUnitMeasure = this._settings.get_string(NET_UNIT_MEASURE);
-      this._netEthStatus = this._settings.get_boolean(NET_ETH_STATUS);
-      this._netEthWidth =
-        this._settings.get_int(NET_ETH_WIDTH) * this._scaleFactor;
-      this._netEthColors = this._settings.get_strv(NET_ETH_COLORS);
-      this._netWlanStatus = this._settings.get_boolean(NET_WLAN_STATUS);
-      this._netWlanWidth =
-        this._settings.get_int(NET_WLAN_WIDTH) * this._scaleFactor;
-      this._netWlanColors = this._settings.get_strv(NET_WLAN_COLORS);
-
-      this._thermalTemperatureUnit = this._settings.get_string(
-        THERMAL_TEMPERATURE_UNIT
-      );
-      this._thermalCpuTemperatureStatus = this._settings.get_boolean(
-        THERMAL_CPU_TEMPERATURE_STATUS
-      );
-      this._thermalCpuTemperatureWidth =
-        this._settings.get_int(THERMAL_CPU_TEMPERATURE_WIDTH) *
-        this._scaleFactor;
-      this._thermalCpuColors = this._settings.get_strv(THERMAL_CPU_COLORS);
-      this._thermalCpuTemperatureDevices = this._parseSettingsArray(
-        THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
-        parseThermalCpuEntry
-      );
-      this._thermalGpuTemperatureStatus = this._settings.get_boolean(
-        THERMAL_GPU_TEMPERATURE_STATUS
-      );
-      this._thermalGpuTemperatureWidth =
-        this._settings.get_int(THERMAL_GPU_TEMPERATURE_WIDTH) *
-        this._scaleFactor;
-      this._thermalGpuColors = this._settings.get_strv(THERMAL_GPU_COLORS);
-      this._thermalGpuTemperatureDevices = this._parseSettingsArray(
-        THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
-        parseThermalGpuEntry
-      );
-
-      this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
-      this._gpuWidth = this._settings.get_int(GPU_WIDTH) * this._scaleFactor;
-      this._gpuColors = this._settings.get_strv(GPU_COLORS);
-      this._gpuMemoryColors = this._settings.get_strv(GPU_MEMORY_COLORS);
-      this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
-      this._gpuMemoryUnitMeasure = this._settings.get_string(
-        GPU_MEMORY_UNIT_MEASURE
-      );
-      this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
-      this._gpuDisplayDeviceName = this._settings.get_boolean(
-        GPU_DISPLAY_DEVICE_NAME
-      );
-      this._gpuDevices = this._parseSettingsArray(GPU_DEVICES_LIST, parseGpuEntry);
+      initializeSettings(this, SETTINGS_KEYS);
     }
 
     _connectSettingsSignals() {
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${REFRESH_TIME}`,
-        this._refreshTimeChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DECIMALS_STATUS}`,
-        this._decimalsStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${LEFT_CLICK_STATUS}`,
-        this._leftClickStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RIGHT_CLICK_STATUS}`,
-        this._rightClickStatusChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${ICONS_STATUS}`,
-        this._iconsStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${ICONS_POSITION}`,
-        this._iconsPositionChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${ITEMS_POSITION}`,
-        this._itemsPositionChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_STATUS}`,
-        this._cpuStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_WIDTH}`,
-        this._cpuWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_COLORS}`,
-        this._cpuColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_FREQUENCY_STATUS}`,
-        this._cpuFrequencyStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_FREQUENCY_WIDTH}`,
-        this._cpuFrequencyWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_FREQUENCY_COLORS}`,
-        this._cpuFrequencyColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_FREQUENCY_UNIT_MEASURE}`,
-        this._cpuFrequencyUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_LOADAVERAGE_STATUS}`,
-        this._cpuLoadAverageStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_LOADAVERAGE_WIDTH}`,
-        this._cpuLoadAverageWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${CPU_LOADAVERAGE_COLORS}`,
-        this._cpuLoadAverageColorsChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_STATUS}`,
-        this._ramStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_WIDTH}`,
-        this._ramWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_COLORS}`,
-        this._ramColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_UNIT}`,
-        this._ramUnitTypeChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_UNIT_MEASURE}`,
-        this._ramUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_MONITOR}`,
-        this._ramMonitorChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_ALERT}`,
-        this._ramAlertChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${RAM_ALERT_THRESHOLD}`,
-        this._ramAlertThresholdChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_STATUS}`,
-        this._swapStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_WIDTH}`,
-        this._swapWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_COLORS}`,
-        this._swapColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_UNIT}`,
-        this._swapUnitTypeChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_UNIT_MEASURE}`,
-        this._swapUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_MONITOR}`,
-        this._swapMonitorChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_ALERT}`,
-        this._swapAlertChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${SWAP_ALERT_THRESHOLD}`,
-        this._swapAlertThresholdChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SHOW_DEVICE_NAME}`,
-        this._diskShowDeviceNameChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_STATS_STATUS}`,
-        this._diskStatsStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_STATS_WIDTH}`,
-        this._diskStatsWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_STATS_COLORS}`,
-        this._diskStatsColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_STATS_MODE}`,
-        this._diskStatsModeChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_STATS_UNIT_MEASURE}`,
-        this._diskStatsUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SPACE_STATUS}`,
-        this._diskSpaceStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SPACE_WIDTH}`,
-        this._diskSpaceWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SPACE_COLORS}`,
-        this._diskSpaceColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SPACE_UNIT}`,
-        this._diskSpaceUnitTypeChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SPACE_UNIT_MEASURE}`,
-        this._diskSpaceUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_SPACE_MONITOR}`,
-        this._diskSpaceMonitorChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${DISK_DEVICES_LIST}`,
-        this._diskDevicesListChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_AUTO_HIDE_STATUS}`,
-        this._netAutoHideStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_UNIT}`,
-        this._netUnitChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_UNIT_MEASURE}`,
-        this._netUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_ETH_STATUS}`,
-        this._netEthStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_ETH_WIDTH}`,
-        this._netEthWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_ETH_COLORS}`,
-        this._netEthColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_WLAN_STATUS}`,
-        this._netWlanStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_WLAN_WIDTH}`,
-        this._netWlanWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${NET_WLAN_COLORS}`,
-        this._netWlanColorsChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_TEMPERATURE_UNIT}`,
-        this._thermalTemperatureUnitChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_CPU_TEMPERATURE_STATUS}`,
-        this._thermalCpuTemperatureStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_CPU_TEMPERATURE_WIDTH}`,
-        this._thermalCpuTemperatureWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_CPU_COLORS}`,
-        this._thermalCpuColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_CPU_TEMPERATURE_DEVICES_LIST}`,
-        this._thermalCpuTemperatureDevicesListChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_GPU_TEMPERATURE_STATUS}`,
-        this._thermalGpuTemperatureStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_GPU_TEMPERATURE_WIDTH}`,
-        this._thermalGpuTemperatureWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_GPU_COLORS}`,
-        this._thermalGpuColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${THERMAL_GPU_TEMPERATURE_DEVICES_LIST}`,
-        this._thermalGpuTemperatureDevicesListChanged.bind(this)
-      );
-
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_STATUS}`,
-        this._gpuStatusChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_WIDTH}`,
-        this._gpuWidthChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_COLORS}`,
-        this._gpuColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_MEMORY_COLORS}`,
-        this._gpuMemoryColorsChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_MEMORY_UNIT}`,
-        this._gpuMemoryUnitTypeChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_MEMORY_UNIT_MEASURE}`,
-        this._gpuMemoryUnitMeasureChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_MEMORY_MONITOR}`,
-        this._gpuMemoryMonitorChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_DISPLAY_DEVICE_NAME}`,
-        this._gpuDisplayDeviceNameChanged.bind(this)
-      );
-      this._handlerIds[this._handlerIdsCount++] = this._settings.connect(
-        `changed::${GPU_DEVICES_LIST}`,
-        this._gpuDevicesListChanged.bind(this)
-      );
+      connectSettingsSignals(this, SETTINGS_KEYS);
     }
 
     // HANDLERS
@@ -1148,34 +548,59 @@ const ResourceMonitor = GObject.registerClass(
         case 3: // Right Click
           if (this._rightClickStatus) {
             this._openPreferences();
+          } else {
+            this.menu.toggle();
           }
 
-          break;
+          return Clutter.EVENT_STOP;
 
         case 1: // Left Click
+          this._launchPrimaryAction();
+
+          return Clutter.EVENT_STOP;
 
         default:
-          if (this._leftClickStatus !== "") {
-            const appSystem = Shell.AppSystem.get_default();
-            const appName = this._leftClickStatus + ".desktop";
+          return Clutter.EVENT_PROPAGATE;
+      }
+    }
 
-            let app = appSystem.lookup_app(appName);
+    _onKeyPressEvent(actor, event) {
+      switch (event.get_key_symbol()) {
+        case Clutter.KEY_Return:
+        case Clutter.KEY_KP_Enter:
+        case Clutter.KEY_space:
+          this._launchPrimaryAction();
+          return Clutter.EVENT_STOP;
 
-            if (app) {
-              // Application found, activate it
-              app.activate();
-            } else {
-              try {
-                Util.spawnCommandLine(this._leftClickStatus);
-              } catch (error) {
-                console.error(
-                  `[Resource_Monitor] Error spawning ${this._leftClickStatus}: ${error}`
-                );
-              }
-            }
-          }
+        case Clutter.KEY_Menu:
+          this.menu.toggle();
+          return Clutter.EVENT_STOP;
 
-          break;
+        default:
+          return Clutter.EVENT_PROPAGATE;
+      }
+    }
+
+    _launchPrimaryAction() {
+      if (this._leftClickStatus === "") {
+        return;
+      }
+
+      const appSystem = Shell.AppSystem.get_default();
+      const appName = this._leftClickStatus + ".desktop";
+      let app = appSystem.lookup_app(appName);
+
+      if (app) {
+        app.activate();
+        return;
+      }
+
+      try {
+        Util.spawnCommandLine(this._leftClickStatus);
+      } catch (error) {
+        console.error(
+          `[Resource_Monitor] Error spawning ${this._leftClickStatus}: ${error}`
+        );
       }
     }
 
@@ -1357,8 +782,8 @@ const ResourceMonitor = GObject.registerClass(
 
       this._basicItemStatus(
         this._cpuStatus,
-        !this._thermalCpuTemperatureStatus &&
-        !this._cpuFrequencyStatus &&
+        !this._hasVisibleThermalCpuTemperature() &&
+        !this._hasVisibleCpuFrequency() &&
         !this._cpuLoadAverageStatus,
         this._cpuIcon,
         this._cpuValue,
@@ -1384,10 +809,18 @@ const ResourceMonitor = GObject.registerClass(
       this._cpuFrequencyStatus =
         this._settings.get_boolean(CPU_FREQUENCY_STATUS);
 
+      this._syncCpuFrequencyVisibility();
+
+      if (this._hasVisibleCpuFrequency()) {
+        this._refreshCpuFrequencyValue();
+      }
+    }
+
+    _syncCpuFrequencyVisibility() {
       this._basicItemStatus(
-        this._cpuFrequencyStatus,
+        this._hasVisibleCpuFrequency(),
         !this._cpuStatus &&
-        !this._thermalCpuTemperatureStatus &&
+        !this._hasVisibleThermalCpuTemperature() &&
         !this._cpuLoadAverageStatus,
         this._cpuIcon,
         this._cpuFrequencyValue,
@@ -1409,7 +842,7 @@ const ResourceMonitor = GObject.registerClass(
     _cpuFrequencyColorsChanged() {
       this._cpuFrequencyColors = this._settings.get_strv(CPU_FREQUENCY_COLORS);
 
-      if (this._cpuFrequencyStatus) {
+      if (this._hasVisibleCpuFrequency()) {
         this._refreshCpuFrequencyValue();
       }
     }
@@ -1419,7 +852,7 @@ const ResourceMonitor = GObject.registerClass(
         CPU_FREQUENCY_UNIT_MEASURE
       );
 
-      if (this._cpuFrequencyStatus) {
+      if (this._hasVisibleCpuFrequency()) {
         this._refreshCpuFrequencyValue();
       }
     }
@@ -1432,8 +865,8 @@ const ResourceMonitor = GObject.registerClass(
       this._basicItemStatus(
         this._cpuLoadAverageStatus,
         !this._cpuStatus &&
-        !this._thermalCpuTemperatureStatus &&
-        !this._cpuFrequencyStatus,
+        !this._hasVisibleThermalCpuTemperature() &&
+        !this._hasVisibleCpuFrequency(),
         this._cpuIcon,
         this._cpuLoadAverageValue,
         this._cpuLoadAverageBracketStart,
@@ -1830,10 +1263,18 @@ const ResourceMonitor = GObject.registerClass(
         THERMAL_CPU_TEMPERATURE_STATUS
       );
 
+      this._syncThermalCpuVisibility();
+
+      if (this._hasVisibleThermalCpuTemperature()) {
+        this._refreshCpuTemperatureValue();
+      }
+    }
+
+    _syncThermalCpuVisibility() {
       this._basicItemStatus(
-        this._thermalCpuTemperatureStatus,
+        this._hasVisibleThermalCpuTemperature(),
         !this._cpuStatus &&
-        !this._cpuFrequencyStatus &&
+        !this._hasVisibleCpuFrequency() &&
         !this._cpuLoadAverageStatus,
         this._cpuIcon,
         this._cpuTemperatureValue,
@@ -1857,7 +1298,7 @@ const ResourceMonitor = GObject.registerClass(
     _thermalCpuColorsChanged() {
       this._thermalCpuColors = this._settings.get_strv(THERMAL_CPU_COLORS);
 
-      if (this._thermalCpuTemperatureStatus) {
+      if (this._hasVisibleThermalCpuTemperature()) {
         this._refreshCpuTemperatureValue();
       }
     }
@@ -1867,10 +1308,10 @@ const ResourceMonitor = GObject.registerClass(
         THERMAL_TEMPERATURE_UNIT
       );
 
-      if (this._thermalCpuTemperatureStatus) {
+      if (this._hasVisibleThermalCpuTemperature()) {
         this._refreshCpuTemperatureValue();
       }
-      if (this._thermalGpuTemperatureStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1881,7 +1322,9 @@ const ResourceMonitor = GObject.registerClass(
         parseThermalCpuEntry
       );
 
-      if (this._thermalCpuTemperatureStatus) {
+      this._syncThermalCpuVisibility();
+
+      if (this._hasVisibleThermalCpuTemperature()) {
         this._refreshCpuTemperatureValue();
       }
     }
@@ -1891,13 +1334,12 @@ const ResourceMonitor = GObject.registerClass(
         THERMAL_GPU_TEMPERATURE_STATUS
       );
 
-      this._basicItemStatus(
-        this._gpuStatus || this._thermalGpuTemperatureStatus,
-        !this._gpuStatus,
-        this._gpuIcon,
-        this._gpuBox
-      );
+      this._syncGpuVisibility();
       this._gpuDevicesListChanged();
+
+      if (this._hasVisibleGpu()) {
+        this._refreshGpuValue();
+      }
     }
 
     _thermalGpuTemperatureWidthChanged() {
@@ -1913,7 +1355,7 @@ const ResourceMonitor = GObject.registerClass(
     _thermalGpuColorsChanged() {
       this._thermalGpuColors = this._settings.get_strv(THERMAL_GPU_COLORS);
 
-      if (this._thermalGpuTemperatureStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1930,13 +1372,12 @@ const ResourceMonitor = GObject.registerClass(
     _gpuStatusChanged() {
       this._gpuStatus = this._settings.get_boolean(GPU_STATUS);
 
-      this._basicItemStatus(
-        this._gpuStatus || this._thermalGpuTemperatureStatus,
-        !this._thermalGpuTemperatureStatus,
-        this._gpuIcon,
-        this._gpuBox
-      );
+      this._syncGpuVisibility();
       this._gpuDevicesListChanged();
+
+      if (this._hasVisibleGpu()) {
+        this._refreshGpuValue();
+      }
     }
 
     _gpuWidthChanged() {
@@ -1948,7 +1389,7 @@ const ResourceMonitor = GObject.registerClass(
     _gpuColorsChanged() {
       this._gpuColors = this._settings.get_strv(GPU_COLORS);
 
-      if (this._gpuStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1956,7 +1397,7 @@ const ResourceMonitor = GObject.registerClass(
     _gpuMemoryColorsChanged() {
       this._gpuMemoryColors = this._settings.get_strv(GPU_MEMORY_COLORS);
 
-      if (this._gpuStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1964,7 +1405,7 @@ const ResourceMonitor = GObject.registerClass(
     _gpuMemoryUnitTypeChanged() {
       this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
 
-      if (this._gpuStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1974,7 +1415,7 @@ const ResourceMonitor = GObject.registerClass(
         GPU_MEMORY_UNIT_MEASURE
       );
 
-      if (this._gpuStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1982,7 +1423,7 @@ const ResourceMonitor = GObject.registerClass(
     _gpuMemoryMonitorChanged() {
       this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
 
-      if (this._gpuStatus) {
+      if (this._hasVisibleGpu()) {
         this._refreshGpuValue();
       }
     }
@@ -1999,6 +1440,11 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDevices = this._parseSettingsArray(GPU_DEVICES_LIST, parseGpuEntry);
 
       this._gpuBox.cleanup_elements();
+
+      if (!this._capabilities.nvidiaSmi) {
+        this._syncGpuVisibility();
+        return;
+      }
 
       this._gpuDevices.forEach((device) => {
         const uuid = device.device;
@@ -2021,187 +1467,46 @@ const ResourceMonitor = GObject.registerClass(
       });
 
       this._gpuBox.set_element_width(this._gpuWidth * this._scaleFactor);
+      this._gpuBox.set_element_thermal_width(
+        this._thermalGpuTemperatureWidth * this._scaleFactor
+      );
+      this._syncGpuVisibility();
+    }
+
+    _hasVisibleCpuFrequency() {
+      return hasVisibleCpuFrequency(this);
+    }
+
+    _hasVisibleThermalCpuTemperature() {
+      return hasVisibleThermalCpuTemperature(this);
+    }
+
+    _hasVisibleGpu() {
+      return hasVisibleGpu(this);
+    }
+
+    _syncGpuVisibility() {
+      syncGpuVisibility(this);
+    }
+
+    _syncCpuFrequencyVisibility() {
+      syncCpuFrequencyVisibility(this);
+    }
+
+    _syncThermalCpuVisibility() {
+      syncThermalCpuVisibility(this);
     }
 
     _refreshHandler() {
-      if (this._cpuStatus) {
-        this._refreshCpuValue();
-      }
-      if (this._ramStatus) {
-        this._refreshRamValue();
-      }
-      if (this._swapStatus) {
-        this._refreshSwapValue();
-      }
-      if (this._diskStatsStatus) {
-        this._refreshDiskStatsValue();
-      }
-      if (this._diskSpaceStatus) {
-        this._refreshDiskSpaceValue();
-      }
-      if (this._netEthStatus) {
-        this._refreshEthValue();
-      }
-      if (this._netWlanStatus) {
-        this._refreshWlanValue();
-      }
-      if (this._cpuFrequencyStatus) {
-        this._refreshCpuFrequencyValue();
-      }
-      if (this._cpuLoadAverageStatus) {
-        this._refreshCpuLoadAverageValue();
-      }
-      if (this._thermalCpuTemperatureStatus) {
-        this._refreshCpuTemperatureValue();
-      }
-      if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
-        this._refreshGpuValue();
-      }
-
-      return GLib.SOURCE_CONTINUE;
+      return refreshHandler(this);
     }
 
     _refreshGui() {
-      //this._onActiveConnectionAdded(client, activeConnection);
-
-      //this._onActiveConnectionRemoved(client, activeConnection);
-
-      //this._refreshTimeChanged();
-
-      //this._decimalsStatusChanged();
-
-      //this._leftClickStatusChanged();
-
-      this._rightClickStatusChanged();
-
-      this._iconsStatusChanged();
-
-      //this._iconsPositionChanged();
-
-      //this._itemsPositionChanged();
-
-      this._cpuStatusChanged();
-
-      this._cpuWidthChanged();
-
-      this._cpuFrequencyStatusChanged();
-
-      this._cpuFrequencyWidthChanged();
-
-      //this._cpuFrequencyUnitMeasureChanged();
-
-      this._cpuLoadAverageStatusChanged();
-
-      this._cpuLoadAverageWidthChanged();
-
-      this._ramStatusChanged();
-
-      this._ramWidthChanged();
-
-      //this._ramUnitTypeChanged();
-
-      //this._ramUnitMeasureChanged();
-
-      //this._ramMonitorChanged();
-
-      //this._ramAlertChanged();
-
-      //this._ramAlertThresholdChanged();
-
-      this._swapStatusChanged();
-
-      this._swapWidthChanged();
-
-      //this._swapUnitTypeChanged();
-
-      //this._swapUnitMeasureChanged();
-
-      //this._swapMonitorChanged();
-
-      //this._swapAlertChanged();
-
-      //this._swapAlertThresholdChanged();
-
-      //this._diskShowDeviceNameChanged();
-
-      this._diskStatsStatusChanged();
-
-      this._diskStatsWidthChanged();
-
-      this._diskStatsModeChanged();
-
-      //this._diskStatsUnitMeasureChanged();
-
-      this._diskSpaceStatusChanged();
-
-      this._diskSpaceWidthChanged();
-
-      //this._diskSpaceUnitTypeChanged();
-
-      //this._diskSpaceUnitMeasureChanged();
-
-      //this._diskSpaceMonitorChanged();
-
-      this._diskDevicesListChanged();
-
-      //this._netAutoHideStatusChanged();
-
-      //this._netUnitChanged();
-
-      //this._netUnitMeasureChanged();
-
-      this._netEthStatusChanged();
-
-      this._netEthWidthChanged();
-
-      this._netWlanStatusChanged();
-
-      this._netWlanWidthChanged();
-
-      this._thermalCpuTemperatureStatusChanged();
-
-      this._thermalCpuTemperatureWidthChanged();
-
-      //this._thermalCpuTemperatureUnitChanged();
-
-      //this._thermalCpuTemperatureDevicesListChanged();
-
-      this._thermalGpuTemperatureStatusChanged();
-
-      this._thermalGpuTemperatureWidthChanged();
-
-      //this._thermalGpuTemperatureDevicesListChanged();
-
-      this._gpuStatusChanged();
-
-      this._gpuWidthChanged();
-
-      //this._gpuMemoryUnitTypeChanged();
-
-      //this._gpuMemoryUnitMeasureChanged();
-
-      //this._gpuMemoryMonitorChanged();
-
-      //this._gpuDisplayDeviceNameChanged();
-
-      this._gpuDevicesListChanged();
+      refreshGui(this);
     }
 
     _parseSettingsArray(key, parser) {
-      return this._settings
-        .get_strv(key)
-        .map((entry) => {
-          try {
-            return parser(entry);
-          } catch (error) {
-            console.error(
-              `[Resource_Monitor] Error parsing settings entry for ${key}:`,
-              error
-            );
-            return null;
-          }
-        })
-        .filter(Boolean);
+      return parseSettingsArray(this._settings, key, parser);
     }
 
     _isCancelledError(error) {
@@ -2214,6 +1519,18 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       return error.code === Gio.IOErrorEnum.CANCELLED;
+    }
+
+    _logIssueOnce(key, message, error = null) {
+      this._issueLogger.logOnce(key, message, error);
+    }
+
+    _clearLoggedIssue(key) {
+      this._issueLogger.clear(key);
+    }
+
+    _runRefreshTask(key, callback) {
+      this._refreshTaskRunner.run(key, callback);
     }
 
     _applyMemoryDisplay(display, options) {
@@ -2235,7 +1552,7 @@ const ResourceMonitor = GObject.registerClass(
         (100 * display.available) / display.total < alertThreshold
       ) {
         if (!alertActive) {
-          Main.notify(title, message);
+          this._notifyMemoryAlert(title, message);
           setAlertActive(true);
         }
       } else {
@@ -2245,6 +1562,10 @@ const ResourceMonitor = GObject.registerClass(
       valueLabel.style = this._getUsageColor(display.value, colors);
       valueLabel.text = `${this._getValueFixed(display.value)}`;
       unitLabel.text = display.unit;
+    }
+
+    _notifyMemoryAlert(title, message) {
+      Main.notify(title, message);
     }
 
     // ==================
@@ -2271,396 +1592,52 @@ const ResourceMonitor = GObject.registerClass(
       return convertValuesToUnit(values, unitMeasure, isBits);
     }
 
-    // Temperature conversion
-    _convertTemperature(tempC) {
-      return convertTemperature(tempC, this._thermalTemperatureUnit);
-    }
-
     // ==================
     // REFRESH FUNCTIONS
     // ==================
 
     _refreshCpuValue() {
-      this._loadFile("/proc/stat")
-        .then((contents) => {
-          const { usage, sample } = buildCpuUsageSample(contents, {
-            total: this._cpuTotOld,
-            idle: this._cpuIdleOld,
-          });
-          this._cpuTotOld = sample.total;
-          this._cpuIdleOld = sample.idle;
-
-          // Set CPU usage color based on thresholds
-          this._cpuValue.style = this._getUsageColor(usage, this._cpuColors);
-
-          // Update CPU usage display with optional decimal precision
-          this._cpuValue.text = `${this._getValueFixed(usage)}`;
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading cpu:", error)
-        );
+      refreshCpuValue(this);
     }
 
     _refreshRamValue() {
-      this._loadFile("/proc/meminfo")
-        .then((contents) => {
-          this._applyMemoryDisplay(
-            buildMemoryDisplay(contents, {
-              totalKey: "MemTotal",
-              availableKey: "MemAvailable",
-              monitor: this._ramMonitor,
-              unitType: this._ramUnitType,
-              unitMeasure: this._ramUnitMeasure,
-            }),
-            {
-              alertEnabled: this._ramAlert,
-              alertThreshold: this._ramAlertThreshold,
-              alertActive: this._ramAlertActive,
-              setAlertActive: (value) => {
-                this._ramAlertActive = value;
-              },
-              title: "Resource Monitor - Low Memory Alert",
-              message: `Available RAM has dropped below ${this._ramAlertThreshold}%. Please take action to free up memory.`,
-              valueLabel: this._ramValue,
-              unitLabel: this._ramUnit,
-              colors: this._ramColors,
-            }
-          );
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading ram:", error)
-        );
+      refreshRamValue(this);
     }
 
     _refreshSwapValue() {
-      this._loadFile("/proc/meminfo")
-        .then((contents) => {
-          this._applyMemoryDisplay(
-            buildMemoryDisplay(contents, {
-              totalKey: "SwapTotal",
-              availableKey: "SwapFree",
-              monitor: this._swapMonitor,
-              unitType: this._swapUnitType,
-              unitMeasure: this._swapUnitMeasure,
-            }),
-            {
-              alertEnabled: this._swapAlert,
-              alertThreshold: this._swapAlertThreshold,
-              alertActive: this._swapAlertActive,
-              setAlertActive: (value) => {
-                this._swapAlertActive = value;
-              },
-              title: "Resource Monitor - Low Memory Alert",
-              message: `Available SWAP has dropped below ${this._swapAlertThreshold}%. Please take action to free up memory.`,
-              valueLabel: this._swapValue,
-              unitLabel: this._swapUnit,
-              colors: this._swapColors,
-            }
-          );
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading swap:", error)
-        );
+      refreshSwapValue(this);
     }
 
     _refreshDiskStatsValue() {
-      this._loadFile("/proc/diskstats")
-        .then((contents) => {
-          const entries = parseDiskStatsEntries(contents);
-          const idle = GLib.get_monotonic_time() / 1000;
-
-          const processEntry = (filesystem, rwTot, rw) => {
-            const delta =
-              (idle - (this._diskStatsBox.get_idle(filesystem) || idle)) / 1000;
-            this._diskStatsBox.set_idle(filesystem, idle);
-
-            let unit = "";
-
-            if (delta > 0) {
-              const rwTotOld = this._diskStatsBox.get_rw_tot(filesystem);
-              for (let i = 0; i < 2; i++) {
-                rw[i] = (rwTot[i] - (rwTotOld[i] || 0)) / delta;
-              }
-              this._diskStatsBox.set_rw_tot(filesystem, rwTot);
-
-              // Convert K to B
-              rw[0] = rw[0] * 1024;
-              rw[1] = rw[1] * 1024;
-              // Convert units and determine appropriate unit string
-              const unitResult = this._convertValuesToUnit(
-                rw,
-                this._diskStatsUnitMeasure
-              );
-              rw = unitResult.values;
-              unit = unitResult.unit;
-            }
-
-            this._diskStatsBox.update_element_value(
-              filesystem,
-              `${this._getValueFixed(rw[0])}|${this._getValueFixed(rw[1])}`,
-              unit,
-              this._getUsageColor(rw, this._diskStatsColors)
-            );
-          };
-
-          switch (this._diskStatsMode) {
-            case "single": {
-              let rwTot = [0, 0];
-              let rw = [0, 0];
-              const filesystem = "single";
-
-              entries.forEach((entry) => {
-                if (this._diskStatsBox.get_filesystem(entry.device)) {
-                  rwTot[0] += entry.readKilobytes;
-                  rwTot[1] += entry.writeKilobytes;
-                }
-              });
-
-              processEntry(filesystem, rwTot, rw);
-              break;
-            }
-
-            case "multiple":
-            default:
-              entries.forEach((entry) => {
-                const filesystem = this._diskStatsBox.get_filesystem(
-                  entry.device
-                );
-                if (filesystem) {
-                  let rwTot = [
-                    entry.readKilobytes,
-                    entry.writeKilobytes,
-                  ];
-                  let rw = [0, 0];
-                  processEntry(filesystem, rwTot, rw);
-                }
-              });
-              break;
-          }
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading disk stats:", error)
-        );
+      refreshDiskStatsValue(this);
     }
 
     _refreshDiskSpaceValue() {
-      this._executeCommand([
-        "df",
-        "--output=source,used,avail,pcent",
-        "-B1K",
-        "-x",
-        "squashfs",
-        "-x",
-        "tmpfs",
-      ])
-        .then((contents) => {
-          parseDiskSpaceTable(contents).forEach((entry) => {
-            const display = buildDiskSpaceDisplay(entry, {
-              monitor: this._diskSpaceMonitor,
-              unitType: this._diskSpaceUnitType,
-              unitMeasure: this._diskSpaceUnitMeasure,
-            });
-
-            this._diskSpaceBox.update_element_value(
-              entry.filesystem,
-              display.isPercent
-                ? `${display.value}`
-                : `${this._getValueFixed(display.value)}`,
-              display.unit,
-              this._getUsageColor(display.value, this._diskSpaceColors)
-            );
-          });
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading disk space:", error)
-        );
+      refreshDiskSpaceValue(this);
     }
 
     _refreshEthValue() {
-      this._loadFile("/proc/net/dev")
-        .then((contents) => {
-          const sample = buildNetworkSample(contents, {
-            pattern: /^(eth[0-9]+|en[a-z0-9]*)$/,
-            unit: this._netUnit,
-            unitMeasure: this._netUnitMeasure,
-            previousTotals: this._duTotEthOld,
-            previousIdle: this._ethIdleOld,
-            currentIdle: GLib.get_monotonic_time() / 1000,
-          });
-          this._duTotEthOld = sample.totals;
-          this._ethIdleOld = sample.idle;
-          this._ethUnit.text = sample.unit;
-
-          // Set color based on thresholds
-          this._ethValue.style = this._getUsageColor(sample.values, this._netEthColors);
-
-          // Display the download/upload values with appropriate decimal places
-          this._ethValue.text = `${this._getValueFixed(
-            sample.values[0]
-          )}|${this._getValueFixed(sample.values[1])}`;
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading eth:", error)
-        );
+      refreshEthValue(this);
     }
 
     _refreshWlanValue() {
-      this._loadFile("/proc/net/dev")
-        .then((contents) => {
-          const sample = buildNetworkSample(contents, {
-            pattern: /^(wlan[0-9]+|wl[a-z0-9]*)$/,
-            unit: this._netUnit,
-            unitMeasure: this._netUnitMeasure,
-            previousTotals: this._duTotWlanOld,
-            previousIdle: this._wlanIdleOld,
-            currentIdle: GLib.get_monotonic_time() / 1000,
-          });
-          this._duTotWlanOld = sample.totals;
-          this._wlanIdleOld = sample.idle;
-          this._wlanUnit.text = sample.unit;
-
-          // Set color based on thresholds
-          this._wlanValue.style = this._getUsageColor(sample.values, this._netWlanColors);
-
-          // Display the download/upload values with appropriate decimal places
-          this._wlanValue.text = `${this._getValueFixed(
-            sample.values[0]
-          )}|${this._getValueFixed(sample.values[1])}`;
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading wlan:", error)
-        );
+      refreshWlanValue(this);
     }
 
     _refreshCpuFrequencyValue() {
-      this._executeCommand([
-        "bash",
-        "-c",
-        "cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq",
-      ])
-        .then((contents) => {
-          const { value, unit } = parseCpuFrequencyOutput(
-            contents,
-            this._cpuFrequencyUnitMeasure
-          );
-
-          this._cpuFrequencyValue.style = this._getUsageColor(
-            value,
-            this._cpuFrequencyColors
-          );
-          this._cpuFrequencyValue.text = `${this._getValueFixed(value)}`;
-          this._cpuFrequencyUnit.text = unit;
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading cpu frequency:", error)
-        );
+      refreshCpuFrequencyValue(this);
     }
 
     _refreshCpuLoadAverageValue() {
-      this._loadFile("/proc/loadavg")
-        .then((contents) => {
-          const display = parseLoadAverageDisplay(contents);
-
-          // Set color based on load average values
-          this._cpuLoadAverageValue.style = this._getUsageColor(
-            display.values[0],
-            this._cpuLoadAverageColors
-          );
-
-          // Display load average values
-          this._cpuLoadAverageValue.text = display.text;
-        })
-        .catch((error) =>
-          console.error(
-            "[Resource_Monitor] Error reading cpu load average:",
-            error
-          )
-        );
+      refreshCpuLoadAverageValue(this);
     }
 
     _refreshCpuTemperatureValue() {
-      const activeSensors = this._thermalCpuTemperatureDevices.filter(
-        (sensor) =>
-          sensor.monitor &&
-          sensor.path &&
-          GLib.file_test(sensor.path, GLib.FileTest.EXISTS)
-      );
-
-      if (activeSensors.length > 0) {
-        Promise.allSettled(activeSensors.map((sensor) => this._loadFile(sensor.path)))
-          .then((results) => {
-            const display = buildCpuTemperatureDisplay(
-              results,
-              this._thermalTemperatureUnit
-            );
-
-            if (!display) {
-              this._cpuTemperatureValue.text = "--";
-              return;
-            }
-
-            this._cpuTemperatureValue.text = `${this._getValueFixed(
-              display.value
-            )}`;
-            this._cpuTemperatureUnit.text = display.unit;
-            this._cpuTemperatureValue.style = this._getUsageColor(
-              display.value,
-              this._thermalCpuColors
-            );
-          })
-          .catch((error) => {
-            if (!this._isCancelledError(error)) {
-              console.error(
-                "[Resource_Monitor] Error reading cpu thermal:",
-                error
-              );
-            }
-          });
-      } else {
-        this._cpuTemperatureValue.text = "--";
-      }
+      refreshCpuTemperatureValue(this);
     }
 
     _refreshGpuValue() {
-      this._executeCommand([
-        "nvidia-smi",
-        "--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
-        "--format=csv,noheader",
-      ])
-        .then((contents) => {
-          const entries = parseGpuSmiOutput(contents, {
-            memoryMonitor: this._gpuMemoryMonitor,
-            memoryUnitType: this._gpuMemoryUnitType,
-            memoryUnitMeasure: this._gpuMemoryUnitMeasure,
-            temperatureUnit: this._thermalTemperatureUnit,
-          });
-
-          entries.forEach((entry) => {
-            this._gpuBox.update_element_value(
-              entry.uuid,
-              `${entry.usage}`,
-              "%",
-              this._getUsageColor(entry.usage, this._gpuColors)
-            );
-
-            this._gpuBox.update_element_thermal_value(
-              entry.uuid,
-              `${this._getValueFixed(entry.temperatureValue)}`,
-              entry.temperatureUnit,
-              this._getUsageColor(entry.temperatureValue, this._thermalGpuColors)
-            );
-
-            this._gpuBox.update_element_memory_value(
-              entry.uuid,
-              `${this._getValueFixed(entry.memoryValue)}`,
-              entry.memoryUnit,
-              this._getUsageColor(entry.memoryValue, this._gpuMemoryColors)
-            );
-          });
-        })
-        .catch((error) =>
-          console.error("[Resource_Monitor] Error reading gpu:", error)
-        );
+      refreshGpuValue(this);
     }
 
     // Common Function
@@ -2707,434 +1684,6 @@ const ResourceMonitor = GObject.registerClass(
 
     async _executeCommand(command, cancellable = this._ioCancellable) {
       return executeRuntimeCommand(command, cancellable);
-    }
-  }
-);
-
-const DiskContainer = GObject.registerClass(
-  class DiskContainer extends St.BoxLayout {
-    _init() {
-      super._init();
-
-      this._elementsPath = [];
-      this._elementsName = [];
-      this._elementsValue = [];
-      this._elementsUnit = [];
-    }
-
-    set_element_width(width) {
-      if (width === 0) {
-        this._elementsPath.forEach((element) => {
-          this._elementsValue[element].min_width = 0;
-          this._elementsValue[element].natural_width = 0;
-          this._elementsValue[element].min_width_set = false;
-          this._elementsValue[element].natural_width_set = false;
-        });
-      } else {
-        this._elementsPath.forEach((element) => {
-          this._elementsValue[element].width = width;
-        });
-      }
-    }
-
-    set_element_name_visibility(status) {
-      this._elementsPath.forEach((element) => {
-        if (typeof this._elementsName[element] !== "undefined") {
-          if (status) {
-            this._elementsName[element].show();
-          } else {
-            this._elementsName[element].hide();
-          }
-        }
-      });
-    }
-
-    cleanup_elements() {
-      this._elementsPath = [];
-      this._elementsName = [];
-      this._elementsValue = [];
-      this._elementsUnit = [];
-
-      this.remove_all_children();
-    }
-  }
-);
-
-const DiskContainerStats = GObject.registerClass(
-  class DiskContainerStats extends DiskContainer {
-    _init() {
-      super._init();
-
-      this.idleOld = [];
-      this.rwTotOld = [];
-
-      this.add_single();
-    }
-
-    add_single() {
-      this._elementsPath.push("single");
-
-      this._elementsValue["single"] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--|--",
-      });
-      this._elementsValue["single"].clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._elementsUnit["single"] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "K",
-      });
-      this._elementsUnit["single"].set_style("padding-left: 0.125em;");
-
-      this.add_child(this._elementsValue["single"]);
-      this.add_child(this._elementsUnit["single"]);
-
-      this.idleOld["single"] = 0;
-      this.rwTotOld["single"] = [0, 0];
-    }
-
-    add_element(filesystem, label) {
-      this._elementsPath.push(filesystem);
-
-      this._elementsName[filesystem] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: ` ${label}: `,
-      });
-
-      this._elementsValue[filesystem] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--|--",
-      });
-      this._elementsValue[filesystem].clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._elementsUnit[filesystem] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "K",
-      });
-      this._elementsUnit[filesystem].set_style("padding-left: 0.125em;");
-
-      this.add_child(this._elementsName[filesystem]);
-      this.add_child(this._elementsValue[filesystem]);
-      this.add_child(this._elementsUnit[filesystem]);
-
-      this.idleOld[filesystem] = 0;
-      this.rwTotOld[filesystem] = [0, 0];
-    }
-
-    update_mode(mode) {
-      switch (mode) {
-        case "single":
-          this._elementsPath.forEach((element) => {
-            if (element !== "single") {
-              this._elementsName[element].hide();
-              this._elementsValue[element].hide();
-              this._elementsUnit[element].hide();
-            } else {
-              this._elementsValue[element].show();
-              this._elementsUnit[element].show();
-            }
-          });
-
-          break;
-
-        case "multiple":
-
-        default:
-          this._elementsPath.forEach((element) => {
-            if (element !== "single") {
-              this._elementsName[element].show();
-              this._elementsValue[element].show();
-              this._elementsUnit[element].show();
-            } else {
-              this._elementsValue[element].hide();
-              this._elementsUnit[element].hide();
-            }
-          });
-
-          break;
-      }
-    }
-
-    get_filesystem(name) {
-      return this._elementsPath.filter((item) => item.endsWith(name)).shift();
-    }
-
-    get_idle(filesystem) {
-      return this.idleOld[filesystem];
-    }
-
-    get_rw_tot(filesystem) {
-      return this.rwTotOld[filesystem];
-    }
-
-    set_idle(filesystem, idle) {
-      this.idleOld[filesystem] = idle;
-    }
-
-    set_rw_tot(filesystem, rwTot) {
-      this.rwTotOld[filesystem] = rwTot;
-    }
-
-    update_element_value(filesystem, value, unit, style = "") {
-      if (this._elementsValue[filesystem]) {
-        this._elementsValue[filesystem].text = value;
-        this._elementsValue[filesystem].style = style;
-        this._elementsUnit[filesystem].text = unit;
-      }
-    }
-  }
-);
-
-const DiskContainerSpace = GObject.registerClass(
-  class DiskContainerSpace extends DiskContainer {
-    add_element(filesystem, label) {
-      this._elementsPath.push(filesystem);
-
-      this._elementsName[filesystem] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: ` ${label}: `,
-      });
-
-      this._elementsValue[filesystem] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: "--",
-      });
-      this._elementsValue[filesystem].clutter_text.set({
-        x_align: Clutter.ActorAlign.END,
-      });
-
-      this._elementsUnit[filesystem] = new St.Label({
-        y_align: Clutter.ActorAlign.CENTER,
-        text: this._diskSpaceUnitType ? "%" : "KB",
-      });
-      this._elementsUnit[filesystem].set_style("padding-left: 0.125em;");
-
-      this.add_child(this._elementsName[filesystem]);
-      this.add_child(this._elementsValue[filesystem]);
-      this.add_child(this._elementsUnit[filesystem]);
-    }
-
-    update_element_value(filesystem, value, unit, style = "") {
-      if (this._elementsValue[filesystem]) {
-        this._elementsValue[filesystem].text = value;
-        this._elementsValue[filesystem].style = style;
-        this._elementsUnit[filesystem].text = unit;
-      }
-    }
-  }
-);
-
-const GpuContainer = GObject.registerClass(
-  class GpuContainer extends St.BoxLayout {
-    _init() {
-      super._init();
-
-      this._elementsUuid = [];
-      this._elementsName = [];
-      this._elementsValue = [];
-      this._elementsUnit = [];
-      this._elementsMemoryValue = [];
-      this._elementsMemoryUnit = [];
-      this._elementsThermalValue = [];
-      this._elementsThermalUnit = [];
-    }
-
-    set_element_width(width) {
-      if (width === 0) {
-        this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsValue[element] !== "undefined") {
-            this._elementsValue[element].min_width = 0;
-            this._elementsValue[element].natural_width = 0;
-            this._elementsValue[element].min_width_set = false;
-            this._elementsValue[element].natural_width_set = false;
-          }
-
-          if (typeof this._elementsMemoryValue[element] !== "undefined") {
-            this._elementsMemoryValue[element].min_width = 0;
-            this._elementsMemoryValue[element].natural_width = 0;
-            this._elementsMemoryValue[element].min_width_set = false;
-            this._elementsMemoryValue[element].natural_width_set = false;
-          }
-        });
-      } else {
-        this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsValue[element] !== "undefined") {
-            this._elementsValue[element].width = width;
-          }
-
-          if (typeof this._elementsMemoryValue[element] !== "undefined") {
-            this._elementsMemoryValue[element].width = width;
-          }
-        });
-      }
-    }
-
-    set_element_thermal_width(width) {
-      if (width === 0) {
-        this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsThermalValue[element] !== "undefined") {
-            this._elementsThermalValue[element].min_width = 0;
-            this._elementsThermalValue[element].natural_width = 0;
-            this._elementsThermalValue[element].min_width_set = false;
-            this._elementsThermalValue[element].natural_width_set = false;
-          }
-        });
-      } else {
-        this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsThermalValue[element] !== "undefined") {
-            this._elementsThermalValue[element].width = width;
-          }
-        });
-      }
-    }
-
-    cleanup_elements() {
-      this._elementsUuid = [];
-      this._elementsName = [];
-      this._elementsValue = [];
-      this._elementsUnit = [];
-      this._elementsMemoryValue = [];
-      this._elementsMemoryUnit = [];
-      this._elementsThermalValue = [];
-      this._elementsThermalUnit = [];
-
-      this.remove_all_children();
-    }
-
-    add_element(uuid, label, usage, memory, thermal) {
-      this._elementsUuid.push(uuid);
-
-      if (label !== null) {
-        this._elementsName[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: ` ${label}: `,
-        });
-        this.add_child(this._elementsName[uuid]);
-      }
-
-      // Usage
-      if (usage) {
-        this._elementsValue[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: "--",
-        });
-        this._elementsValue[uuid].clutter_text.set({
-          x_align: Clutter.ActorAlign.END,
-        });
-
-        this._elementsUnit[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: "%",
-        });
-        this._elementsUnit[uuid].set_style("padding-left: 0.125em;");
-
-        this.add_child(
-          new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: "[",
-          })
-        );
-        this.add_child(this._elementsValue[uuid]);
-        this.add_child(this._elementsUnit[uuid]);
-        this.add_child(
-          new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: "]",
-          })
-        );
-      }
-
-      // Memory
-      if (memory) {
-        this._elementsMemoryValue[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: "--",
-        });
-        this._elementsMemoryValue[uuid].clutter_text.set({
-          x_align: Clutter.ActorAlign.END,
-        });
-
-        this._elementsMemoryUnit[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: this._gpuMemoryUnitType ? "%" : "KB",
-        });
-        this._elementsMemoryUnit[uuid].set_style("padding-left: 0.125em;");
-
-        this.add_child(
-          new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: "[",
-          })
-        );
-        this.add_child(this._elementsMemoryValue[uuid]);
-        this.add_child(this._elementsMemoryUnit[uuid]);
-        this.add_child(
-          new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: "]",
-          })
-        );
-      }
-
-      // Thermal
-      if (thermal) {
-        this._elementsThermalValue[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: "--",
-        });
-        this._elementsThermalValue[uuid].clutter_text.set({
-          x_align: Clutter.ActorAlign.END,
-        });
-
-        this._elementsThermalUnit[uuid] = new St.Label({
-          y_align: Clutter.ActorAlign.CENTER,
-          text: "°C",
-        });
-        this._elementsThermalUnit[uuid].set_style("padding-left: 0.125em;");
-
-        this.add_child(
-          new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: "[",
-          })
-        );
-        this.add_child(this._elementsThermalValue[uuid]);
-        this.add_child(this._elementsThermalUnit[uuid]);
-        this.add_child(
-          new St.Label({
-            y_align: Clutter.ActorAlign.CENTER,
-            text: "]",
-          })
-        );
-      }
-    }
-
-    update_element_value(uuid, value, unit, style = "") {
-      if (this._elementsValue[uuid]) {
-        this._elementsValue[uuid].text = value;
-        this._elementsValue[uuid].style = style;
-        this._elementsUnit[uuid].text = unit;
-      }
-    }
-
-    update_element_memory_value(uuid, value, unit, style = "") {
-      if (this._elementsMemoryValue[uuid]) {
-        this._elementsMemoryValue[uuid].text = value;
-        this._elementsMemoryValue[uuid].style = style;
-        this._elementsMemoryUnit[uuid].text = unit;
-      }
-    }
-
-    update_element_thermal_value(uuid, value, unit, style = "") {
-      if (this._elementsThermalValue[uuid]) {
-        this._elementsThermalValue[uuid].text = value;
-        this._elementsThermalValue[uuid].style = style;
-        this._elementsThermalUnit[uuid].text = unit;
-      }
     }
   }
 );

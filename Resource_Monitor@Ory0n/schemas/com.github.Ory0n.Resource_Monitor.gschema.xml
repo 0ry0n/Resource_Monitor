@@ -49,8 +49,8 @@
         </key>
         <key name="cpustatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show CPU usage</summary>
+            <description>Displays the main CPU usage indicator in the panel.</description>
         </key>
         <key name="cpuwidth" type="i">
             <default>0</default>
@@ -60,13 +60,13 @@
         </key>
         <key name="cpucolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>CPU usage color thresholds</summary>
+            <description>Stores threshold and color rules applied to CPU usage values.</description>
         </key>
         <key name="cpufrequencystatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show CPU frequency</summary>
+            <description>Displays the current CPU frequency in the panel.</description>
         </key>
         <key name="cpufrequencywidth" type="i">
             <default>0</default>
@@ -76,18 +76,18 @@
         </key>
         <key name="cpufrequencycolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>CPU frequency color thresholds</summary>
+            <description>Stores threshold and color rules applied to CPU frequency values.</description>
         </key>
         <key name="cpufrequencyunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>CPU frequency unit</summary>
+            <description>Selects the preferred unit used for CPU frequency values.</description>
         </key>
         <key name="cpuloadaveragestatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show load average</summary>
+            <description>Displays the system load average in the panel.</description>
         </key>
         <key name="cpuloadaveragewidth" type="i">
             <default>0</default>
@@ -97,13 +97,13 @@
         </key>
         <key name="cpuloadaveragecolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Load average color thresholds</summary>
+            <description>Stores threshold and color rules applied to load average values.</description>
         </key>
         <key name="ramstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show RAM usage</summary>
+            <description>Displays the RAM usage indicator in the panel.</description>
         </key>
         <key name="ramwidth" type="i">
             <default>0</default>
@@ -113,28 +113,28 @@
         </key>
         <key name="ramcolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>RAM color thresholds</summary>
+            <description>Stores threshold and color rules applied to RAM values.</description>
         </key>
         <key name="ramunit" type="s">
             <default>"numeric"</default>
-            <summary></summary>
-            <description></description>
+            <summary>RAM display mode</summary>
+            <description>Chooses whether RAM is shown as a numeric value or percentage.</description>
         </key>
         <key name="ramunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>RAM unit</summary>
+            <description>Selects the preferred unit used for RAM values when numeric mode is enabled.</description>
         </key>
         <key name="rammonitor" type="s">
             <default>"used"</default>
-            <summary></summary>
-            <description></description>
+            <summary>RAM metric</summary>
+            <description>Chooses whether the extension displays used or free RAM.</description>
         </key>
         <key name="ramalert" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Enable RAM alert</summary>
+            <description>Shows a notification when available RAM drops below the configured threshold.</description>
         </key>
         <key name="ramalertthreshold" type="i">
             <default>10</default>
@@ -144,8 +144,8 @@
         </key>
         <key name="swapstatus" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show swap usage</summary>
+            <description>Displays the swap usage indicator in the panel.</description>
         </key>
         <key name="swapwidth" type="i">
             <default>0</default>
@@ -155,28 +155,28 @@
         </key>
         <key name="swapcolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Swap color thresholds</summary>
+            <description>Stores threshold and color rules applied to swap values.</description>
         </key>
         <key name="swapunit" type="s">
             <default>"numeric"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Swap display mode</summary>
+            <description>Chooses whether swap is shown as a numeric value or percentage.</description>
         </key>
         <key name="swapunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Swap unit</summary>
+            <description>Selects the preferred unit used for swap values when numeric mode is enabled.</description>
         </key>
         <key name="swapmonitor" type="s">
             <default>"used"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Swap metric</summary>
+            <description>Chooses whether the extension displays used or free swap.</description>
         </key>
         <key name="swapalert" type="b">
             <default>false</default>
-            <summary></summary>
-            <description></description>
+            <summary>Enable swap alert</summary>
+            <description>Shows a notification when available swap drops below the configured threshold.</description>
         </key>
         <key name="swapalertthreshold" type="i">
             <default>10</default>
@@ -186,13 +186,13 @@
         </key>
         <key name="diskshowdevicename" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show disk display names</summary>
+            <description>Displays the configured disk labels next to disk indicators in the panel.</description>
         </key>
         <key name="diskstatsstatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show disk statistics</summary>
+            <description>Displays disk throughput indicators in the panel.</description>
         </key>
         <key name="diskstatswidth" type="i">
             <default>0</default>
@@ -202,23 +202,23 @@
         </key>
         <key name="diskstatscolors" type="as">
             <default>[]</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk statistics color thresholds</summary>
+            <description>Stores threshold and color rules applied to disk throughput values.</description>
         </key>
         <key name="diskstatsmode" type="s">
             <default>"multiple"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk statistics display mode</summary>
+            <description>Chooses whether disk throughput is shown in single or multiple-value mode.</description>
         </key>
         <key name="diskstatsunitmeasure" type="s">
             <default>"auto"</default>
-            <summary></summary>
-            <description></description>
+            <summary>Disk statistics unit</summary>
+            <description>Selects the preferred unit used for disk throughput values.</description>
         </key>
         <key name="diskspacestatus" type="b">
             <default>true</default>
-            <summary></summary>
-            <description></description>
+            <summary>Show disk space</summary>
+            <description>Displays disk space indicators in the panel.</description>
         </key>
         <key name="diskspacewidth" type="i">
             <default>0</default>

@@ -1,3 +1,20 @@
 .main-label {
   font-weight: bold;
 }
+
+.embedded-widget {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.resource-monitor-list {
+  background: transparent;
+}
+
+.resource-monitor-list row {
+  border-radius: 12px;
+}
+
+.resource-monitor-column-view {
+  background: transparent;
+}

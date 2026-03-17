@@ -9,12 +9,16 @@ export function buildCpuUsageSample(contents, previousSample) {
 }
 
 export function parseCpuFrequencyOutput(contents, unitMeasure) {
-  const maxFrequency = Math.max(
-    ...contents
-      .split("\n")
-      .map((line) => parseInt(line.trim(), 10))
-      .filter(Number.isFinite)
-  );
+  const frequencies = contents
+    .split("\n")
+    .map((line) => parseInt(line.trim(), 10))
+    .filter(Number.isFinite);
+
+  if (frequencies.length === 0) {
+    return null;
+  }
+
+  const maxFrequency = Math.max(...frequencies);
 
   const [value, unit] = convertValueToUnit(maxFrequency, unitMeasure, true);
   return { value, unit };

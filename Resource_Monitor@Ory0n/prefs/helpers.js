@@ -1,24 +1,14 @@
 import Gio from "gi://Gio";
-import GObject from "gi://GObject";
 import Gtk from "gi://Gtk?version=4.0";
 import Gdk from "gi://Gdk?version=4.0";
 
-export const ResourceMonitorBuilderScope = GObject.registerClass(
-  {
-    Implements: [Gtk.BuilderScope],
-  },
-  class ResourceMonitorBuilderScope extends GObject.Object {
-    vfunc_create_closure(builder, handlerName, flags, connectObject) {
-      if (flags & Gtk.BuilderClosureFlags.SWAPPED)
-        throw new Error('Unsupported template signal flag "swapped"');
-
-      if (typeof this[handlerName] === "undefined")
-        throw new Error(`${handlerName} is undefined`);
-
-      return this[handlerName].bind(connectObject || this);
-    }
-  }
-);
+export {
+  executeCommand,
+  loadContents,
+  loadFile,
+  readOutput,
+} from "../runtime/io.js";
+export { parseSettingsArray } from "../utils/settings.js";
 
 export function replaceSignalHandler(widget, propertyName, signalName, callback) {
   if (widget[propertyName]) {
@@ -26,22 +16,6 @@ export function replaceSignalHandler(widget, propertyName, signalName, callback)
   }
 
   widget[propertyName] = widget.connect(signalName, callback);
-}
-
-export function parseSettingsArray(settings, key, parser) {
-  return settings
-    .get_strv(key)
-    .map((entry) => {
-      try {
-        return parser(entry);
-      } catch (error) {
-        console.error(
-          `[Resource_Monitor] Error parsing settings entry for ${key}: ${error.message}`
-        );
-        return null;
-      }
-    })
-    .filter(Boolean);
 }
 
 export function connectSpinButton(settings, settingsName, element) {
@@ -255,52 +229,4 @@ export function saveArrayToSettings(model, settings, key) {
     array.push(model.get_item(iter).getFormattedString());
   }
   settings.set_strv(key, array);
-}
-
-export function loadContents(file, cancellable = null) {
-  return new Promise((resolve, reject) => {
-    file.load_contents_async(cancellable, (sourceObject, result) => {
-      try {
-        const [ok, contents] = sourceObject.load_contents_finish(result);
-        if (ok) {
-          resolve(contents);
-        } else {
-          reject(new Error("Failed to load contents"));
-        }
-      } catch (error) {
-        reject(new Error(`Error in load_contents_finish: ${error.message}`));
-      }
-    });
-  });
-}
-
-export function loadFile(path, cancellable = null) {
-  const file = Gio.File.new_for_path(path);
-  return loadContents(file, cancellable);
-}
-
-export function readOutput(proc, cancellable = null) {
-  return new Promise((resolve, reject) => {
-    proc.communicate_utf8_async(null, cancellable, (sourceObject, result) => {
-      try {
-        const [ok, stdout, stderr] =
-          sourceObject.communicate_utf8_finish(result);
-        if (ok) {
-          resolve(stdout);
-        } else {
-          reject(new Error(`Process failed with error: ${stderr}`));
-        }
-      } catch (error) {
-        reject(new Error(`Error in communicate_utf8_finish: ${error.message}`));
-      }
-    });
-  });
-}
-
-export function executeCommand(command, cancellable = null) {
-  const proc = Gio.Subprocess.new(
-    command,
-    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE
-  );
-  return readOutput(proc, cancellable);
 }
