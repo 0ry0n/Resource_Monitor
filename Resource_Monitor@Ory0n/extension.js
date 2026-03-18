@@ -25,7 +25,6 @@ import Gio from "gi://Gio";
 import Clutter from "gi://Clutter";
 import GLib from "gi://GLib";
 import Shell from "gi://Shell";
-import NM from "gi://NM";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
@@ -43,16 +42,13 @@ import {
   serializeThermalCpuEntry,
 } from "./common.js";
 import {
-  convertValueToUnit,
   convertValuesToUnit,
   getUsageColor,
   getValueFixed,
 } from "./runtime/metrics.js";
 import {
   executeCommand as executeRuntimeCommand,
-  loadContents as loadRuntimeContents,
   loadFile as loadRuntimeFile,
-  readOutput as readRuntimeOutput,
 } from "./runtime/io.js";
 import { buildMainGui, createMainGui } from "./panel/mainGui.js";
 import {
@@ -94,6 +90,7 @@ import {
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
 const DECIMALS_STATUS = "decimalsstatus";
+const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
 const RIGHT_CLICK_STATUS = "rightclickstatus";
 
@@ -146,7 +143,6 @@ const DISK_SPACE_UNIT = "diskspaceunit";
 const DISK_SPACE_UNIT_MEASURE = "diskspaceunitmeasure";
 const DISK_SPACE_MONITOR = "diskspacemonitor";
 const DISK_DEVICES_LIST = "diskdeviceslist";
-const DISK_DEVICES_LIST_SEPARATOR = " ";
 
 const NET_AUTO_HIDE_STATUS = "netautohidestatus";
 const NET_UNIT = "netunit";
@@ -167,7 +163,6 @@ const THERMAL_GPU_TEMPERATURE_STATUS = "thermalgputemperaturestatus";
 const THERMAL_GPU_TEMPERATURE_WIDTH = "thermalgputemperaturewidth";
 const THERMAL_GPU_COLORS = "thermalgpucolors";
 const THERMAL_GPU_TEMPERATURE_DEVICES_LIST = "thermalgputemperaturedeviceslist";
-const THERMAL_CPU_TEMPERATURE_DEVICES_LIST_SEPARATOR = "-";
 
 const GPU_STATUS = "gpustatus";
 const GPU_WIDTH = "gpuwidth";
@@ -178,11 +173,24 @@ const GPU_MEMORY_UNIT_MEASURE = "gpumemoryunitmeasure";
 const GPU_MEMORY_MONITOR = "gpumemorymonitor";
 const GPU_DISPLAY_DEVICE_NAME = "gpudisplaydevicename";
 const GPU_DEVICES_LIST = "gpudeviceslist";
-const GPU_DEVICES_LIST_SEPARATOR = ":";
+const GPU_MIN_REFRESH_INTERVAL_SECONDS = 5;
+
+let networkManagerPromise = null;
+
+async function _loadNetworkManager() {
+  if (!networkManagerPromise) {
+    networkManagerPromise = import("gi://NM")
+      .then((module) => module.default ?? module)
+      .catch(() => null);
+  }
+
+  return networkManagerPromise;
+}
 
 const SETTINGS_KEYS = {
   REFRESH_TIME,
   DECIMALS_STATUS,
+  DATA_SCALE_BASE,
   LEFT_CLICK_STATUS,
   RIGHT_CLICK_STATUS,
   ICONS_STATUS,
@@ -258,30 +266,35 @@ const SETTINGS_KEYS = {
   parseThermalCpuEntry,
   parseThermalGpuEntry,
   parseGpuEntry,
-  NM,
 };
 
 const ResourceMonitor = GObject.registerClass(
   class ResourceMonitor extends PanelMenu.Button {
-    _init({ settings, openPreferences, path, metadata }) {
+    _init({ settings, openPreferences, path, metadata, logger = console }) {
       super._init(0.0, metadata.name, false);
 
       this._settings = settings;
       this._openPreferences = openPreferences;
       this._path = path;
       this._metadata = metadata;
+      this._logger = logger;
 
       this._themeContext = St.ThemeContext.get_for_stage(global.stage);
       this._scaleFactor = 1;
       this._destroyed = false;
       this._ioCancellable = new Gio.Cancellable();
       this._refreshTaskRunner = new RefreshTaskRunner();
-      this._issueLogger = new IssueLogger();
+      this._issueLogger = new IssueLogger(this._logger);
       this._capabilities = detectCapabilities();
+      this._nm = null;
       this._nmClient = null;
+      this._networkManagerAvailable = false;
       this._nmClientHandlerIds = [];
       this._ramAlertActive = false;
       this._swapAlertActive = false;
+      this._gpuRefreshIntervalUsec =
+        GPU_MIN_REFRESH_INTERVAL_SECONDS * 1_000_000;
+      this._lastGpuRefreshAtUsec = 0;
       this._themeContextHandlerId = this._themeContext.connect(
         "notify::scale-factor",
         () => {
@@ -319,14 +332,13 @@ const ResourceMonitor = GObject.registerClass(
       this._duTotWlanOld = [0, 0];
       this._wlanIdleOld = 0;
 
-      this._cpuTemperatures = 0;
-      this._cpuTemperaturesReadings = 0;
-
       this._createMainGui();
       this._setupAccessibility();
       this._setupMenu();
 
       this._initSettings();
+      this._updateGpuRefreshInterval();
+      this._syncInteractionUi();
 
       this._buildMainGui();
 
@@ -335,9 +347,7 @@ const ResourceMonitor = GObject.registerClass(
       this.connect("button-press-event", this._clickManager.bind(this));
       this.connect("key-press-event", this._onKeyPressEvent.bind(this));
 
-      if (typeof NM !== "undefined") {
-        this._initNetworkMonitor();
-      }
+      this._initNetworkMonitor();
 
       this._refreshThermalCpuSensorPaths();
 
@@ -359,17 +369,11 @@ const ResourceMonitor = GObject.registerClass(
         this.set_accessible_name(accessibleName);
       }
 
-      if (typeof this.set_tooltip_text === "function") {
-        this.set_tooltip_text(
-          _(
-            "Left click launches the configured action. Right click opens preferences."
-          )
-        );
-      } else {
-        this.tooltip_text = _(
-          "Left click launches the configured action. Right click opens preferences."
-        );
-      }
+      this._setPanelTooltip(
+        _(
+          "Left-click launches the configured action. Right-click opens preferences."
+        )
+      );
 
       if (this._box) {
         this._box.accessible_name = accessibleName;
@@ -379,9 +383,35 @@ const ResourceMonitor = GObject.registerClass(
     _setupMenu() {
       this.menu.removeAll();
 
+      this._menuPrimaryActionInfoItem = new PopupMenu.PopupMenuItem("", {
+        reactive: false,
+        can_focus: false,
+      });
+      this._menuPrimaryActionInfoItem.add_style_class_name(
+        "resource-monitor-menu-info"
+      );
+      this.menu.addMenuItem(this._menuPrimaryActionInfoItem);
+
+      this._menuRefreshInfoItem = new PopupMenu.PopupMenuItem("", {
+        reactive: false,
+        can_focus: false,
+      });
+      this._menuRefreshInfoItem.add_style_class_name("resource-monitor-menu-info");
+      this.menu.addMenuItem(this._menuRefreshInfoItem);
+
+      this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+      this._menuLaunchPrimaryActionItem = new PopupMenu.PopupMenuItem(
+        _("Run Primary Action")
+      );
+      this._menuLaunchPrimaryActionItem.connect("activate", () => {
+        this._launchPrimaryAction();
+      });
+      this.menu.addMenuItem(this._menuLaunchPrimaryActionItem);
+
       const refreshItem = new PopupMenu.PopupMenuItem(_("Refresh Now"));
       refreshItem.connect("activate", () => {
-        this._refreshHandler();
+        this._refreshHandler(true);
       });
       this.menu.addMenuItem(refreshItem);
 
@@ -390,13 +420,109 @@ const ResourceMonitor = GObject.registerClass(
         this._openPreferences();
       });
       this.menu.addMenuItem(preferencesItem);
+
+      this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
+      this._menuRightClickToggleItem = new PopupMenu.PopupSwitchMenuItem(
+        _("Right-click opens preferences"),
+        Boolean(this._rightClickStatus)
+      );
+      this._menuRightClickToggleItem.connect("toggled", (item, state) => {
+        if (state !== this._rightClickStatus) {
+          this._settings.set_boolean(RIGHT_CLICK_STATUS, state);
+        }
+      });
+      this.menu.addMenuItem(this._menuRightClickToggleItem);
+
+      this._updateMenuState();
+    }
+
+    _setPanelTooltip(text) {
+      if (typeof this.set_tooltip_text === "function") {
+        this.set_tooltip_text(text);
+      } else {
+        this.tooltip_text = text;
+      }
+    }
+
+    _isPrimaryActionConfigured() {
+      return (
+        typeof this._leftClickStatus === "string" &&
+        this._leftClickStatus.trim().length > 0
+      );
+    }
+
+    _getPrimaryActionDisplayName() {
+      const action =
+        typeof this._leftClickStatus === "string"
+          ? this._leftClickStatus.trim()
+          : "";
+
+      if (action === "") {
+        return _("Disabled");
+      }
+
+      const appSystem = Shell.AppSystem.get_default();
+      const appId = action.endsWith(".desktop") ? action : `${action}.desktop`;
+      const app = appSystem.lookup_app(appId);
+      if (app) {
+        return app.get_name();
+      }
+
+      return action;
+    }
+
+    _updatePanelTooltip() {
+      const rightClickAction = this._rightClickStatus
+        ? _("Open preferences")
+        : _("Open indicator menu");
+      this._setPanelTooltip(
+        `${_("Left-click")}: ${this._getPrimaryActionDisplayName()}\n${_("Right-click")}: ${rightClickAction}`
+      );
+    }
+
+    _updateMenuState() {
+      if (
+        !this._menuPrimaryActionInfoItem ||
+        !this._menuRefreshInfoItem ||
+        !this._menuLaunchPrimaryActionItem
+      ) {
+        return;
+      }
+
+      const primaryAction = this._getPrimaryActionDisplayName();
+      const refreshInterval = Number.isFinite(this._refreshTime)
+        ? this._refreshTime
+        : this._settings.get_int(REFRESH_TIME);
+      const hasPrimaryAction = this._isPrimaryActionConfigured();
+
+      this._menuPrimaryActionInfoItem.label.text =
+        `${_("Primary Action")}: ${primaryAction}`;
+      this._menuRefreshInfoItem.label.text =
+        `${_("Refresh Interval")}: ${refreshInterval} s`;
+
+      this._menuLaunchPrimaryActionItem.setSensitive(hasPrimaryAction);
+      this._menuLaunchPrimaryActionItem.label.text = hasPrimaryAction
+        ? _("Run Primary Action")
+        : _("Primary Action Disabled");
+
+      if (this._menuRightClickToggleItem) {
+        this._menuRightClickToggleItem.setToggleState(
+          Boolean(this._rightClickStatus)
+        );
+      }
+    }
+
+    _syncInteractionUi() {
+      this._updateMenuState();
+      this._updatePanelTooltip();
     }
 
     destroy() {
       this._destroyed = true;
 
       if (this._mainTimer) {
-        GLib.source_remove(this._mainTimer);
+        GLib.Source.remove(this._mainTimer);
         this._mainTimer = null;
       }
 
@@ -420,10 +546,18 @@ const ResourceMonitor = GObject.registerClass(
 
     async _initNetworkMonitor() {
       try {
+        this._nm = await _loadNetworkManager();
+        this._networkManagerAvailable = this._nm !== null;
+        this._netAutoHideStatusChanged();
+
+        if (!this._nm || this._destroyed) {
+          return;
+        }
+
         this._nmClient = await new Promise((resolve, reject) => {
-          NM.Client.new_async(this._ioCancellable, (source, result) => {
+          this._nm.Client.new_async(this._ioCancellable, (source, result) => {
             try {
-              resolve(NM.Client.new_finish(result));
+              resolve(this._nm.Client.new_finish(result));
             } catch (error) {
               reject(error);
             }
@@ -449,8 +583,14 @@ const ResourceMonitor = GObject.registerClass(
 
         this._onActiveConnectionRemoved(this._nmClient);
       } catch (error) {
+        this._networkManagerAvailable = false;
+        this._netAutoHideStatusChanged();
+
         if (!this._isCancelledError(error)) {
-          console.error("[Resource_Monitor] Error initializing NM client:", error);
+          this._logger.error(
+            "[Resource_Monitor] Error initializing NM client:",
+            error
+          );
         }
       }
     }
@@ -476,31 +616,41 @@ const ResourceMonitor = GObject.registerClass(
         const sensorPathByName = new Map();
         const sensors = await Promise.all(
           descriptors.map(async (descriptor) => {
-            const chipName = decoder
-              .decode(await this._loadFile(descriptor.namePath))
-              .trim();
+            try {
+              const chipName = decoder
+                .decode(await this._loadFile(descriptor.namePath))
+                .trim();
 
-            if (!allowedSensorNames.has(chipName)) {
-              return null;
-            }
+              if (!allowedSensorNames.has(chipName)) {
+                return null;
+              }
 
-            let label = descriptor.fallbackLabel;
-            if (GLib.file_test(descriptor.labelPath, GLib.FileTest.EXISTS)) {
-              try {
-                label = decoder.decode(await this._loadFile(descriptor.labelPath)).trim();
-              } catch (error) {
-                if (!this._isCancelledError(error)) {
-                  label = descriptor.fallbackLabel;
-                } else {
-                  throw error;
+              let label = descriptor.fallbackLabel;
+              if (GLib.file_test(descriptor.labelPath, GLib.FileTest.EXISTS)) {
+                try {
+                  label = decoder
+                    .decode(await this._loadFile(descriptor.labelPath))
+                    .trim();
+                } catch (error) {
+                  if (!this._isCancelledError(error)) {
+                    label = descriptor.fallbackLabel;
+                  } else {
+                    throw error;
+                  }
                 }
               }
-            }
 
-            return {
-              name: `${chipName}: ${label}`,
-              path: descriptor.inputPath,
-            };
+              return {
+                name: `${chipName}: ${label}`,
+                path: descriptor.inputPath,
+              };
+            } catch (error) {
+              if (this._isCancelledError(error)) {
+                throw error;
+              }
+
+              return null;
+            }
           })
         );
 
@@ -573,9 +723,18 @@ const ResourceMonitor = GObject.registerClass(
       ).scale_factor;
     }
 
+    _updateGpuRefreshInterval() {
+      const refreshInterval = Number.isFinite(this._refreshTime)
+        ? this._refreshTime
+        : GPU_MIN_REFRESH_INTERVAL_SECONDS;
+
+      this._gpuRefreshIntervalUsec =
+        Math.max(refreshInterval, GPU_MIN_REFRESH_INTERVAL_SECONDS) * 1_000_000;
+    }
+
     _clickManager(actor, event) {
       switch (event.get_button()) {
-        case 3: // Right Click
+        case 3: // Right-click
           if (this._rightClickStatus) {
             this._openPreferences();
           } else {
@@ -584,7 +743,7 @@ const ResourceMonitor = GObject.registerClass(
 
           return Clutter.EVENT_STOP;
 
-        case 1: // Left Click
+        case 1: // Left-click
           this._launchPrimaryAction();
 
           return Clutter.EVENT_STOP;
@@ -612,13 +771,17 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _launchPrimaryAction() {
-      if (this._leftClickStatus === "") {
+      const action =
+        typeof this._leftClickStatus === "string"
+          ? this._leftClickStatus.trim()
+          : "";
+      if (action === "") {
         return;
       }
 
       const appSystem = Shell.AppSystem.get_default();
-      const appName = this._leftClickStatus + ".desktop";
-      let app = appSystem.lookup_app(appName);
+      const appId = action.endsWith(".desktop") ? action : `${action}.desktop`;
+      const app = appSystem.lookup_app(appId);
 
       if (app) {
         app.activate();
@@ -626,23 +789,31 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       try {
-        Util.spawnCommandLine(this._leftClickStatus);
+        Util.spawnCommandLine(action);
       } catch (error) {
-        console.error(
-          `[Resource_Monitor] Error spawning ${this._leftClickStatus}: ${error}`
+        this._notifyMemoryAlert(
+          this._metadata?.name ?? _("Resource Monitor"),
+          _("Unable to launch the configured action.")
+        );
+        this._logger.error(
+          `[Resource_Monitor] Error spawning ${action}: ${error}`
         );
       }
     }
 
     _onActiveConnectionAdded(client, activeConnection) {
+      if (!this._nm) {
+        return;
+      }
+
       activeConnection.get_devices().forEach((device) => {
         switch (device.get_device_type()) {
-          case NM.DeviceType.ETHERNET:
+          case this._nm.DeviceType.ETHERNET:
             this._nmEthStatus = true;
 
             break;
 
-          case NM.DeviceType.WIFI:
+          case this._nm.DeviceType.WIFI:
             this._nmWlanStatus = true;
 
             break;
@@ -671,18 +842,22 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _onActiveConnectionRemoved(client, activeConnection) {
+      if (!this._nm) {
+        return;
+      }
+
       this._nmEthStatus = false;
       this._nmWlanStatus = false;
 
       client.get_active_connections().forEach((activeConnection) => {
         activeConnection.get_devices().forEach((device) => {
           switch (device.get_device_type()) {
-            case NM.DeviceType.ETHERNET:
+            case this._nm.DeviceType.ETHERNET:
               this._nmEthStatus = true;
 
               break;
 
-            case NM.DeviceType.WIFI:
+            case this._nm.DeviceType.WIFI:
               this._nmWlanStatus = true;
 
               break;
@@ -713,9 +888,11 @@ const ResourceMonitor = GObject.registerClass(
 
     _refreshTimeChanged() {
       this._refreshTime = this._settings.get_int(REFRESH_TIME);
+      this._updateGpuRefreshInterval();
+      this._syncInteractionUi();
 
       if (this._mainTimer) {
-        GLib.source_remove(this._mainTimer);
+        GLib.Source.remove(this._mainTimer);
         this._mainTimer = null;
       }
 
@@ -729,15 +906,22 @@ const ResourceMonitor = GObject.registerClass(
     _decimalsStatusChanged() {
       this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
 
-      this._refreshHandler();
+      this._refreshHandler(true);
+    }
+
+    _dataScaleBaseChanged() {
+      this._dataScaleBase = this._settings.get_string(DATA_SCALE_BASE);
+      this._refreshHandler(true);
     }
 
     _leftClickStatusChanged() {
       this._leftClickStatus = this._settings.get_string(LEFT_CLICK_STATUS);
+      this._syncInteractionUi();
     }
 
     _rightClickStatusChanged() {
       this._rightClickStatus = this._settings.get_boolean(RIGHT_CLICK_STATUS);
+      this._syncInteractionUi();
     }
 
     _iconsStatusChanged() {
@@ -844,20 +1028,6 @@ const ResourceMonitor = GObject.registerClass(
       if (this._hasVisibleCpuFrequency()) {
         this._refreshCpuFrequencyValue();
       }
-    }
-
-    _syncCpuFrequencyVisibility() {
-      this._basicItemStatus(
-        this._hasVisibleCpuFrequency(),
-        !this._cpuStatus &&
-        !this._hasVisibleThermalCpuTemperature() &&
-        !this._cpuLoadAverageStatus,
-        this._cpuIcon,
-        this._cpuFrequencyValue,
-        this._cpuFrequencyUnit,
-        this._cpuFrequencyBracketStart,
-        this._cpuFrequencyBracketEnd
-      );
     }
 
     _cpuFrequencyWidthChanged() {
@@ -1186,7 +1356,7 @@ const ResourceMonitor = GObject.registerClass(
     _netAutoHideStatusChanged() {
       this._netAutoHideStatus =
         this._settings.get_boolean(NET_AUTO_HIDE_STATUS) &&
-        typeof NM !== "undefined";
+        this._networkManagerAvailable;
 
       this._basicItemStatus(
         (this._netEthStatus && this._nmEthStatus) ||
@@ -1300,20 +1470,6 @@ const ResourceMonitor = GObject.registerClass(
       }
     }
 
-    _syncThermalCpuVisibility() {
-      this._basicItemStatus(
-        this._hasVisibleThermalCpuTemperature(),
-        !this._cpuStatus &&
-        !this._hasVisibleCpuFrequency() &&
-        !this._cpuLoadAverageStatus,
-        this._cpuIcon,
-        this._cpuTemperatureValue,
-        this._cpuTemperatureUnit,
-        this._cpuTemperatureBracketStart,
-        this._cpuTemperatureBracketEnd
-      );
-    }
-
     _thermalCpuTemperatureWidthChanged() {
       this._thermalCpuTemperatureWidth = this._settings.get_int(
         THERMAL_CPU_TEMPERATURE_WIDTH
@@ -1342,7 +1498,7 @@ const ResourceMonitor = GObject.registerClass(
         this._refreshCpuTemperatureValue();
       }
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1368,7 +1524,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDevicesListChanged();
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1386,7 +1542,7 @@ const ResourceMonitor = GObject.registerClass(
       this._thermalGpuColors = this._settings.get_strv(THERMAL_GPU_COLORS);
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1406,7 +1562,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDevicesListChanged();
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1420,7 +1576,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuColors = this._settings.get_strv(GPU_COLORS);
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1428,7 +1584,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuMemoryColors = this._settings.get_strv(GPU_MEMORY_COLORS);
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1436,7 +1592,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuMemoryUnitType = this._settings.get_string(GPU_MEMORY_UNIT);
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1446,7 +1602,7 @@ const ResourceMonitor = GObject.registerClass(
       );
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1454,7 +1610,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuMemoryMonitor = this._settings.get_string(GPU_MEMORY_MONITOR);
 
       if (this._hasVisibleGpu()) {
-        this._refreshGpuValue();
+        this._refreshGpuValue(true);
       }
     }
 
@@ -1527,8 +1683,8 @@ const ResourceMonitor = GObject.registerClass(
       syncThermalCpuVisibility(this);
     }
 
-    _refreshHandler() {
-      return refreshHandler(this);
+    _refreshHandler(forceGpu = false) {
+      return refreshHandler(this, forceGpu);
     }
 
     _refreshGui() {
@@ -1612,14 +1768,14 @@ const ResourceMonitor = GObject.registerClass(
       return getValueFixed(value, this._decimalsStatus);
     }
 
-    // Conversion for a single value (KB, MB, GB or Hz)
-    _convertValueToUnit(value, unitMeasure, isHertz = false) {
-      return convertValueToUnit(value, unitMeasure, isHertz);
-    }
-
     // Conversion of array of values (network/disk)
     _convertValuesToUnit(values, unitMeasure, isBits = false) {
-      return convertValuesToUnit(values, unitMeasure, isBits);
+      return convertValuesToUnit(
+        values,
+        unitMeasure,
+        isBits,
+        this._dataScaleBase
+      );
     }
 
     // ==================
@@ -1666,8 +1822,8 @@ const ResourceMonitor = GObject.registerClass(
       refreshCpuTemperatureValue(this);
     }
 
-    _refreshGpuValue() {
-      refreshGpuValue(this);
+    _refreshGpuValue(force = false) {
+      refreshGpuValue(this, { force });
     }
 
     // Common Function
@@ -1700,16 +1856,8 @@ const ResourceMonitor = GObject.registerClass(
       }
     }
 
-    _loadContents(file, cancellable = this._ioCancellable) {
-      return loadRuntimeContents(file, cancellable);
-    }
-
     async _loadFile(path, cancellable = this._ioCancellable) {
       return loadRuntimeFile(path, cancellable);
-    }
-
-    _readOutput(proc, cancellable = this._ioCancellable) {
-      return readRuntimeOutput(proc, cancellable);
     }
 
     async _executeCommand(command, cancellable = this._ioCancellable) {
@@ -1721,6 +1869,8 @@ const ResourceMonitor = GObject.registerClass(
 export default class ResourceMonitorExtension extends Extension {
   enable() {
     this._settings = this.getSettings();
+    this._logger =
+      typeof this.getLogger === "function" ? this.getLogger() : console;
     this._indicator = new ResourceMonitor({
       settings: this._settings,
       openPreferences: () => {
@@ -1728,6 +1878,7 @@ export default class ResourceMonitorExtension extends Extension {
       },
       path: this.path,
       metadata: this.metadata,
+      logger: this._logger,
     });
 
     const index = {
@@ -1751,6 +1902,7 @@ export default class ResourceMonitorExtension extends Extension {
           },
           path: this.path,
           metadata: this.metadata,
+          logger: this._logger,
         });
 
         Main.panel.addToStatusArea(
@@ -1777,6 +1929,7 @@ export default class ResourceMonitorExtension extends Extension {
     }
 
     this._settings = null;
+    this._logger = null;
 
     if (this._indicator) {
       this._indicator.destroy();

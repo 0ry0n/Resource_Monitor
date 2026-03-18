@@ -1,6 +1,7 @@
 export function initializeSettings(indicator, keys) {
   indicator._refreshTime = indicator._settings.get_int(keys.REFRESH_TIME);
   indicator._decimalsStatus = indicator._settings.get_boolean(keys.DECIMALS_STATUS);
+  indicator._dataScaleBase = indicator._settings.get_string(keys.DATA_SCALE_BASE);
   indicator._leftClickStatus = indicator._settings.get_string(keys.LEFT_CLICK_STATUS);
   indicator._rightClickStatus = indicator._settings.get_boolean(keys.RIGHT_CLICK_STATUS);
 
@@ -9,13 +10,13 @@ export function initializeSettings(indicator, keys) {
   indicator._itemsPosition = indicator._settings.get_strv(keys.ITEMS_POSITION);
 
   indicator._cpuStatus = indicator._settings.get_boolean(keys.CPU_STATUS);
-  indicator._cpuWidth = indicator._settings.get_int(keys.CPU_WIDTH) * indicator._scaleFactor;
+  indicator._cpuWidth = indicator._settings.get_int(keys.CPU_WIDTH);
   indicator._cpuColors = indicator._settings.get_strv(keys.CPU_COLORS);
   indicator._cpuFrequencyStatus = indicator._settings.get_boolean(
     keys.CPU_FREQUENCY_STATUS
   );
   indicator._cpuFrequencyWidth =
-    indicator._settings.get_int(keys.CPU_FREQUENCY_WIDTH) * indicator._scaleFactor;
+    indicator._settings.get_int(keys.CPU_FREQUENCY_WIDTH);
   indicator._cpuFrequencyColors = indicator._settings.get_strv(
     keys.CPU_FREQUENCY_COLORS
   );
@@ -26,13 +27,13 @@ export function initializeSettings(indicator, keys) {
     keys.CPU_LOADAVERAGE_STATUS
   );
   indicator._cpuLoadAverageWidth =
-    indicator._settings.get_int(keys.CPU_LOADAVERAGE_WIDTH) * indicator._scaleFactor;
+    indicator._settings.get_int(keys.CPU_LOADAVERAGE_WIDTH);
   indicator._cpuLoadAverageColors = indicator._settings.get_strv(
     keys.CPU_LOADAVERAGE_COLORS
   );
 
   indicator._ramStatus = indicator._settings.get_boolean(keys.RAM_STATUS);
-  indicator._ramWidth = indicator._settings.get_int(keys.RAM_WIDTH) * indicator._scaleFactor;
+  indicator._ramWidth = indicator._settings.get_int(keys.RAM_WIDTH);
   indicator._ramColors = indicator._settings.get_strv(keys.RAM_COLORS);
   indicator._ramUnitType = indicator._settings.get_string(keys.RAM_UNIT);
   indicator._ramUnitMeasure = indicator._settings.get_string(keys.RAM_UNIT_MEASURE);
@@ -43,7 +44,7 @@ export function initializeSettings(indicator, keys) {
   );
 
   indicator._swapStatus = indicator._settings.get_boolean(keys.SWAP_STATUS);
-  indicator._swapWidth = indicator._settings.get_int(keys.SWAP_WIDTH) * indicator._scaleFactor;
+  indicator._swapWidth = indicator._settings.get_int(keys.SWAP_WIDTH);
   indicator._swapColors = indicator._settings.get_strv(keys.SWAP_COLORS);
   indicator._swapUnitType = indicator._settings.get_string(keys.SWAP_UNIT);
   indicator._swapUnitMeasure = indicator._settings.get_string(keys.SWAP_UNIT_MEASURE);
@@ -58,7 +59,7 @@ export function initializeSettings(indicator, keys) {
   );
   indicator._diskStatsStatus = indicator._settings.get_boolean(keys.DISK_STATS_STATUS);
   indicator._diskStatsWidth =
-    indicator._settings.get_int(keys.DISK_STATS_WIDTH) * indicator._scaleFactor;
+    indicator._settings.get_int(keys.DISK_STATS_WIDTH);
   indicator._diskStatsColors = indicator._settings.get_strv(keys.DISK_STATS_COLORS);
   indicator._diskStatsMode = indicator._settings.get_string(keys.DISK_STATS_MODE);
   indicator._diskStatsUnitMeasure = indicator._settings.get_string(
@@ -66,7 +67,7 @@ export function initializeSettings(indicator, keys) {
   );
   indicator._diskSpaceStatus = indicator._settings.get_boolean(keys.DISK_SPACE_STATUS);
   indicator._diskSpaceWidth =
-    indicator._settings.get_int(keys.DISK_SPACE_WIDTH) * indicator._scaleFactor;
+    indicator._settings.get_int(keys.DISK_SPACE_WIDTH);
   indicator._diskSpaceColors = indicator._settings.get_strv(keys.DISK_SPACE_COLORS);
   indicator._diskSpaceUnitType = indicator._settings.get_string(keys.DISK_SPACE_UNIT);
   indicator._diskSpaceUnitMeasure = indicator._settings.get_string(
@@ -80,18 +81,18 @@ export function initializeSettings(indicator, keys) {
     keys.parseDiskEntry
   );
 
-  indicator._netAutoHideStatus =
-    indicator._settings.get_boolean(keys.NET_AUTO_HIDE_STATUS) &&
-    typeof keys.NM !== "undefined";
+  indicator._netAutoHideStatus = indicator._settings.get_boolean(
+    keys.NET_AUTO_HIDE_STATUS
+  );
   indicator._netUnit = indicator._settings.get_string(keys.NET_UNIT);
   indicator._netUnitMeasure = indicator._settings.get_string(keys.NET_UNIT_MEASURE);
   indicator._netEthStatus = indicator._settings.get_boolean(keys.NET_ETH_STATUS);
   indicator._netEthWidth =
-    indicator._settings.get_int(keys.NET_ETH_WIDTH) * indicator._scaleFactor;
+    indicator._settings.get_int(keys.NET_ETH_WIDTH);
   indicator._netEthColors = indicator._settings.get_strv(keys.NET_ETH_COLORS);
   indicator._netWlanStatus = indicator._settings.get_boolean(keys.NET_WLAN_STATUS);
   indicator._netWlanWidth =
-    indicator._settings.get_int(keys.NET_WLAN_WIDTH) * indicator._scaleFactor;
+    indicator._settings.get_int(keys.NET_WLAN_WIDTH);
   indicator._netWlanColors = indicator._settings.get_strv(keys.NET_WLAN_COLORS);
 
   indicator._thermalTemperatureUnit = indicator._settings.get_string(
@@ -101,8 +102,7 @@ export function initializeSettings(indicator, keys) {
     keys.THERMAL_CPU_TEMPERATURE_STATUS
   );
   indicator._thermalCpuTemperatureWidth =
-    indicator._settings.get_int(keys.THERMAL_CPU_TEMPERATURE_WIDTH) *
-    indicator._scaleFactor;
+    indicator._settings.get_int(keys.THERMAL_CPU_TEMPERATURE_WIDTH);
   indicator._thermalCpuColors = indicator._settings.get_strv(keys.THERMAL_CPU_COLORS);
   indicator._thermalCpuTemperatureDevices = indicator._parseSettingsArray(
     keys.THERMAL_CPU_TEMPERATURE_DEVICES_LIST,
@@ -112,8 +112,7 @@ export function initializeSettings(indicator, keys) {
     keys.THERMAL_GPU_TEMPERATURE_STATUS
   );
   indicator._thermalGpuTemperatureWidth =
-    indicator._settings.get_int(keys.THERMAL_GPU_TEMPERATURE_WIDTH) *
-    indicator._scaleFactor;
+    indicator._settings.get_int(keys.THERMAL_GPU_TEMPERATURE_WIDTH);
   indicator._thermalGpuColors = indicator._settings.get_strv(keys.THERMAL_GPU_COLORS);
   indicator._thermalGpuTemperatureDevices = indicator._parseSettingsArray(
     keys.THERMAL_GPU_TEMPERATURE_DEVICES_LIST,
@@ -121,7 +120,7 @@ export function initializeSettings(indicator, keys) {
   );
 
   indicator._gpuStatus = indicator._settings.get_boolean(keys.GPU_STATUS);
-  indicator._gpuWidth = indicator._settings.get_int(keys.GPU_WIDTH) * indicator._scaleFactor;
+  indicator._gpuWidth = indicator._settings.get_int(keys.GPU_WIDTH);
   indicator._gpuColors = indicator._settings.get_strv(keys.GPU_COLORS);
   indicator._gpuMemoryColors = indicator._settings.get_strv(keys.GPU_MEMORY_COLORS);
   indicator._gpuMemoryUnitType = indicator._settings.get_string(keys.GPU_MEMORY_UNIT);
@@ -144,6 +143,7 @@ export function connectSettingsSignals(indicator, keys) {
   const signalMap = [
     [keys.REFRESH_TIME, "_refreshTimeChanged"],
     [keys.DECIMALS_STATUS, "_decimalsStatusChanged"],
+    [keys.DATA_SCALE_BASE, "_dataScaleBaseChanged"],
     [keys.LEFT_CLICK_STATUS, "_leftClickStatusChanged"],
     [keys.RIGHT_CLICK_STATUS, "_rightClickStatusChanged"],
     [keys.ICONS_STATUS, "_iconsStatusChanged"],

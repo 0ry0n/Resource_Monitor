@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin zip
+        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin zip gettext
 
       - name: Build Package
         run: make package

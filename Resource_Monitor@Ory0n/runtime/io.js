@@ -26,13 +26,40 @@ export function readOutput(proc, cancellable = null) {
   return new Promise((resolve, reject) => {
     proc.communicate_utf8_async(null, cancellable, (sourceObject, result) => {
       try {
-        const [ok, stdout, stderr] =
-          sourceObject.communicate_utf8_finish(result);
-        if (ok) {
-          resolve(stdout);
-        } else {
-          reject(new Error(`Process failed with error: ${stderr}`));
+        const communicateResult = sourceObject.communicate_utf8_finish(result);
+        let stdout = "";
+        let stderr = "";
+
+        if (Array.isArray(communicateResult)) {
+          if (communicateResult.length >= 3) {
+            [, stdout, stderr] = communicateResult;
+          } else if (communicateResult.length === 2) {
+            [stdout, stderr] = communicateResult;
+          }
         }
+
+        const successful =
+          typeof sourceObject.get_successful === "function"
+            ? sourceObject.get_successful()
+            : Boolean(Array.isArray(communicateResult) && communicateResult[0]);
+
+        if (successful) {
+          resolve(stdout);
+          return;
+        }
+
+        const exitStatus =
+          typeof sourceObject.get_exit_status === "function"
+            ? sourceObject.get_exit_status()
+            : "unknown";
+        const reason = (stderr || "").trim();
+        reject(
+          new Error(
+            reason
+              ? `Process failed (exit ${exitStatus}): ${reason}`
+              : `Process failed with exit status ${exitStatus}`
+          )
+        );
       } catch (error) {
         reject(error);
       }

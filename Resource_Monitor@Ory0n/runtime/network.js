@@ -5,6 +5,7 @@ export function buildNetworkSample(contents, options) {
     pattern,
     unit,
     unitMeasure,
+    scaleBase = "decimal",
     previousTotals,
     previousIdle,
     currentIdle,
@@ -16,11 +17,24 @@ export function buildNetworkSample(contents, options) {
   let displayUnit = unit === "bits" ? "b" : "B";
 
   if (delta > 0) {
-    values = totals.map(
-      (total, index) => ((total - (previousTotals[index] || 0)) * factor) / delta
-    );
+    values = totals.map((total, index) => {
+      const previousValue = previousTotals[index] || 0;
+      const deltaCounter = total - previousValue;
 
-    const converted = convertValuesToUnit(values, unitMeasure, unit === "bits");
+      // Counter resets can happen after link/interface resets.
+      if (deltaCounter <= 0) {
+        return 0;
+      }
+
+      return (deltaCounter * factor) / delta;
+    });
+
+    const converted = convertValuesToUnit(
+      values,
+      unitMeasure,
+      unit === "bits",
+      scaleBase
+    );
     values = converted.values;
     displayUnit = converted.unit;
   }

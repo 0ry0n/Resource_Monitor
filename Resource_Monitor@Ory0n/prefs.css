@@ -13,6 +13,10 @@
 
 .resource-monitor-list row {
   border-radius: 12px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 
 .resource-monitor-column-view {
@@ -21,5 +25,14 @@
 
 .resource-monitor-threshold-preview {
   min-width: 4.5em;
+  font-weight: 600;
+}
+
+.resource-monitor-reorder-row {
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.resource-monitor-reorder-label {
   font-weight: 600;
 }

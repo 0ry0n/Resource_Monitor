@@ -61,6 +61,7 @@ import { getThermalCpuSensorDescriptors } from "./services/runtime.js";
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
 const DECIMALS_STATUS = "decimalsstatus";
+const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
 const RIGHT_CLICK_STATUS = "rightclickstatus";
 const CUSTOM_LEFT_CLICK_STATUS = "customleftclickstatus";
@@ -168,6 +169,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._settings = settings;
       this._dir = dir;
       this._metadata = metadata;
+      this._diskReadGeneration = 0;
 
       // Gtk Css Provider
       this._provider = new Gtk.CssProvider();
@@ -232,11 +234,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return row;
     }
 
-    _createSectionPage(title) {
-      return new Adw.PreferencesPage({
-        name: title.toLowerCase(),
+    _createSectionPage({ name, title, iconName = null }) {
+      const page = new Adw.PreferencesPage({
+        name,
         title,
       });
+
+      if (iconName) {
+        page.icon_name = iconName;
+      }
+
+      return page;
     }
 
     _createSettingsGroup(title, description = null) {
@@ -277,6 +285,71 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return widget;
     }
 
+    _getFrequencyScaleOptions() {
+      return [
+        ["auto", _("Auto")],
+        ["k", _("kHz")],
+        ["m", _("MHz")],
+        ["g", _("GHz")],
+      ];
+    }
+
+    _getNumericOrPercentOptions() {
+      return [
+        ["numeric", _("Numeric")],
+        ["perc", "%"],
+      ];
+    }
+
+    _getDataScaleOptions() {
+      return [
+        ["auto", _("Auto")],
+        ["k", _("Kilo")],
+        ["m", _("Mega")],
+        ["g", _("Giga")],
+        ["t", _("Tera")],
+      ];
+    }
+
+    _getDataScaleBaseOptions() {
+      return [
+        ["decimal", _("SI (1000)")],
+        ["binary", _("IEC (1024)")],
+      ];
+    }
+
+    _getMemoryMonitorOptions() {
+      return [
+        ["used", _("Used Memory")],
+        ["free", _("Free Memory")],
+      ];
+    }
+
+    _getSpaceMonitorOptions() {
+      return [
+        ["used", _("Used Space")],
+        ["free", _("Free Space")],
+      ];
+    }
+
+    _getNetworkUnitOptions() {
+      return [
+        ["bytes", _("B/s")],
+        ["bits", _("b/s")],
+      ];
+    }
+
+    _getCurrentDataScaleBaseLabel() {
+      const base = this._settings.get_string(DATA_SCALE_BASE);
+      return base === "binary" ? _("IEC (1024)") : _("SI (1000)");
+    }
+
+    _appendDataScaleBaseHint(text) {
+      return `${text} ${_("Current base: %s.").format(
+        this._getCurrentDataScaleBaseLabel()
+      )}`;
+    }
+
     _createListBox() {
       return new Gtk.ListBox({
         selection_mode: Gtk.SelectionMode.NONE,
@@ -293,9 +366,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
     }
 
-    _createIconButton(iconName) {
+    _createIconButton(iconName, tooltip = null) {
+      const resolvedTooltip =
+        tooltip ?? (iconName === "list-add" ? _("Add threshold") : null);
+
       return new Gtk.Button({
         icon_name: iconName,
+        tooltip_text: resolvedTooltip,
         valign: Gtk.Align.CENTER,
       });
     }
@@ -304,14 +381,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return new Gtk.Entry({
         input_purpose: inputPurpose,
         hexpand: true,
-      });
-    }
-
-    _createCheckButton(label, group = null) {
-      return new Gtk.CheckButton({
-        label,
-        group,
-        halign: Gtk.Align.START,
       });
     }
 
@@ -577,24 +646,28 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const sensors = [];
 
       for (const descriptor of descriptors) {
-        const chipName = decoder.decode(await loadFile(descriptor.namePath)).trim();
-        if (!allowedSensorNames.has(chipName)) {
+        try {
+          const chipName = decoder.decode(await loadFile(descriptor.namePath)).trim();
+          if (!allowedSensorNames.has(chipName)) {
+            continue;
+          }
+
+          let label = descriptor.fallbackLabel;
+          if (GLib.file_test(descriptor.labelPath, GLib.FileTest.EXISTS)) {
+            try {
+              label = decoder.decode(await loadFile(descriptor.labelPath)).trim();
+            } catch (error) {
+              label = descriptor.fallbackLabel;
+            }
+          }
+
+          sensors.push({
+            device: descriptor.inputPath,
+            name: `${chipName}: ${label}`,
+          });
+        } catch (error) {
           continue;
         }
-
-        let label = descriptor.fallbackLabel;
-        if (GLib.file_test(descriptor.labelPath, GLib.FileTest.EXISTS)) {
-          try {
-            label = decoder.decode(await loadFile(descriptor.labelPath)).trim();
-          } catch (error) {
-            label = descriptor.fallbackLabel;
-          }
-        }
-
-        sensors.push({
-          device: descriptor.inputPath,
-          name: `${chipName}: ${label}`,
-        });
       }
 
       return sensors;
@@ -622,8 +695,43 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return group;
     }
 
-    _buildNativeGlobalPage(title) {
-      const page = this._createSectionPage(title);
+    _getPanelItemLabel(item) {
+      const labels = {
+        cpu: _("CPU"),
+        ram: _("RAM"),
+        swap: _("Swap"),
+        stats: _("Disk Statistics"),
+        space: _("Disk Space"),
+        eth: _("Ethernet"),
+        wlan: _("Wi-Fi"),
+        gpu: _("GPU"),
+      };
+
+      return labels[item] ?? item;
+    }
+
+    _resolveLeftClickPreset(activeCommand, customCommand) {
+      if (activeCommand === "gnome-system-monitor") {
+        return "system-monitor";
+      }
+
+      if (activeCommand === "gnome-usage") {
+        return "gnome-usage";
+      }
+
+      if (activeCommand === customCommand) {
+        return "custom";
+      }
+
+      return "custom";
+    }
+
+    _buildNativeGlobalPage() {
+      const page = this._createSectionPage({
+        name: "global",
+        title: _("Global"),
+        iconName: "preferences-system-symbolic",
+      });
 
       const generalGroup = this._createSettingsGroup(_("General"));
       generalGroup.add(
@@ -636,13 +744,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       generalGroup.add(
         this._createActionRow(
           _("Panel Position"),
-          _("Choose where the indicator appears in the top bar."),
+          _("Choose where the indicator appears in the panel."),
           this._extensionPositionCombobox
         )
       );
       generalGroup.add(
         this._createActionRow(
-          _("Open Preferences on Right Click"),
+          _("Open Preferences on Right-click"),
           _("Show the preferences window when the indicator is right-clicked."),
           this._extensionRightClickPrefs
         )
@@ -652,6 +760,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Show Decimal Digits"),
           _("Enable fractional digits in the panel values."),
           this._decimalsDisplay
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Data Unit Base"),
+          _("Choose whether data units use SI (1000) or IEC (1024) scaling."),
+          this._dataScaleBaseCombobox
         )
       );
       generalGroup.add(
@@ -675,7 +790,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         description: _("Choose what happens when the indicator is left-clicked."),
       });
       launchGroup.add(
-        this._wrapEmbeddedWidget(this._extensionLeftClickRadioButtonSM.get_parent())
+        this._createActionRow(
+          _("Left-click Action"),
+          _("Choose the app or command launched on left-click."),
+          this._extensionLeftClickActionCombobox
+        )
+      );
+      launchGroup.add(
+        this._createActionRow(
+          _("Custom Command"),
+          _("Used only when Left-click Action is set to Custom Command."),
+          this._extensionLeftClickEntryCustom
+        )
       );
       page.add(launchGroup);
 
@@ -694,23 +820,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeCpuPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeCpuPage() {
+      const page = this._createSectionPage({
+        name: "cpu",
+        title: _("CPU"),
+        iconName: "utilities-system-monitor-symbolic",
+      });
 
       const usageGroup = this._createSettingsGroup(
         _("Usage"),
-        _("Configure the main CPU usage indicator shown in the panel.")
+        _("Configure how CPU usage appears in the panel.")
       );
       usageGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show CPU usage in the top bar."),
+          _("Show in Panel"),
+          _("Show CPU usage in the panel."),
           this._cpuDisplay
         )
       );
       usageGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for the CPU value."),
           this._cpuWidthSpinbutton
         )
@@ -727,25 +857,25 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const frequencyGroup = this._createSettingsGroup(
         _("Frequency"),
-        _("Control how CPU frequency is displayed.")
+        _("Configure how CPU frequency appears in the panel.")
       );
       frequencyGroup.add(
         this._createActionRow(
-          _("Display"),
+          _("Show in Panel"),
           _("Show the current CPU frequency in the panel."),
           this._cpuFrequencyDisplay
         )
       );
       frequencyGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for the frequency value."),
           this._cpuFrequencyWidthSpinbutton
         )
       );
       frequencyGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
+          _("Scale"),
           _("Choose how CPU frequency is formatted."),
           this._cpuFrequencyUnitMeasureCombobox
         )
@@ -762,18 +892,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const loadAverageGroup = this._createSettingsGroup(
         _("Load Average"),
-        _("Control how system load average is shown.")
+        _("Configure how system load average appears in the panel.")
       );
       loadAverageGroup.add(
         this._createActionRow(
-          _("Display"),
+          _("Show in Panel"),
           _("Show the load average in the panel."),
           this._cpuLoadAverageDisplay
         )
       );
       loadAverageGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for the load average value."),
           this._cpuLoadAverageWidthSpinbutton
         )
@@ -791,8 +921,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeRamPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeRamPage() {
+      const page = this._createSectionPage({
+        name: "ram",
+        title: _("RAM"),
+        iconName: "computer-symbolic",
+      });
 
       const monitorGroup = this._createSettingsGroup(
         _("Memory"),
@@ -800,36 +934,38 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show RAM usage in the top bar."),
+          _("Show in Panel"),
+          _("Show RAM usage in the panel."),
           this._ramDisplay
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for the RAM value."),
           this._ramWidthSpinbutton
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Unit"),
-          _("Choose whether to show percentages or numeric values."),
+          _("Value Format"),
+          _("Choose between percentage and numeric values."),
           this._ramUnitCombobox
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
-          _("Choose how numeric RAM values are formatted."),
+          _("Scale"),
+          this._appendDataScaleBaseHint(
+            _("Choose how numeric RAM values are formatted.")
+          ),
           this._ramUnitMeasureCombobox
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Monitor"),
-          _("Choose whether the indicator tracks used or free memory."),
+          _("Tracked Value"),
+          _("Choose whether to track used or free memory."),
           this._ramMonitorCombobox
         )
       );
@@ -866,8 +1002,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeSwapPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeSwapPage() {
+      const page = this._createSectionPage({
+        name: "swap",
+        title: _("Swap"),
+        iconName: "computer-symbolic",
+      });
 
       const monitorGroup = this._createSettingsGroup(
         _("Swap"),
@@ -875,36 +1015,38 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show swap usage in the top bar."),
+          _("Show in Panel"),
+          _("Show swap usage in the panel."),
           this._swapDisplay
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for the swap value."),
           this._swapWidthSpinbutton
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Unit"),
-          _("Choose whether to show percentages or numeric values."),
+          _("Value Format"),
+          _("Choose between percentage and numeric values."),
           this._swapUnitCombobox
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
-          _("Choose how numeric swap values are formatted."),
+          _("Scale"),
+          this._appendDataScaleBaseHint(
+            _("Choose how numeric swap values are formatted.")
+          ),
           this._swapUnitMeasureCombobox
         )
       );
       monitorGroup.add(
         this._createActionRow(
-          _("Monitor"),
-          _("Choose whether the indicator tracks used or free swap."),
+          _("Tracked Value"),
+          _("Choose whether to track used or free swap."),
           this._swapMonitorCombobox
         )
       );
@@ -941,8 +1083,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeNetPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeNetPage() {
+      const page = this._createSectionPage({
+        name: "net",
+        title: _("Network"),
+        iconName: "network-workgroup-symbolic",
+      });
 
       const commonGroup = this._createSettingsGroup(
         _("Common"),
@@ -950,22 +1096,24 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       commonGroup.add(
         this._createActionRow(
-          _("Auto Hide"),
-          _("Hide network indicators when there is no traffic."),
+          _("Auto-hide Inactive"),
+          _("Hide interfaces with no active NetworkManager connection."),
           this._netAutoHide
         )
       );
       commonGroup.add(
         this._createActionRow(
-          _("Unit"),
+          _("Base Unit"),
           _("Choose whether throughput is displayed in bytes or bits."),
           this._netUnitCombobox
         )
       );
       commonGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
-          _("Choose how network throughput values are formatted."),
+          _("Scale"),
+          this._appendDataScaleBaseHint(
+            _("Choose how network throughput values are formatted.")
+          ),
           this._netUnitMeasureCombobox
         )
       );
@@ -973,18 +1121,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const ethernetGroup = this._createSettingsGroup(
         _("Ethernet"),
-        _("Configure the wired network indicator.")
+        _("Configure how wired traffic appears in the panel.")
       );
       ethernetGroup.add(
         this._createActionRow(
-          _("Display"),
+          _("Show in Panel"),
           _("Show Ethernet traffic in the panel."),
           this._netEthDisplay
         )
       );
       ethernetGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for Ethernet throughput."),
           this._netEthWidthSpinbutton
         )
@@ -1001,18 +1149,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const wirelessGroup = this._createSettingsGroup(
         _("Wireless"),
-        _("Configure the Wi-Fi network indicator.")
+        _("Configure how Wi-Fi traffic appears in the panel.")
       );
       wirelessGroup.add(
         this._createActionRow(
-          _("Display"),
+          _("Show in Panel"),
           _("Show Wi-Fi traffic in the panel."),
           this._netWlanDisplay
         )
       );
       wirelessGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for Wi-Fi throughput."),
           this._netWlanWidthSpinbutton
         )
@@ -1030,12 +1178,16 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeDiskPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeDiskPage() {
+      const page = this._createSectionPage({
+        name: "disk",
+        title: _("Disk"),
+        iconName: "drive-harddisk-symbolic",
+      });
 
       const commonGroup = this._createSettingsGroup(
         _("Common"),
-        _("Configure shared disk indicator settings.")
+        _("Configure shared disk settings for panel indicators.")
       );
       commonGroup.add(
         this._createActionRow(
@@ -1052,29 +1204,31 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       statsGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show disk activity statistics in the top bar."),
+          _("Show in Panel"),
+          _("Show disk activity statistics in the panel."),
           this._diskStatsDisplay
         )
       );
       statsGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for disk activity values."),
           this._diskStatsWidthSpinbutton
         )
       );
       statsGroup.add(
         this._createActionRow(
-          _("Mode"),
-          _("Choose whether disk activity is displayed as a single or multiple values."),
+          _("Aggregation"),
+          _("Choose a single combined value or per-device values."),
           this._diskStatsModeCombobox
         )
       );
       statsGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
-          _("Choose how disk activity values are formatted."),
+          _("Scale"),
+          this._appendDataScaleBaseHint(
+            _("Choose how disk activity values are formatted.")
+          ),
           this._diskStatsUnitMeasureCombobox
         )
       );
@@ -1094,36 +1248,38 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       spaceGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show disk space usage in the top bar."),
+          _("Show in Panel"),
+          _("Show disk space usage in the panel."),
           this._diskSpaceDisplay
         )
       );
       spaceGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for disk space values."),
           this._diskSpaceWidthSpinbutton
         )
       );
       spaceGroup.add(
         this._createActionRow(
-          _("Unit"),
-          _("Choose whether to show percentages or numeric values."),
+          _("Value Format"),
+          _("Choose between percentage and numeric values."),
           this._diskSpaceUnitCombobox
         )
       );
       spaceGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
-          _("Choose how numeric disk space values are formatted."),
+          _("Scale"),
+          this._appendDataScaleBaseHint(
+            _("Choose how numeric disk space values are formatted.")
+          ),
           this._diskSpaceUnitMeasureCombobox
         )
       );
       spaceGroup.add(
         this._createActionRow(
-          _("Monitor"),
-          _("Choose whether the indicator tracks used or free space."),
+          _("Tracked Value"),
+          _("Choose whether to track used or free space."),
           this._diskSpaceMonitorCombobox
         )
       );
@@ -1154,8 +1310,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeThermalPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeThermalPage() {
+      const page = this._createSectionPage({
+        name: "thermal",
+        title: _("Thermal"),
+        iconName: "weather-clear-symbolic",
+      });
 
       const commonGroup = this._createSettingsGroup(
         _("Common"),
@@ -1163,8 +1323,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       commonGroup.add(
         this._createActionRow(
-          _("Unit"),
-          _("Choose whether temperatures are displayed in Celsius or Fahrenheit."),
+          _("Temperature Unit"),
+          _("Choose Celsius or Fahrenheit for all thermal readings."),
           this._thermalUnitCombobox
         )
       );
@@ -1172,18 +1332,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const cpuGroup = this._createSettingsGroup(
         _("CPU Temperature"),
-        _("Configure the CPU temperature indicator.")
+        _("Configure how CPU temperature appears in the panel.")
       );
       cpuGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show CPU temperature in the top bar."),
+          _("Show in Panel"),
+          _("Show CPU temperature in the panel."),
           this._thermalCpuDisplay
         )
       );
       cpuGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for CPU temperature values."),
           this._thermalCpuWidthSpinbutton
         )
@@ -1209,18 +1369,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const gpuGroup = this._createSettingsGroup(
         _("GPU Temperature"),
-        _("Configure the GPU temperature indicator.")
+        _("Configure how GPU temperature appears in the panel.")
       );
       gpuGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show GPU temperature in the top bar."),
+          _("Show in Panel"),
+          _("Show GPU temperature in the panel."),
           this._thermalGpuDisplay
         )
       );
       gpuGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for GPU temperature values."),
           this._thermalGpuWidthSpinbutton
         )
@@ -1247,23 +1407,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return page;
     }
 
-    _buildNativeGpuPage(title) {
-      const page = this._createSectionPage(title);
+    _buildNativeGpuPage() {
+      const page = this._createSectionPage({
+        name: "gpu",
+        title: _("GPU"),
+        iconName: "video-display-symbolic",
+      });
 
       const usageGroup = this._createSettingsGroup(
         _("Usage"),
-        _("Configure the GPU usage indicator.")
+        _("Configure how GPU usage appears in the panel.")
       );
       usageGroup.add(
         this._createActionRow(
-          _("Display"),
-          _("Show GPU usage in the top bar."),
+          _("Show in Panel"),
+          _("Show GPU usage in the panel."),
           this._gpuDisplay
         )
       );
       usageGroup.add(
         this._createActionRow(
-          _("Width"),
+          _("Reserved Width"),
           _("Reserve a fixed amount of space for GPU usage values."),
           this._gpuWidthSpinbutton
         )
@@ -1287,26 +1451,28 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       const memoryGroup = this._createSettingsGroup(
         _("Memory"),
-        _("Configure the GPU memory indicator.")
+        _("Configure how GPU memory appears in the panel.")
       );
       memoryGroup.add(
         this._createActionRow(
-          _("Unit"),
-          _("Choose whether to show percentages or numeric values."),
+          _("Value Format"),
+          _("Choose between percentage and numeric values."),
           this._gpuMemoryUnitCombobox
         )
       );
       memoryGroup.add(
         this._createActionRow(
-          _("Unit of Measure"),
-          _("Choose how numeric GPU memory values are formatted."),
+          _("Scale"),
+          this._appendDataScaleBaseHint(
+            _("Choose how numeric GPU memory values are formatted.")
+          ),
           this._gpuMemoryUnitMeasureCombobox
         )
       );
       memoryGroup.add(
         this._createActionRow(
-          _("Monitor"),
-          _("Choose whether the indicator tracks used or free GPU memory."),
+          _("Tracked Value"),
+          _("Choose whether to track used or free GPU memory."),
           this._gpuMemoryMonitorCombobox
         )
       );
@@ -1346,19 +1512,19 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         return false;
       });
 
-      window.add(this._buildNativeGlobalPage("Global"));
-      window.add(this._buildNativeCpuPage("Cpu"));
-      window.add(this._buildNativeRamPage("Ram"));
-      window.add(this._buildNativeSwapPage("Swap"));
-      window.add(this._buildNativeDiskPage("Disk"));
-      window.add(this._buildNativeNetPage("Net"));
-      window.add(this._buildNativeThermalPage("Thermal"));
-      window.add(this._buildNativeGpuPage("Gpu"));
+      window.add(this._buildNativeGlobalPage());
+      window.add(this._buildNativeCpuPage());
+      window.add(this._buildNativeRamPage());
+      window.add(this._buildNativeSwapPage());
+      window.add(this._buildNativeDiskPage());
+      window.add(this._buildNativeNetPage());
+      window.add(this._buildNativeThermalPage());
+      window.add(this._buildNativeGpuPage());
     }
 
     _buildGlobal() {
       this._secondsSpinbutton = this._createSpinButton({
-        upper: 10,
+        upper: 60,
         step: 1,
         page: 1,
       });
@@ -1367,33 +1533,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         ["center", _("Center")],
         ["right", _("Right")],
       ]);
-      this._extensionLeftClickRadioButtonSM = this._createCheckButton(
-        _("Launch GNOME System Monitor")
-      );
-      this._extensionLeftClickRadioButtonU = this._createCheckButton(
-        _("Launch GNOME Usage"),
-        this._extensionLeftClickRadioButtonSM
-      );
-      this._extensionLeftClickRadioButtonCustom = this._createCheckButton(
-        _("Custom program"),
-        this._extensionLeftClickRadioButtonSM
-      );
+      this._extensionLeftClickActionCombobox = this._createComboBox([
+        ["system-monitor", _("GNOME System Monitor")],
+        ["gnome-usage", _("GNOME Usage")],
+        ["custom", _("Custom Command")],
+      ]);
       this._extensionLeftClickEntryCustom = this._createEntry(
         Gtk.InputPurpose.TERMINAL
       );
-      this._extensionLeftClickBox = new Gtk.Box({
-        orientation: Gtk.Orientation.VERTICAL,
-        spacing: 12,
-        hexpand: true,
-      });
-      this._extensionLeftClickBox.append(this._extensionLeftClickRadioButtonSM);
-      this._extensionLeftClickBox.append(this._extensionLeftClickRadioButtonU);
-      this._extensionLeftClickBox.append(
-        this._extensionLeftClickRadioButtonCustom
+      this._extensionLeftClickEntryCustom.placeholder_text = _(
+        "e.g. gnome-system-monitor"
       );
-      this._extensionLeftClickBox.append(this._extensionLeftClickEntryCustom);
+      this._extensionLeftClickEntryCustom.width_chars = 28;
       this._extensionRightClickPrefs = this._createSwitch();
       this._decimalsDisplay = this._createSwitch();
+      this._dataScaleBaseCombobox = this._createComboBox(
+        this._getDataScaleBaseOptions()
+      );
       this._iconsDisplay = this._createSwitch();
       this._iconsPositionCombobox = this._createComboBox([
         ["left", _("Left")],
@@ -1422,6 +1578,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         DECIMALS_STATUS,
         this._decimalsDisplay
       );
+      connectComboBox(
+        this._settings,
+        DATA_SCALE_BASE,
+        this._dataScaleBaseCombobox
+      );
       connectSwitchButton(
         this._settings,
         ICONS_STATUS,
@@ -1440,42 +1601,53 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // LEFT-CLICK
       const active = this._settings.get_string(LEFT_CLICK_STATUS);
-      const textBufferCustom = this._settings.get_string(
+      let textBufferCustom = this._settings.get_string(
         CUSTOM_LEFT_CLICK_STATUS
       );
-
-      this._extensionLeftClickRadioButtonSM.connect("toggled", (button) => {
-        if (button.active) {
-          this._settings.set_string(LEFT_CLICK_STATUS, "gnome-system-monitor");
-        }
-      });
-      this._extensionLeftClickRadioButtonSM.active =
-        "gnome-system-monitor" === active;
-
-      this._extensionLeftClickRadioButtonU.connect("toggled", (button) => {
-        if (button.active) {
-          this._settings.set_string(LEFT_CLICK_STATUS, "gnome-usage");
-        }
-      });
-      this._extensionLeftClickRadioButtonU.active = "gnome-usage" === active;
-
-      this._extensionLeftClickRadioButtonCustom.connect("toggled", (button) => {
-        if (button.active) {
-          const text = this._settings.get_string(CUSTOM_LEFT_CLICK_STATUS);
-          this._settings.set_string(LEFT_CLICK_STATUS, text);
-        }
-        this._extensionLeftClickEntryCustom.sensitive = button.active;
-      });
-      this._extensionLeftClickRadioButtonCustom.active =
-        textBufferCustom === active;
-      this._extensionLeftClickEntryCustom.sensitive =
-        this._extensionLeftClickRadioButtonCustom.active;
+      if (!textBufferCustom || textBufferCustom === "custom-program") {
+        textBufferCustom =
+          active &&
+          active !== "gnome-system-monitor" &&
+          active !== "gnome-usage"
+            ? active
+            : "custom-program";
+      }
       this._extensionLeftClickEntryCustom.text = textBufferCustom;
 
-      this._extensionLeftClickEntryCustom.connect("changed", (tBuffer) => {
-        this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, tBuffer.text);
-        if (this._extensionLeftClickRadioButtonCustom.active) {
-          this._settings.set_string(LEFT_CLICK_STATUS, tBuffer.text);
+      this._extensionLeftClickActionCombobox.set_active_id(
+        this._resolveLeftClickPreset(active, textBufferCustom)
+      );
+      this._extensionLeftClickEntryCustom.sensitive =
+        this._extensionLeftClickActionCombobox.get_active_id() === "custom";
+
+      this._extensionLeftClickActionCombobox.connect("changed", (widget) => {
+        const selected = widget.get_active_id();
+        const isCustom = selected === "custom";
+        this._extensionLeftClickEntryCustom.sensitive = isCustom;
+
+        switch (selected) {
+          case "system-monitor":
+            this._settings.set_string(LEFT_CLICK_STATUS, "gnome-system-monitor");
+            break;
+          case "gnome-usage":
+            this._settings.set_string(LEFT_CLICK_STATUS, "gnome-usage");
+            break;
+          case "custom":
+          default:
+            this._settings.set_string(
+              LEFT_CLICK_STATUS,
+              this._extensionLeftClickEntryCustom.text
+            );
+            break;
+        }
+      });
+
+      this._extensionLeftClickEntryCustom.connect("changed", (entry) => {
+        this._settings.set_string(CUSTOM_LEFT_CLICK_STATUS, entry.text);
+        if (
+          this._extensionLeftClickActionCombobox.get_active_id() === "custom"
+        ) {
+          this._settings.set_string(LEFT_CLICK_STATUS, entry.text);
         }
       });
 
@@ -1486,12 +1658,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const element = itemsPositionArray[i];
 
         const row = new Gtk.ListBoxRow();
-        const box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL });
+        row.add_css_class("resource-monitor-reorder-row");
+        const box = new Gtk.Box({
+          orientation: Gtk.Orientation.HORIZONTAL,
+          spacing: 8,
+        });
 
         const up = new Gtk.Button({
           icon_name: "go-up",
           tooltip_text: _("Move Up"),
+          valign: Gtk.Align.CENTER,
         });
+        up.add_css_class("flat");
         up.connect("clicked", (button) => {
           const index = row.get_index();
           if (index > 0) {
@@ -1508,7 +1686,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         const down = new Gtk.Button({
           icon_name: "go-down",
           tooltip_text: _("Move Down"),
+          valign: Gtk.Align.CENTER,
         });
+        down.add_css_class("flat");
         down.connect("clicked", (button) => {
           const index = row.get_index();
           if (index < itemsPositionArray.length - 1) {
@@ -1523,13 +1703,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           }
         });
 
-        box.append(
-          new Gtk.Label({
-            label: element,
-            hexpand: true,
-            halign: Gtk.Align.START,
-          })
-        );
+        const label = new Gtk.Label({
+          label: this._getPanelItemLabel(element),
+          hexpand: true,
+          halign: Gtk.Align.START,
+        });
+        label.add_css_class("resource-monitor-reorder-label");
+        box.append(label);
         box.append(up);
         box.append(down);
 
@@ -1550,12 +1730,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
       this._cpuFrequencyColorsAddButton = this._createIconButton("list-add");
       this._cpuFrequencyColorsListbox = this._createListBox();
-      this._cpuFrequencyUnitMeasureCombobox = this._createComboBox([
-        ["auto", _("Auto")],
-        ["k", _("KHz")],
-        ["m", _("MHz")],
-        ["g", _("GHz")],
-      ]);
+      this._cpuFrequencyUnitMeasureCombobox = this._createComboBox(
+        this._getFrequencyScaleOptions()
+      );
       this._cpuLoadAverageDisplay = this._createSwitch();
       this._cpuLoadAverageWidthSpinbutton = this._createSpinButton({
         upper: 400,
@@ -1636,24 +1813,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._ramWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._ramColorsAddButton = this._createIconButton("list-add");
       this._ramColorsListbox = this._createListBox();
-      this._ramUnitCombobox = this._createComboBox([
-        ["numeric", _("Numeric")],
-        ["perc", "%"],
-      ]);
-      this._ramUnitMeasureCombobox = this._createComboBox([
-        ["auto", _("Auto")],
-        ["k", _("Kilo")],
-        ["m", _("Mega")],
-        ["g", _("Giga")],
-        ["t", _("Tera")],
-      ]);
-      this._ramMonitorCombobox = this._createComboBox([
-        ["used", _("Used Memory")],
-        ["free", _("Free Memory")],
-      ]);
+      this._ramUnitCombobox = this._createComboBox(
+        this._getNumericOrPercentOptions()
+      );
+      this._ramUnitMeasureCombobox = this._createComboBox(
+        this._getDataScaleOptions()
+      );
+      this._ramMonitorCombobox = this._createComboBox(
+        this._getMemoryMonitorOptions()
+      );
       this._ramAlert = this._createSwitch();
       this._ramAlertThresholdSpinbutton = this._createSpinButton({
-        upper: 100,
+        upper: 99,
       });
 
       this._initializeUsageMonitor({
@@ -1682,24 +1853,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._swapWidthSpinbutton = this._createSpinButton({ upper: 400 });
       this._swapColorsAddButton = this._createIconButton("list-add");
       this._swapColorsListbox = this._createListBox();
-      this._swapUnitCombobox = this._createComboBox([
-        ["numeric", _("Numeric")],
-        ["perc", "%"],
-      ]);
-      this._swapUnitMeasureCombobox = this._createComboBox([
-        ["auto", _("Auto")],
-        ["k", _("Kilo")],
-        ["m", _("Mega")],
-        ["g", _("Giga")],
-        ["t", _("Tera")],
-      ]);
-      this._swapMonitorCombobox = this._createComboBox([
-        ["used", _("Used Memory")],
-        ["free", _("Free Memory")],
-      ]);
+      this._swapUnitCombobox = this._createComboBox(
+        this._getNumericOrPercentOptions()
+      );
+      this._swapUnitMeasureCombobox = this._createComboBox(
+        this._getDataScaleOptions()
+      );
+      this._swapMonitorCombobox = this._createComboBox(
+        this._getMemoryMonitorOptions()
+      );
       this._swapAlert = this._createSwitch();
       this._swapAlertThresholdSpinbutton = this._createSpinButton({
-        upper: 100,
+        upper: 99,
       });
 
       this._initializeUsageMonitor({
@@ -1733,32 +1898,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         ["single", _("Single Mode")],
         ["multiple", _("Multiple Mode")],
       ]);
-      this._diskStatsUnitMeasureCombobox = this._createComboBox([
-        ["auto", _("Auto")],
-        ["k", _("Kilo")],
-        ["m", _("Mega")],
-        ["g", _("Giga")],
-        ["t", _("Tera")],
-      ]);
+      this._diskStatsUnitMeasureCombobox = this._createComboBox(
+        this._getDataScaleOptions()
+      );
       this._diskSpaceDisplay = this._createSwitch();
       this._diskSpaceWidthSpinbutton = this._createSpinButton({ upper: 500 });
       this._diskSpaceColorsAddButton = this._createIconButton("list-add");
       this._diskSpaceColorsListbox = this._createListBox();
-      this._diskSpaceUnitCombobox = this._createComboBox([
-        ["numeric", _("Numeric")],
-        ["perc", "%"],
-      ]);
-      this._diskSpaceUnitMeasureCombobox = this._createComboBox([
-        ["auto", _("Auto")],
-        ["k", _("Kilo")],
-        ["m", _("Mega")],
-        ["g", _("Giga")],
-        ["t", _("Tera")],
-      ]);
-      this._diskSpaceMonitorCombobox = this._createComboBox([
-        ["used", _("Used Space")],
-        ["free", _("Free Space")],
-      ]);
+      this._diskSpaceUnitCombobox = this._createComboBox(
+        this._getNumericOrPercentOptions()
+      );
+      this._diskSpaceUnitMeasureCombobox = this._createComboBox(
+        this._getDataScaleOptions()
+      );
+      this._diskSpaceMonitorCombobox = this._createComboBox(
+        this._getSpaceMonitorOptions()
+      );
       this._diskDevicesDisplayAll = this._createSwitch();
       this._diskDevicesColumnView = this._createColumnView();
 
@@ -1932,6 +2087,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _readDiskDevices(settings, model, loadAll) {
+      const generation = ++this._diskReadGeneration;
       model.remove_all();
 
       const disksArray = parseSettingsArray(
@@ -1942,6 +2098,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       this._readMountEntries()
         .then((entries) => {
+          if (generation !== this._diskReadGeneration) {
+            return;
+          }
+
           for (const { filesystem, mountPoint } of entries) {
 
             let statsButton = false;
@@ -1976,6 +2136,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             // Load additional devices from /proc/diskstats if needed
             loadFile("/proc/diskstats")
               .then((contents) => {
+                if (generation !== this._diskReadGeneration) {
+                  return;
+                }
+
                 const lines = new TextDecoder().decode(contents).split("\n");
 
                 for (const line of lines) {
@@ -2026,7 +2190,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                 }
 
                 // Save updated disksArray to settings
-                saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+                if (generation === this._diskReadGeneration) {
+                  saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+                }
               })
               .catch((err) =>
                 console.error(
@@ -2036,7 +2202,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               );
           } else {
             // Save updated disksArray to settings
-            saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+            if (generation === this._diskReadGeneration) {
+              saveArrayToSettings(model, settings, DISK_DEVICES_LIST);
+            }
           }
         })
         .catch((err) =>
@@ -2046,13 +2214,12 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _buildNet() {
       this._netAutoHide = this._createSwitch();
-      this._netUnitCombobox = this._createComboBox([
-        ["bytes", _("Bps")],
-        ["bits", _("bps")],
-      ]);
+      this._netUnitCombobox = this._createComboBox(
+        this._getNetworkUnitOptions()
+      );
       this._netUnitMeasureCombobox = this._createComboBox([
         ["auto", _("Auto")],
-        ["b", _("Byte/Bit")],
+        ["b", _("Base Unit")],
         ["k", _("Kilo")],
         ["m", _("Mega")],
         ["g", _("Giga")],
@@ -2327,21 +2494,15 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._gpuColorsListbox = this._createListBox();
       this._gpuMemoryColorsAddButton = this._createIconButton("list-add");
       this._gpuMemoryColorsListbox = this._createListBox();
-      this._gpuMemoryUnitCombobox = this._createComboBox([
-        ["numeric", _("Numeric")],
-        ["perc", "%"],
-      ]);
-      this._gpuMemoryUnitMeasureCombobox = this._createComboBox([
-        ["auto", _("Auto")],
-        ["k", _("Kilo")],
-        ["m", _("Mega")],
-        ["g", _("Giga")],
-        ["t", _("Tera")],
-      ]);
-      this._gpuMemoryMonitorCombobox = this._createComboBox([
-        ["used", _("Used Memory")],
-        ["free", _("Free Memory")],
-      ]);
+      this._gpuMemoryUnitCombobox = this._createComboBox(
+        this._getNumericOrPercentOptions()
+      );
+      this._gpuMemoryUnitMeasureCombobox = this._createComboBox(
+        this._getDataScaleOptions()
+      );
+      this._gpuMemoryMonitorCombobox = this._createComboBox(
+        this._getMemoryMonitorOptions()
+      );
       this._gpuDisplayDeviceName = this._createSwitch();
       this._gpuDevicesColumnView = this._createColumnView();
       this._gpuDevicesColumnView.sensitive = hasNvidiaSmi;

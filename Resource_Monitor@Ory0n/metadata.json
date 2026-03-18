@@ -7,6 +7,6 @@
   "donations": {
     "paypal": "0ry0n"
   },
-  "gettext-domain": "com-github-Ory0n-Resource_Monitor",
+  "gettext-domain": "Resource_Monitor@Ory0n",
   "settings-schema": "org.gnome.shell.extensions.resource-monitor"
 }

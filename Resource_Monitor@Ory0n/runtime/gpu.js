@@ -1,8 +1,17 @@
 import { convertTemperature, convertValueToUnit } from "./metrics.js";
 
+const BYTES_PER_MIB = 1024 * 1024;
+const BYTES_TO_DECIMAL_KILOBYTES = 1 / 1000;
+const MIB_TO_KIB = 1024;
+
 export function parseGpuSmiOutput(contents, options) {
-  const { memoryMonitor, memoryUnitType, memoryUnitMeasure, temperatureUnit } =
-    options;
+  const {
+    memoryMonitor,
+    memoryUnitType,
+    memoryUnitMeasure,
+    temperatureUnit,
+    memoryScaleBase = "decimal",
+  } = options;
 
   return contents
     .trim()
@@ -45,10 +54,14 @@ export function parseGpuSmiOutput(contents, options) {
         return null;
       }
 
+      const memoryScaleMultiplier =
+        memoryScaleBase === "binary"
+          ? MIB_TO_KIB
+          : BYTES_PER_MIB * BYTES_TO_DECIMAL_KILOBYTES;
       const usage = parseInt(usageMatch[1], 10);
-      const memoryTotal = parseInt(memoryTotalMatch[1], 10) * 1024 * 1.024;
-      const memoryUsed = parseInt(memoryUsedMatch[1], 10) * 1024 * 1.024;
-      const memoryFree = parseInt(memoryFreeMatch[1], 10) * 1024 * 1.024;
+      const memoryTotal = parseInt(memoryTotalMatch[1], 10) * memoryScaleMultiplier;
+      const memoryUsed = parseInt(memoryUsedMatch[1], 10) * memoryScaleMultiplier;
+      const memoryFree = parseInt(memoryFreeMatch[1], 10) * memoryScaleMultiplier;
       const rawTemperature = parseInt(temperatureMatch[1], 10);
 
       if (
@@ -62,7 +75,7 @@ export function parseGpuSmiOutput(contents, options) {
       }
 
       let memoryValue = memoryMonitor === "free" ? memoryFree : memoryUsed;
-      let memoryUnit = "KB";
+      let memoryUnit = memoryScaleBase === "binary" ? "KiB" : "KB";
       let memoryPercent = null;
 
       if (memoryUnitType === "perc") {
@@ -70,7 +83,12 @@ export function parseGpuSmiOutput(contents, options) {
         memoryValue = memoryPercent;
         memoryUnit = "%";
       } else {
-        [memoryValue, memoryUnit] = convertValueToUnit(memoryValue, memoryUnitMeasure);
+        [memoryValue, memoryUnit] = convertValueToUnit(
+          memoryValue,
+          memoryUnitMeasure,
+          false,
+          memoryScaleBase
+        );
       }
 
       const [temperatureValue, temperatureDisplayUnit] = convertTemperature(

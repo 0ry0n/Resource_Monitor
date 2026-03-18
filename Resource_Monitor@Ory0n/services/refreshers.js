@@ -2,6 +2,10 @@ import GLib from "gi://GLib";
 import { gettext as _ } from "resource:///org/gnome/shell/extensions/extension.js";
 
 import { buildCpuUsageSample, parseCpuFrequencyOutput, parseLoadAverageDisplay } from "../runtime/cpu.js";
+import {
+  getBaseStorageUnit,
+  getFixedDataUnitForMeasure,
+} from "../runtime/metrics.js";
 import { buildMemoryDisplay } from "../runtime/memory.js";
 import {
   buildDiskSpaceDisplay,
@@ -24,7 +28,7 @@ import {
 function resetCpuFrequencyDisplay(indicator) {
   indicator._cpuFrequencyValue.style = "";
   indicator._cpuFrequencyValue.text = "--";
-  indicator._cpuFrequencyUnit.text = "KHz";
+  indicator._cpuFrequencyUnit.text = "kHz";
 }
 
 function resetCpuTemperatureDisplay(indicator) {
@@ -34,9 +38,10 @@ function resetCpuTemperatureDisplay(indicator) {
 }
 
 function resetGpuDisplay(indicator) {
+  const memoryUnit = getBaseStorageUnit(indicator._dataScaleBase);
   indicator._gpuDevices.forEach((device) => {
     indicator._gpuBox.update_element_value(device.device, "--", "%", "");
-    indicator._gpuBox.update_element_memory_value(device.device, "--", "KB", "");
+    indicator._gpuBox.update_element_memory_value(device.device, "--", memoryUnit, "");
     indicator._gpuBox.update_element_thermal_value(
       device.device,
       "--",
@@ -44,6 +49,29 @@ function resetGpuDisplay(indicator) {
       ""
     );
   });
+}
+
+function _shouldRunGpuRefresh(indicator, force = false) {
+  const now = GLib.get_monotonic_time();
+
+  if (force) {
+    indicator._lastGpuRefreshAtUsec = now;
+    return true;
+  }
+
+  const refreshIntervalUsec = indicator._gpuRefreshIntervalUsec || 0;
+  if (refreshIntervalUsec <= 0) {
+    indicator._lastGpuRefreshAtUsec = now;
+    return true;
+  }
+
+  const elapsed = now - (indicator._lastGpuRefreshAtUsec || 0);
+  if (elapsed < refreshIntervalUsec) {
+    return false;
+  }
+
+  indicator._lastGpuRefreshAtUsec = now;
+  return true;
 }
 
 export function refreshCpuValue(indicator) {
@@ -89,6 +117,7 @@ export function refreshRamValue(indicator) {
             monitor: indicator._ramMonitor,
             unitType: indicator._ramUnitType,
             unitMeasure: indicator._ramUnitMeasure,
+            scaleBase: indicator._dataScaleBase,
           }),
           {
             alertEnabled: indicator._ramAlert,
@@ -132,6 +161,7 @@ export function refreshSwapValue(indicator) {
             monitor: indicator._swapMonitor,
             unitType: indicator._swapUnitType,
             unitMeasure: indicator._swapUnitMeasure,
+            scaleBase: indicator._dataScaleBase,
           }),
           {
             alertEnabled: indicator._swapAlert,
@@ -172,22 +202,27 @@ export function refreshDiskStatsValue(indicator) {
         indicator._clearLoggedIssue("disk-stats-read-error");
 
         const processEntry = (filesystem, rwTot, rw) => {
-          const delta =
-            (idle - (indicator._diskStatsBox.get_idle(filesystem) || idle)) /
-            1000;
+          const previousIdle = indicator._diskStatsBox.get_idle(filesystem) || 0;
+          const delta = previousIdle > 0 ? (idle - previousIdle) / 1000 : 0;
           indicator._diskStatsBox.set_idle(filesystem, idle);
+          const rwTotOld = indicator._diskStatsBox.get_rw_tot(filesystem) || [
+            0, 0,
+          ];
+          indicator._diskStatsBox.set_rw_tot(filesystem, rwTot);
 
-          let unit = "";
+          let unit =
+            indicator._diskStatsUnitMeasure === "auto"
+              ? getFixedDataUnitForMeasure("b", indicator._dataScaleBase)
+              : getFixedDataUnitForMeasure(
+                indicator._diskStatsUnitMeasure,
+                indicator._dataScaleBase
+              );
 
           if (delta > 0) {
-            const rwTotOld = indicator._diskStatsBox.get_rw_tot(filesystem);
             for (let i = 0; i < 2; i++) {
-              rw[i] = (rwTot[i] - (rwTotOld[i] || 0)) / delta;
+              const deltaCounter = rwTot[i] - (rwTotOld[i] || 0);
+              rw[i] = deltaCounter > 0 ? deltaCounter / delta : 0;
             }
-            indicator._diskStatsBox.set_rw_tot(filesystem, rwTot);
-
-            rw[0] *= 1024;
-            rw[1] *= 1024;
             const unitResult = indicator._convertValuesToUnit(
               rw,
               indicator._diskStatsUnitMeasure
@@ -212,8 +247,8 @@ export function refreshDiskStatsValue(indicator) {
 
             entries.forEach((entry) => {
               if (indicator._diskStatsBox.get_filesystem(entry.device)) {
-                rwTot[0] += entry.readKilobytes;
-                rwTot[1] += entry.writeKilobytes;
+                rwTot[0] += entry.readBytes;
+                rwTot[1] += entry.writeBytes;
               }
             });
 
@@ -228,7 +263,7 @@ export function refreshDiskStatsValue(indicator) {
                 entry.device
               );
               if (filesystem) {
-                let rwTot = [entry.readKilobytes, entry.writeKilobytes];
+                let rwTot = [entry.readBytes, entry.writeBytes];
                 let rw = [0, 0];
                 processEntry(filesystem, rwTot, rw);
               }
@@ -263,8 +298,8 @@ export function refreshDiskSpaceValue(indicator) {
 
         return {
           filesystem: device.device,
-          usedKilobytes: Math.max(0, (size - free) / 1024),
-          availableKilobytes: Math.max(0, free / 1024),
+          usedBytes: Math.max(0, size - free),
+          availableBytes: Math.max(0, free),
           usedPercent: size > 0 ? Math.round((100 * (size - free)) / size) : 0,
         };
       })
@@ -287,6 +322,7 @@ export function refreshDiskSpaceValue(indicator) {
             monitor: indicator._diskSpaceMonitor,
             unitType: indicator._diskSpaceUnitType,
             unitMeasure: indicator._diskSpaceUnitMeasure,
+            scaleBase: indicator._dataScaleBase,
           });
 
           indicator._diskSpaceBox.update_element_value(
@@ -329,6 +365,7 @@ export function refreshEthValue(indicator) {
           pattern: /^(eth[0-9]+|en[a-z0-9]*)$/,
           unit: indicator._netUnit,
           unitMeasure: indicator._netUnitMeasure,
+          scaleBase: indicator._dataScaleBase,
           previousTotals: indicator._duTotEthOld,
           previousIdle: indicator._ethIdleOld,
           currentIdle: GLib.get_monotonic_time() / 1000,
@@ -366,6 +403,7 @@ export function refreshWlanValue(indicator) {
           pattern: /^(wlan[0-9]+|wl[a-z0-9]*)$/,
           unit: indicator._netUnit,
           unitMeasure: indicator._netUnitMeasure,
+          scaleBase: indicator._dataScaleBase,
           previousTotals: indicator._duTotWlanOld,
           previousIdle: indicator._wlanIdleOld,
           currentIdle: GLib.get_monotonic_time() / 1000,
@@ -538,7 +576,9 @@ export function refreshCpuTemperatureValue(indicator) {
   }
 }
 
-export function refreshGpuValue(indicator) {
+export function refreshGpuValue(indicator, options = {}) {
+  const { force = false } = options;
+
   if (!indicator._capabilities.nvidiaSmi) {
     syncGpuVisibility(indicator);
     indicator._logIssueOnce(
@@ -548,17 +588,22 @@ export function refreshGpuValue(indicator) {
     return;
   }
 
+  if (!_shouldRunGpuRefresh(indicator, force)) {
+    return;
+  }
+
   indicator._runRefreshTask("gpu", () =>
     indicator._executeCommand([
       "nvidia-smi",
       "--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
-      "--format=csv,noheader",
+      "--format=csv,noheader,nounits",
     ])
       .then((contents) => {
         const entries = parseGpuSmiOutput(contents, {
           memoryMonitor: indicator._gpuMemoryMonitor,
           memoryUnitType: indicator._gpuMemoryUnitType,
           memoryUnitMeasure: indicator._gpuMemoryUnitMeasure,
+          memoryScaleBase: indicator._dataScaleBase,
           temperatureUnit: indicator._thermalTemperatureUnit,
         });
 
@@ -616,7 +661,7 @@ export function refreshGpuValue(indicator) {
   );
 }
 
-export function refreshHandler(indicator) {
+export function refreshHandler(indicator, forceGpu = false) {
   if (indicator._cpuStatus) {
     refreshCpuValue(indicator);
   }
@@ -648,7 +693,7 @@ export function refreshHandler(indicator) {
     refreshCpuTemperatureValue(indicator);
   }
   if (hasVisibleGpu(indicator)) {
-    refreshGpuValue(indicator);
+    refreshGpuValue(indicator, { force: forceGpu });
   }
 
   return GLib.SOURCE_CONTINUE;

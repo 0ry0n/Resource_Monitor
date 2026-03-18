@@ -63,8 +63,9 @@ export function getThermalCpuSensorDescriptors() {
 }
 
 export class IssueLogger {
-  constructor() {
+  constructor(logger = console) {
     this._loggedIssues = new Set();
+    this._logger = logger;
   }
 
   logOnce(key, message, error = null) {
@@ -74,10 +75,15 @@ export class IssueLogger {
 
     this._loggedIssues.add(key);
 
+    const logError =
+      this._logger && typeof this._logger.error === "function"
+        ? this._logger.error.bind(this._logger)
+        : console.error.bind(console);
+
     if (error) {
-      console.error(message, error);
+      logError(message, error);
     } else {
-      console.error(message);
+      logError(message);
     }
   }
 

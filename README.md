@@ -37,17 +37,24 @@ The repository now includes a small maintenance workflow for local development.
 
 - `make schema`
   Compiles the GSettings schema locally.
+- `make test`
+  Runs runtime smoke tests for parsers and data-format conversions.
+- `make pot`
+  Regenerates the gettext template at `po/Resource_Monitor@Ory0n.pot`.
+- `make po-update`
+  Updates language catalogs from the template.
 - `make validate`
-  Runs schema compilation and checks the git diff for whitespace issues.
+  Runs schema compilation, runtime smoke tests, gettext template refresh, and translation format checks.
 - `make package`
-  Builds a distributable zip archive in `build/`.
+  Builds a distributable zip archive in `build/` including compiled translations.
 - `make install`
-  Installs the extension into `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/`.
+  Installs the extension into `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/` including compiled translations.
 
 ## Project Conventions
 
 - The extension follows the modern GNOME Shell extension layout with `metadata.json`, `extension.js`, `prefs.js`, GTK4/Libadwaita preferences, and a dedicated GSettings schema.
 - The GSettings schema id used by the project is `org.gnome.shell.extensions.resource-monitor`, aligned with GNOME extension conventions.
+- User-visible strings are localized through gettext (`gettext-domain` in metadata) with catalogs in `po/` and compiled `.mo` files included at package/install time.
 - Supported GNOME Shell versions must stay synchronized between `metadata.json`, release notes, and this README.
 - New compatibility claims should only be added after validation on the corresponding stable GNOME Shell release.
 
@@ -56,9 +63,9 @@ The repository now includes a small maintenance workflow for local development.
 GitHub Actions now includes:
 
 - `Validate`
-  Compiles schemas and checks the patch formatting on pushes and pull requests.
+  Compiles schemas, runs smoke tests, refreshes gettext template, and validates translation catalogs on pushes and pull requests.
 - `Release`
-  Builds the extension zip on demand and automatically attaches it to GitHub releases for tags matching `v*`.
+  Builds the extension zip (including compiled translations) on demand and automatically attaches it to GitHub releases for tags matching `v*`.
 
 ## Preferences
 
@@ -76,7 +83,12 @@ GitHub Actions now includes:
 
 ## About Units
 
-The units displayed in Resource_Monitor are in K, M, ... (powers of 1024), or KB, MB, ... (powers of 1000).
+Resource_Monitor supports both data scaling standards:
+
+- SI (`1000`): `KB`, `MB`, `GB`, ...
+- IEC (`1024`): `KiB`, `MiB`, `GiB`, ...
+
+You can choose the preferred base in `Preferences -> Global -> Data Unit Base`.
 
 ## Runtime Dependencies
 

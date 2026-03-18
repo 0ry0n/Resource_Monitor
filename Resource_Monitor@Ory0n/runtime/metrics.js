@@ -78,13 +78,48 @@ export function getValueFixed(value, showDecimals) {
   return showDecimals ? value.toFixed(1) : value.toFixed(0);
 }
 
-export function convertValueToUnit(value, unitMeasure, isHertz = false) {
-  const factor = 1000;
-  const unitSuffixes = isHertz
-    ? ["KHz", "MHz", "GHz", "THz"]
-    : ["KB", "MB", "GB", "TB"];
+const DECIMAL_FACTOR = 1000;
+const BINARY_FACTOR = 1024;
+const DISKSTAT_SECTOR_BYTES = 512;
 
-  let unit = isHertz ? "KHz" : "KB";
+export function getDataScaleFactor(scaleBase = "decimal") {
+  return scaleBase === "binary" ? BINARY_FACTOR : DECIMAL_FACTOR;
+}
+
+function getStorageUnitSuffixes(scaleBase = "decimal") {
+  return scaleBase === "binary"
+    ? ["KiB", "MiB", "GiB", "TiB"]
+    : ["KB", "MB", "GB", "TB"];
+}
+
+function getThroughputUnitSuffixes(scaleBase = "decimal", isBits = false) {
+  if (isBits) {
+    return scaleBase === "binary"
+      ? ["b", "Kib", "Mib", "Gib", "Tib"]
+      : ["b", "kb", "Mb", "Gb", "Tb"];
+  }
+
+  return scaleBase === "binary"
+    ? ["B", "KiB", "MiB", "GiB", "TiB"]
+    : ["B", "KB", "MB", "GB", "TB"];
+}
+
+export function getBaseStorageUnit(scaleBase = "decimal") {
+  return getStorageUnitSuffixes(scaleBase)[0];
+}
+
+export function convertValueToUnit(
+  value,
+  unitMeasure,
+  isHertz = false,
+  scaleBase = "decimal"
+) {
+  const factor = isHertz ? DECIMAL_FACTOR : getDataScaleFactor(scaleBase);
+  const unitSuffixes = isHertz
+    ? ["kHz", "MHz", "GHz", "THz"]
+    : getStorageUnitSuffixes(scaleBase);
+
+  let unit = unitSuffixes[0];
 
   switch (unitMeasure) {
     case "k":
@@ -119,32 +154,78 @@ export function convertValueToUnit(value, unitMeasure, isHertz = false) {
   return [value, unit];
 }
 
-export function convertValuesToUnit(values, unitMeasure, isBits = false) {
-  const factor = 1024;
-  const unitSuffixes = isBits
-    ? ["b", "k", "m", "g", "t"]
-    : ["B", "K", "M", "G", "T"];
-  const normalizedUnit = isBits
-    ? unitMeasure?.toLowerCase()
-    : unitMeasure?.toUpperCase();
+export function convertValuesToUnit(
+  values,
+  unitMeasure,
+  isBits = false,
+  scaleBase = "decimal"
+) {
+  const factor = getDataScaleFactor(scaleBase);
+  const unitSuffixes = getThroughputUnitSuffixes(scaleBase, isBits);
+  const normalizedMeasure = unitMeasure?.toLowerCase();
+  const sanitizedValues = values.map((currentValue) =>
+    Number.isFinite(currentValue) ? Math.max(0, currentValue) : 0
+  );
 
   let exponent = 0;
 
-  if (normalizedUnit && unitSuffixes.includes(normalizedUnit)) {
-    exponent = unitSuffixes.indexOf(normalizedUnit);
-  } else {
-    while (
-      values.some((currentValue) => currentValue >= factor ** (exponent + 1)) &&
-      exponent < 4
-    ) {
-      exponent++;
-    }
+  switch (normalizedMeasure) {
+    case "b":
+      exponent = 0;
+      break;
+    case "k":
+      exponent = 1;
+      break;
+    case "m":
+      exponent = 2;
+      break;
+    case "g":
+      exponent = 3;
+      break;
+    case "t":
+      exponent = 4;
+      break;
+    default:
+      while (
+        sanitizedValues.some(
+          (currentValue) => currentValue >= factor ** (exponent + 1)
+        ) &&
+        exponent < 4
+      ) {
+        exponent++;
+      }
+      break;
   }
 
   return {
-    values: values.map((currentValue) => currentValue / factor ** exponent),
+    values: sanitizedValues.map(
+      (currentValue) => currentValue / factor ** exponent
+    ),
     unit: unitSuffixes[exponent],
   };
+}
+
+export function getFixedDataUnitForMeasure(
+  unitMeasure,
+  scaleBase = "decimal",
+  isBits = false
+) {
+  const unitSuffixes = getThroughputUnitSuffixes(scaleBase, isBits);
+
+  switch (unitMeasure?.toLowerCase()) {
+    case "k":
+      return unitSuffixes[1];
+    case "m":
+      return unitSuffixes[2];
+    case "g":
+      return unitSuffixes[3];
+    case "t":
+      return unitSuffixes[4];
+    case "b":
+    case "auto":
+    default:
+      return unitSuffixes[0];
+  }
 }
 
 export function convertTemperature(tempCelsius, preferredUnit) {
@@ -155,7 +236,16 @@ export function convertTemperature(tempCelsius, preferredUnit) {
 
 export function parseCpuUsage(contents, previousSample) {
   const lines = new TextDecoder().decode(contents).split("\n");
-  const entry = lines[0].trim().split(/\s+/);
+  const entry = lines[0]?.trim().split(/\s+/) || [];
+  if (entry.length < 5 || entry[0] !== "cpu") {
+    return {
+      usage: 0,
+      sample: {
+        total: previousSample.total || 0,
+        idle: previousSample.idle || 0,
+      },
+    };
+  }
   const idle = parseInt(entry[4], 10) + (parseInt(entry[5], 10) || 0);
 
   let total = 0;
@@ -166,11 +256,31 @@ export function parseCpuUsage(contents, previousSample) {
     }
   }
 
+  const hasPreviousSample =
+    Number.isFinite(previousSample.total) &&
+    Number.isFinite(previousSample.idle) &&
+    previousSample.total > 0 &&
+    previousSample.idle >= 0;
+
+  if (!hasPreviousSample) {
+    return {
+      usage: 0,
+      sample: {
+        total,
+        idle,
+      },
+    };
+  }
+
   const deltaTotal = total - (previousSample.total || 0);
   const deltaIdle = idle - (previousSample.idle || 0);
+  const usage =
+    deltaTotal > 0
+      ? (100 * Math.max(0, deltaTotal - Math.max(0, deltaIdle))) / deltaTotal
+      : 0;
 
   return {
-    usage: deltaTotal ? (100 * (deltaTotal - deltaIdle)) / deltaTotal : 0,
+    usage,
     sample: {
       total,
       idle,
@@ -214,12 +324,22 @@ export function parseDiskStats(contents) {
     .decode(contents)
     .split("\n")
     .map((line) => line.trim().split(/\s+/))
-    .filter((entry) => entry[2] && !/^loop/.test(entry[2]))
-    .map((entry) => ({
-      device: entry[2],
-      readKilobytes: parseInt(entry[5], 10) / 2,
-      writeKilobytes: parseInt(entry[9], 10) / 2,
-    }));
+    .filter((entry) => entry.length >= 10 && entry[2] && !/^loop/.test(entry[2]))
+    .map((entry) => {
+      const readSectors = parseInt(entry[5], 10);
+      const writeSectors = parseInt(entry[9], 10);
+
+      if (!Number.isFinite(readSectors) || !Number.isFinite(writeSectors)) {
+        return null;
+      }
+
+      return {
+        device: entry[2],
+        readBytes: readSectors * DISKSTAT_SECTOR_BYTES,
+        writeBytes: writeSectors * DISKSTAT_SECTOR_BYTES,
+      };
+    })
+    .filter(Boolean);
 }
 
 export function parseNetworkTotals(contents, pattern) {
@@ -228,15 +348,28 @@ export function parseNetworkTotals(contents, pattern) {
 
   for (let index = 2; index < lines.length - 1; index++) {
     const line = lines[index].trim();
-    const [iface, data] = line.split(":").map((segment) => segment.trim());
+    const splitLine = line.split(":");
+    if (splitLine.length < 2) {
+      continue;
+    }
+
+    const iface = splitLine[0].trim();
+    const data = splitLine[1].trim();
 
     if (!pattern.test(iface)) {
       continue;
     }
 
     const values = data.split(/\s+/);
-    totals[0] += parseInt(values[0], 10);
-    totals[1] += parseInt(values[8], 10);
+    const rxBytes = parseInt(values[0], 10);
+    const txBytes = parseInt(values[8], 10);
+
+    if (!Number.isFinite(rxBytes) || !Number.isFinite(txBytes)) {
+      continue;
+    }
+
+    totals[0] += rxBytes;
+    totals[1] += txBytes;
   }
 
   return totals;

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<schemalist gettext-domain="com-github-Ory0n-Resource_Monitor">
+<schemalist gettext-domain="Resource_Monitor@Ory0n">
     <schema id="org.gnome.shell.extensions.resource-monitor" path="/org/gnome/shell/extensions/resource-monitor/">
         <key name="refreshtime" type="i">
             <default>2</default>
@@ -17,19 +17,24 @@
             <summary>Show decimal digits</summary>
             <description>Enables fractional digits for values shown in the panel.</description>
         </key>
+        <key name="datascalebase" type="s">
+            <default>"decimal"</default>
+            <summary>Data unit base</summary>
+            <description>Chooses whether data unit scaling uses SI powers of 1000 or IEC powers of 1024.</description>
+        </key>
         <key name="leftclickstatus" type="s">
             <default>"gnome-system-monitor"</default>
-            <summary>Left click action</summary>
+            <summary>Left-click action</summary>
             <description>Desktop file or command executed when the indicator is left-clicked.</description>
         </key>
         <key name="customleftclickstatus" type="s">
             <default>"custom-program"</default>
-            <summary>Custom left click command</summary>
-            <description>Stores the custom command shown in preferences for the left click action.</description>
+            <summary>Custom left-click command</summary>
+            <description>Stores the custom command shown in preferences for the left-click action.</description>
         </key>
         <key name="rightclickstatus" type="b">
             <default>true</default>
-            <summary>Open preferences on right click</summary>
+            <summary>Open preferences on right-click</summary>
             <description>When enabled, right-clicking the indicator opens the extension preferences window.</description>
         </key>
         <key name="iconsstatus" type="b">

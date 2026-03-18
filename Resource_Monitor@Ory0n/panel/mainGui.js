@@ -4,14 +4,29 @@ import St from "gi://St";
 
 import { DiskContainerSpace, DiskContainerStats, GpuContainer } from "./containers.js";
 
-const UNIT_PADDING_STYLE = "padding-left: 0.125em;";
+function _addStyleClasses(actor, classes) {
+  classes.forEach((cssClass) => actor.add_style_class_name(cssClass));
+}
+
+function _createGroupBox(name) {
+  const box = new St.BoxLayout({
+    style_class: "resource-monitor-group",
+  });
+  box.add_style_class_name(`resource-monitor-group-${name}`);
+  return box;
+}
+
+function _replaceGroupChildren(group, appendChildren) {
+  group.remove_all_children();
+  appendChildren((child) => group.add_child(child));
+}
 
 function _createUnitLabel(text) {
   const label = new St.Label({
     y_align: Clutter.ActorAlign.CENTER,
     text,
   });
-  label.set_style(UNIT_PADDING_STYLE);
+  _addStyleClasses(label, ["resource-monitor-unit"]);
   return label;
 }
 
@@ -20,6 +35,7 @@ function _createValueLabel(text) {
     y_align: Clutter.ActorAlign.CENTER,
     text,
   });
+  _addStyleClasses(label, ["resource-monitor-value"]);
   label.clutter_text.set({
     x_align: Clutter.ActorAlign.END,
   });
@@ -27,17 +43,21 @@ function _createValueLabel(text) {
 }
 
 function _createBracketLabel(text) {
-  return new St.Label({
+  const label = new St.Label({
     y_align: Clutter.ActorAlign.CENTER,
     text,
   });
+  _addStyleClasses(label, ["resource-monitor-bracket"]);
+  return label;
 }
 
 function _createIcon(path) {
-  return new St.Icon({
+  const icon = new St.Icon({
     gicon: Gio.icon_new_for_string(path),
     style_class: "system-status-icon",
   });
+  _addStyleClasses(icon, ["resource-monitor-icon"]);
+  return icon;
 }
 
 function _appendCpuChildren(indicator, addChild, iconsPosition) {
@@ -90,7 +110,17 @@ function _appendSingleBoxChildren(icon, box, addChild, iconsPosition) {
 }
 
 export function createMainGui(indicator) {
-  indicator._box = new St.BoxLayout();
+  indicator._box = new St.BoxLayout({
+    style_class: "resource-monitor-box",
+  });
+  indicator._cpuGroup = _createGroupBox("cpu");
+  indicator._ramGroup = _createGroupBox("ram");
+  indicator._swapGroup = _createGroupBox("swap");
+  indicator._diskStatsGroup = _createGroupBox("disk-stats");
+  indicator._diskSpaceGroup = _createGroupBox("disk-space");
+  indicator._ethGroup = _createGroupBox("eth");
+  indicator._wlanGroup = _createGroupBox("wlan");
+  indicator._gpuGroup = _createGroupBox("gpu");
 
   indicator._cpuIcon = _createIcon(`${indicator._path}/icons/cpu-symbolic.svg`);
   indicator._ramIcon = _createIcon(`${indicator._path}/icons/ram-symbolic.svg`);
@@ -106,12 +136,12 @@ export function createMainGui(indicator) {
   indicator._gpuIcon = _createIcon(`${indicator._path}/icons/gpu-symbolic.svg`);
 
   indicator._cpuTemperatureUnit = _createUnitLabel("°C");
-  indicator._cpuFrequencyUnit = _createUnitLabel("KHz");
+  indicator._cpuFrequencyUnit = _createUnitLabel("kHz");
   indicator._cpuUnit = _createUnitLabel("%");
   indicator._ramUnit = _createUnitLabel("KB");
   indicator._swapUnit = _createUnitLabel("KB");
-  indicator._ethUnit = _createUnitLabel("K");
-  indicator._wlanUnit = _createUnitLabel("K");
+  indicator._ethUnit = _createUnitLabel("B");
+  indicator._wlanUnit = _createUnitLabel("B");
 
   indicator._cpuValue = _createValueLabel("--");
   indicator._ramValue = _createValueLabel("--");
@@ -121,6 +151,17 @@ export function createMainGui(indicator) {
   indicator._cpuTemperatureValue = _createValueLabel("--");
   indicator._cpuFrequencyValue = _createValueLabel("--");
   indicator._cpuLoadAverageValue = _createValueLabel("--");
+  _addStyleClasses(indicator._cpuTemperatureValue, [
+    "resource-monitor-secondary-value",
+  ]);
+  _addStyleClasses(indicator._cpuFrequencyValue, [
+    "resource-monitor-secondary-value",
+  ]);
+  _addStyleClasses(indicator._cpuLoadAverageValue, [
+    "resource-monitor-secondary-value",
+  ]);
+  _addStyleClasses(indicator._cpuTemperatureUnit, ["resource-monitor-secondary-unit"]);
+  _addStyleClasses(indicator._cpuFrequencyUnit, ["resource-monitor-secondary-unit"]);
 
   indicator._cpuTemperatureBracketStart = _createBracketLabel("[");
   indicator._cpuTemperatureBracketEnd = _createBracketLabel("]");
@@ -128,6 +169,24 @@ export function createMainGui(indicator) {
   indicator._cpuFrequencyBracketEnd = _createBracketLabel("]");
   indicator._cpuLoadAverageBracketStart = _createBracketLabel("[");
   indicator._cpuLoadAverageBracketEnd = _createBracketLabel("]");
+  _addStyleClasses(indicator._cpuTemperatureBracketStart, [
+    "resource-monitor-secondary-bracket",
+  ]);
+  _addStyleClasses(indicator._cpuTemperatureBracketEnd, [
+    "resource-monitor-secondary-bracket",
+  ]);
+  _addStyleClasses(indicator._cpuFrequencyBracketStart, [
+    "resource-monitor-secondary-bracket",
+  ]);
+  _addStyleClasses(indicator._cpuFrequencyBracketEnd, [
+    "resource-monitor-secondary-bracket",
+  ]);
+  _addStyleClasses(indicator._cpuLoadAverageBracketStart, [
+    "resource-monitor-secondary-bracket",
+  ]);
+  _addStyleClasses(indicator._cpuLoadAverageBracketEnd, [
+    "resource-monitor-secondary-bracket",
+  ]);
 
   indicator._diskStatsBox = new DiskContainerStats();
   indicator._diskSpaceBox = new DiskContainerSpace();
@@ -138,83 +197,93 @@ export function buildMainGui(indicator) {
   indicator._refreshGui();
 
   const iconsPosition = indicator._iconsPosition;
-  const addChild = (child) => indicator._box.add_child(child);
+  indicator._box.remove_style_class_name("resource-monitor-icons-left");
+  indicator._box.remove_style_class_name("resource-monitor-icons-right");
+  indicator._box.add_style_class_name(
+    iconsPosition === "left"
+      ? "resource-monitor-icons-left"
+      : "resource-monitor-icons-right"
+  );
+
+  const groupsByItem = {
+    cpu: indicator._cpuGroup,
+    ram: indicator._ramGroup,
+    swap: indicator._swapGroup,
+    stats: indicator._diskStatsGroup,
+    space: indicator._diskSpaceGroup,
+    eth: indicator._ethGroup,
+    wlan: indicator._wlanGroup,
+    gpu: indicator._gpuGroup,
+  };
+
+  _replaceGroupChildren(indicator._cpuGroup, (addChild) =>
+    _appendCpuChildren(indicator, addChild, iconsPosition)
+  );
+  _replaceGroupChildren(indicator._ramGroup, (addChild) =>
+    _appendSimpleChildren(
+      indicator._ramIcon,
+      indicator._ramValue,
+      indicator._ramUnit,
+      addChild,
+      iconsPosition
+    )
+  );
+  _replaceGroupChildren(indicator._swapGroup, (addChild) =>
+    _appendSimpleChildren(
+      indicator._swapIcon,
+      indicator._swapValue,
+      indicator._swapUnit,
+      addChild,
+      iconsPosition
+    )
+  );
+  _replaceGroupChildren(indicator._diskStatsGroup, (addChild) =>
+    _appendSingleBoxChildren(
+      indicator._diskStatsIcon,
+      indicator._diskStatsBox,
+      addChild,
+      iconsPosition
+    )
+  );
+  _replaceGroupChildren(indicator._diskSpaceGroup, (addChild) =>
+    _appendSingleBoxChildren(
+      indicator._diskSpaceIcon,
+      indicator._diskSpaceBox,
+      addChild,
+      iconsPosition
+    )
+  );
+  _replaceGroupChildren(indicator._ethGroup, (addChild) =>
+    _appendSimpleChildren(
+      indicator._ethIcon,
+      indicator._ethValue,
+      indicator._ethUnit,
+      addChild,
+      iconsPosition
+    )
+  );
+  _replaceGroupChildren(indicator._wlanGroup, (addChild) =>
+    _appendSimpleChildren(
+      indicator._wlanIcon,
+      indicator._wlanValue,
+      indicator._wlanUnit,
+      addChild,
+      iconsPosition
+    )
+  );
+  _replaceGroupChildren(indicator._gpuGroup, (addChild) =>
+    _appendSingleBoxChildren(
+      indicator._gpuIcon,
+      indicator._gpuBox,
+      addChild,
+      iconsPosition
+    )
+  );
 
   indicator._itemsPosition.forEach((element) => {
-    switch (element) {
-      case "cpu":
-        _appendCpuChildren(indicator, addChild, iconsPosition);
-        break;
-
-      case "ram":
-        _appendSimpleChildren(
-          indicator._ramIcon,
-          indicator._ramValue,
-          indicator._ramUnit,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      case "swap":
-        _appendSimpleChildren(
-          indicator._swapIcon,
-          indicator._swapValue,
-          indicator._swapUnit,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      case "stats":
-        _appendSingleBoxChildren(
-          indicator._diskStatsIcon,
-          indicator._diskStatsBox,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      case "space":
-        _appendSingleBoxChildren(
-          indicator._diskSpaceIcon,
-          indicator._diskSpaceBox,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      case "eth":
-        _appendSimpleChildren(
-          indicator._ethIcon,
-          indicator._ethValue,
-          indicator._ethUnit,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      case "wlan":
-        _appendSimpleChildren(
-          indicator._wlanIcon,
-          indicator._wlanValue,
-          indicator._wlanUnit,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      case "gpu":
-        _appendSingleBoxChildren(
-          indicator._gpuIcon,
-          indicator._gpuBox,
-          addChild,
-          iconsPosition
-        );
-        break;
-
-      default:
-        break;
+    const group = groupsByItem[element];
+    if (group) {
+      indicator._box.add_child(group);
     }
   });
 
