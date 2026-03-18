@@ -73,7 +73,7 @@ const DiskContainer = GObject.registerClass(
 
     set_element_name_visibility(status) {
       this._elementsPath.forEach((element) => {
-        if (typeof this._elementsName[element] !== "undefined") {
+        if (this._elementsName[element] !== undefined) {
           if (status) {
             this._elementsName[element].show();
           } else {
@@ -244,14 +244,14 @@ export const GpuContainer = GObject.registerClass(
     set_element_width(width) {
       if (width === 0) {
         this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsValue[element] !== "undefined") {
+          if (this._elementsValue[element] !== undefined) {
             this._elementsValue[element].min_width = 0;
             this._elementsValue[element].natural_width = 0;
             this._elementsValue[element].min_width_set = false;
             this._elementsValue[element].natural_width_set = false;
           }
 
-          if (typeof this._elementsMemoryValue[element] !== "undefined") {
+          if (this._elementsMemoryValue[element] !== undefined) {
             this._elementsMemoryValue[element].min_width = 0;
             this._elementsMemoryValue[element].natural_width = 0;
             this._elementsMemoryValue[element].min_width_set = false;
@@ -260,11 +260,11 @@ export const GpuContainer = GObject.registerClass(
         });
       } else {
         this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsValue[element] !== "undefined") {
+          if (this._elementsValue[element] !== undefined) {
             this._elementsValue[element].width = width;
           }
 
-          if (typeof this._elementsMemoryValue[element] !== "undefined") {
+          if (this._elementsMemoryValue[element] !== undefined) {
             this._elementsMemoryValue[element].width = width;
           }
         });
@@ -274,7 +274,7 @@ export const GpuContainer = GObject.registerClass(
     set_element_thermal_width(width) {
       if (width === 0) {
         this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsThermalValue[element] !== "undefined") {
+          if (this._elementsThermalValue[element] !== undefined) {
             this._elementsThermalValue[element].min_width = 0;
             this._elementsThermalValue[element].natural_width = 0;
             this._elementsThermalValue[element].min_width_set = false;
@@ -283,7 +283,7 @@ export const GpuContainer = GObject.registerClass(
         });
       } else {
         this._elementsUuid.forEach((element) => {
-          if (typeof this._elementsThermalValue[element] !== "undefined") {
+          if (this._elementsThermalValue[element] !== undefined) {
             this._elementsThermalValue[element].width = width;
           }
         });

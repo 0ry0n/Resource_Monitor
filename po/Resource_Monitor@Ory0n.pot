@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Resource_Monitor 1\n"
 "Report-Msgid-Bugs-To: https://github.com/0ry0n/Resource_Monitor/issues\n"
-"POT-Creation-Date: 2026-03-18 19:49+0100\n"
+"POT-Creation-Date: 2026-03-18 19:53+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -934,7 +934,7 @@ msgid "Display Name"
 msgstr ""
 
 #: Resource_Monitor@Ory0n/prefs.js:2212 Resource_Monitor@Ory0n/prefs.js:2780
-#: Resource_Monitor@Ory0n/prefs/helpers.js:245
+#: Resource_Monitor@Ory0n/prefs/helpers.js:247
 msgid "Device"
 msgstr ""
 
@@ -955,7 +955,7 @@ msgid "°F"
 msgstr ""
 
 #: Resource_Monitor@Ory0n/prefs.js:2790
-#: Resource_Monitor@Ory0n/prefs/helpers.js:252
+#: Resource_Monitor@Ory0n/prefs/helpers.js:254
 msgid "Name"
 msgstr ""
 
@@ -967,11 +967,11 @@ msgstr ""
 msgid "Memory Monitor"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs/helpers.js:83
+#: Resource_Monitor@Ory0n/prefs/helpers.js:84
 msgid "Preview"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs/helpers.js:115
+#: Resource_Monitor@Ory0n/prefs/helpers.js:116
 msgid "Higher than"
 msgstr ""
 
@@ -979,7 +979,7 @@ msgstr ""
 msgid "Remove threshold"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs/helpers.js:294
+#: Resource_Monitor@Ory0n/prefs/helpers.js:296
 msgid "Monitor"
 msgstr ""
 

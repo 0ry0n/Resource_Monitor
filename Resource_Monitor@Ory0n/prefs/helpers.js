@@ -36,37 +36,38 @@ export function connectSwitchButton(settings, settingsName, element) {
   settings.bind(settingsName, element, "active", Gio.SettingsBindFlags.DEFAULT);
 }
 
-function _normalizeThresholdValue(value) {
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function _normalizeColorEntry(colorEntry, separator = " ") {
+function _parseColorEntry(colorEntry, separator = " ") {
   if (typeof colorEntry !== "string") {
-    return "";
+    return null;
   }
 
-  return colorEntry.includes("undefined")
-    ? colorEntry.replaceAll("undefined", separator)
-    : colorEntry;
+  const parts = colorEntry.split(separator);
+  if (parts.length !== 4) {
+    return null;
+  }
+
+  const [threshold, red, green, blue] = parts.map(Number);
+  if (
+    !Number.isFinite(threshold) ||
+    !Number.isFinite(red) ||
+    !Number.isFinite(green) ||
+    !Number.isFinite(blue)
+  ) {
+    return null;
+  }
+
+  return { threshold, red, green, blue };
 }
 
-function _sortColorEntries(colorsArray, separator) {
-  return [...colorsArray].sort((first, second) => {
-    const [firstThreshold] = _normalizeColorEntry(first, separator).split(separator);
-    const [secondThreshold] = _normalizeColorEntry(second, separator).split(separator);
-    return (
-      _normalizeThresholdValue(firstThreshold) -
-      _normalizeThresholdValue(secondThreshold)
-    );
-  });
+function _formatColorEntry({ threshold, red, green, blue }, separator = " ") {
+  return `${threshold}${separator}${red}${separator}${green}${separator}${blue}`;
 }
 
-function _normalizeAndSortColorEntries(colorsArray, separator = " ") {
-  return _sortColorEntries(
-    colorsArray.map((colorEntry) => _normalizeColorEntry(colorEntry, separator)),
-    separator
-  );
+function _sanitizeAndSortColorEntries(colorsArray, separator = " ") {
+  return colorsArray
+    .map((colorEntry) => _parseColorEntry(colorEntry, separator))
+    .filter(Boolean)
+    .sort((first, second) => first.threshold - second.threshold);
 }
 
 function _rgbaToHex(rgba) {
@@ -118,6 +119,25 @@ export function makeColorRow(
     })
   );
 
+  let colorButton = null;
+  const updateColorSetting = (thresholdText, rgba) => {
+    const index = row.get_index();
+    let colorsArray = settings.get_strv(settingsName);
+
+    if (index >= 0 && index < colorsArray.length) {
+      colorsArray[index] = _formatColorEntry(
+        {
+          threshold: Number.parseFloat(thresholdText) || 0,
+          red: rgba.red,
+          green: rgba.green,
+          blue: rgba.blue,
+        },
+        separator
+      );
+      settings.set_strv(settingsName, colorsArray);
+    }
+  };
+
   const entry = new Gtk.Entry({
     input_purpose: Gtk.InputPurpose.NUMBER,
     text,
@@ -125,40 +145,20 @@ export function makeColorRow(
     margin_end: 8,
   });
   entry.connect("changed", (widget) => {
-    const index = row.get_index();
-    let colorsArray = settings.get_strv(settingsName);
-
-    if (index >= 0 && index < colorsArray.length) {
-      const [, oldRed, oldGreen, oldBlue] = _normalizeColorEntry(
-        colorsArray[index],
-        separator
-      ).split(separator);
-      colorsArray[index] =
-        `${widget.text}${separator}${oldRed}${separator}${oldGreen}${separator}${oldBlue}`;
-      settings.set_strv(settingsName, colorsArray);
+    if (colorButton) {
+      updateColorSetting(widget.text, colorButton.get_rgba());
     }
   });
   box.append(entry);
 
-  const colorButton = new Gtk.ColorButton({
+  colorButton = new Gtk.ColorButton({
     rgba: new Gdk.RGBA({ red, green, blue, alpha }),
     margin_end: 8,
   });
   colorButton.connect("color-set", (widget) => {
-    const index = row.get_index();
-    let colorsArray = settings.get_strv(settingsName);
-
-    if (index >= 0 && index < colorsArray.length) {
-      const rgba = widget.get_rgba();
-      _setPreviewMarkup(preview, rgba);
-      const [threshold] = _normalizeColorEntry(
-        colorsArray[index],
-        separator
-      ).split(separator);
-      colorsArray[index] =
-        `${threshold}${separator}${rgba.red}${separator}${rgba.green}${separator}${rgba.blue}`;
-      settings.set_strv(settingsName, colorsArray);
-    }
+    const rgba = widget.get_rgba();
+    _setPreviewMarkup(preview, rgba);
+    updateColorSetting(entry.text, rgba);
   });
   box.append(colorButton);
 
@@ -191,24 +191,26 @@ export function makeColors(
   addButton,
   separator = " "
 ) {
-  const colorsArray = _normalizeAndSortColorEntries(
+  const sortedColorEntries = _sanitizeAndSortColorEntries(
     settings.get_strv(settingsName),
     separator
+  );
+  const colorsArray = sortedColorEntries.map((entry) =>
+    _formatColorEntry(entry, separator)
   );
 
   settings.set_strv(settingsName, colorsArray);
 
-  for (const element of colorsArray) {
-    const [threshold, red, green, blue] = element.split(separator);
+  for (const { threshold, red, green, blue } of sortedColorEntries) {
     makeColorRow(
       settings,
       settingsName,
       listBox,
       separator,
-      threshold,
-      parseFloat(red),
-      parseFloat(green),
-      parseFloat(blue)
+      `${threshold}`,
+      red,
+      green,
+      blue
     );
   }
 

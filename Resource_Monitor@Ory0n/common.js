@@ -28,16 +28,8 @@ function _parseJsonEntry(serialized, type) {
   return parsed;
 }
 
-function _toBoolean(value, fallback = false) {
-  if (typeof value === "boolean") {
-    return value;
-  }
-
-  if (typeof value === "string") {
-    return value === "true";
-  }
-
-  return fallback;
+function _toBoolean(value) {
+  return value === true;
 }
 
 export function serializeDiskEntry({

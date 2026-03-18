@@ -7,23 +7,17 @@ function normalizeColorComponent(component) {
   return Math.max(0, Math.min(255, Math.round(scaled)));
 }
 
-function normalizeColorEntry(colorItem, separator = " ") {
+function parseColorThreshold(colorItem, separator) {
   if (typeof colorItem !== "string") {
-    return "";
+    return null;
   }
 
-  return colorItem.includes("undefined")
-    ? colorItem.replaceAll("undefined", separator)
-    : colorItem;
-}
+  const parts = colorItem.split(separator);
+  if (parts.length !== 4) {
+    return null;
+  }
 
-function parseColorThreshold(colorItem, separator) {
-  const [thresholdRaw, rRaw, gRaw, bRaw] = normalizeColorEntry(
-    colorItem,
-    separator
-  )
-    .split(separator)
-    .map(Number);
+  const [thresholdRaw, rRaw, gRaw, bRaw] = parts.map(Number);
   const threshold = Number.isFinite(thresholdRaw) ? thresholdRaw : null;
   const r = normalizeColorComponent(rRaw);
   const g = normalizeColorComponent(gRaw);
