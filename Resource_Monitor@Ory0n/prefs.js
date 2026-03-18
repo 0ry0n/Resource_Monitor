@@ -64,6 +64,7 @@ import {
 // Settings
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
+const DISPLAY_MODE = "displaymode";
 const DECIMALS_STATUS = "decimalsstatus";
 const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
@@ -319,6 +320,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return [
         ["decimal", _("SI (1000)")],
         ["binary", _("IEC (1024)")],
+      ];
+    }
+
+    _getDisplayModeOptions() {
+      return [
+        ["primary", _("Primary Display Only")],
+        ["all", _("All Available Panels")],
       ];
     }
 
@@ -944,6 +952,15 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Panel Position"),
           _("Choose where the indicator appears in the panel."),
           this._extensionPositionCombobox
+        )
+      );
+      generalGroup.add(
+        this._createActionRow(
+          _("Display Mode"),
+          _(
+            "Choose whether the indicator is shown only on the primary panel or on every available panel."
+          ),
+          this._displayModeCombobox
         )
       );
       generalGroup.add(
@@ -1743,6 +1760,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         ["center", _("Center")],
         ["right", _("Right")],
       ]);
+      this._displayModeCombobox = this._createComboBox(
+        this._getDisplayModeOptions()
+      );
       this._extensionLeftClickActionCombobox = this._createComboBox([
         ["system-monitor", _("GNOME System Monitor")],
         ["gnome-usage", _("GNOME Usage")],
@@ -1777,6 +1797,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._settings,
         EXTENSION_POSITION,
         this._extensionPositionCombobox
+      );
+      connectComboBox(
+        this._settings,
+        DISPLAY_MODE,
+        this._displayModeCombobox
       );
       connectSwitchButton(
         this._settings,

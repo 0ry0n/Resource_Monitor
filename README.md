@@ -55,6 +55,7 @@ The repository now includes a small maintenance workflow for local development.
 - The extension follows the modern GNOME Shell extension layout with `metadata.json`, `extension.js`, `prefs.js`, GTK4/Libadwaita preferences, and a dedicated GSettings schema.
 - The GSettings schema id used by the project is `org.gnome.shell.extensions.resource-monitor`, aligned with GNOME extension conventions.
 - User-visible strings are localized through gettext (`gettext-domain` in metadata) with catalogs in `po/` and compiled `.mo` files included at package/install time.
+- Display placement supports a primary-only mode and an all-available-panels mode; when no secondary panel provider is present, primary-only behavior is preserved.
 - Supported GNOME Shell versions must stay synchronized between `metadata.json`, release notes, and this README.
 - New compatibility claims should only be added after validation on the corresponding stable GNOME Shell release.
 

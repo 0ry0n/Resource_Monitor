@@ -12,6 +12,11 @@
             <summary>Panel position</summary>
             <description>Chooses whether the indicator is added to the left, center or right area of the GNOME Shell panel.</description>
         </key>
+        <key name="displaymode" type="s">
+            <default>"primary"</default>
+            <summary>Display mode</summary>
+            <description>Chooses whether the indicator is shown only on the primary panel or on all available panels provided by the current desktop setup.</description>
+        </key>
         <key name="decimalsstatus" type="b">
             <default>true</default>
             <summary>Show decimal digits</summary>

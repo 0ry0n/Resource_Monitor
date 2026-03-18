@@ -91,6 +91,7 @@ import {
 // Settings
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
+const DISPLAY_MODE = "displaymode";
 const DECIMALS_STATUS = "decimalsstatus";
 const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
@@ -176,6 +177,13 @@ const GPU_MEMORY_MONITOR = "gpumemorymonitor";
 const GPU_DISPLAY_DEVICE_NAME = "gpudisplaydevicename";
 const GPU_DEVICES_LIST = "gpudeviceslist";
 const GPU_MIN_REFRESH_INTERVAL_SECONDS = 5;
+const DISPLAY_MODE_PRIMARY = "primary";
+const DISPLAY_MODE_ALL = "all";
+const PANEL_POSITION_INDEX = {
+  left: -1,
+  center: 0,
+  right: 0,
+};
 
 let networkManagerPromise = null;
 
@@ -1879,11 +1887,8 @@ const ResourceMonitor = GObject.registerClass(
 );
 
 export default class ResourceMonitorExtension extends Extension {
-  enable() {
-    this._settings = this.getSettings();
-    this._logger =
-      typeof this.getLogger === "function" ? this.getLogger() : console;
-    this._indicator = new ResourceMonitor({
+  _createIndicator() {
+    return new ResourceMonitor({
       settings: this._settings,
       openPreferences: () => {
         this.openPreferences();
@@ -1892,60 +1897,222 @@ export default class ResourceMonitorExtension extends Extension {
       metadata: this.metadata,
       logger: this._logger,
     });
+  }
 
-    const index = {
-      left: -1,
-      center: 0,
-      right: 0,
+  _getPanelBox() {
+    return ["left", "center", "right"].includes(this._extensionPosition)
+      ? this._extensionPosition
+      : "right";
+  }
+
+  _isAllPanelsMode() {
+    return this._displayMode === DISPLAY_MODE_ALL;
+  }
+
+  _destroyIndicators() {
+    if (!Array.isArray(this._indicators)) {
+      return;
+    }
+
+    this._indicators.forEach((indicator) => {
+      indicator?.destroy?.();
+    });
+    this._indicators = [];
+  }
+
+  _disconnectPanelProviderSignals() {
+    if (!Array.isArray(this._panelProviderSignals)) {
+      return;
+    }
+
+    this._panelProviderSignals.forEach(({ emitter, id }) => {
+      if (emitter && id) {
+        try {
+          emitter.disconnect(id);
+        } catch (error) {
+          // The provider may be destroyed before disconnecting.
+        }
+      }
+    });
+    this._panelProviderSignals = [];
+  }
+
+  _connectPanelProviderSignals() {
+    this._disconnectPanelProviderSignals();
+
+    const dashToPanel = global?.dashToPanel;
+    if (!dashToPanel || typeof dashToPanel.connect !== "function") {
+      return;
+    }
+
+    ["panels-created", "panels-destroyed"].forEach((signalName) => {
+      try {
+        const id = dashToPanel.connect(signalName, () => {
+          if (this._isAllPanelsMode()) {
+            this._queueIndicatorsRebuild();
+          }
+        });
+        this._panelProviderSignals.push({ emitter: dashToPanel, id });
+      } catch (error) {
+        // Signal may not exist in this provider version.
+      }
+    });
+  }
+
+  _getPanelTargets() {
+    if (!this._isAllPanelsMode()) {
+      return [{ panel: Main.panel, id: "primary" }];
+    }
+
+    const targets = [];
+    const seenPanels = new Set();
+    const appendTarget = (panel, id) => {
+      if (
+        !panel ||
+        typeof panel.addToStatusArea !== "function" ||
+        seenPanels.has(panel)
+      ) {
+        return;
+      }
+
+      seenPanels.add(panel);
+      targets.push({ panel, id });
     };
 
-    this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
-    this._handlerId = this._settings.connect(
-      `changed::${EXTENSION_POSITION}`,
-      () => {
-        this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
+    const dashToPanelPanels = global?.dashToPanel?.panels;
+    if (Array.isArray(dashToPanelPanels)) {
+      dashToPanelPanels.forEach((panelRef, index) => {
+        const panel = panelRef?.panel ?? panelRef;
+        const monitorIndex = panelRef?.monitor?.index;
+        const targetId = Number.isInteger(monitorIndex)
+          ? `monitor-${monitorIndex}`
+          : `panel-${index}`;
+        appendTarget(panel, targetId);
+      });
+    }
 
-        this._indicator.destroy();
-        this._indicator = null;
-        this._indicator = new ResourceMonitor({
-          settings: this._settings,
-          openPreferences: () => {
-            this.openPreferences();
-          },
-          path: this.path,
-          metadata: this.metadata,
-          logger: this._logger,
-        });
+    if (targets.length === 0) {
+      appendTarget(Main.panel, "primary");
+    }
 
-        Main.panel.addToStatusArea(
-          this.uuid,
-          this._indicator,
-          index[this._extensionPosition],
-          this._extensionPosition
+    return targets;
+  }
+
+  _rebuildIndicators() {
+    this._destroyIndicators();
+
+    const panelBox = this._getPanelBox();
+    const positionIndex = PANEL_POSITION_INDEX[panelBox] ?? 0;
+
+    this._getPanelTargets().forEach((target, index) => {
+      const indicator = this._createIndicator();
+      const role = `${this.uuid}-${target.id}-${index}`;
+
+      try {
+        target.panel.addToStatusArea(role, indicator, positionIndex, panelBox);
+        this._indicators.push(indicator);
+      } catch (error) {
+        this._logger?.error?.(
+          "[Resource_Monitor] Error adding indicator to panel.",
+          error
         );
+        indicator.destroy();
       }
+    });
+  }
+
+  _queueIndicatorsRebuild() {
+    if (this._rebuildIdleId) {
+      return;
+    }
+
+    this._rebuildIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+      this._rebuildIdleId = 0;
+
+      if (!this._settings) {
+        return GLib.SOURCE_REMOVE;
+      }
+
+      this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
+      this._displayMode = this._settings.get_string(DISPLAY_MODE);
+      this._rebuildIndicators();
+
+      return GLib.SOURCE_REMOVE;
+    });
+  }
+
+  enable() {
+    this._settings = this.getSettings();
+    this._logger =
+      typeof this.getLogger === "function" ? this.getLogger() : console;
+    this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
+    this._displayMode = this._settings.get_string(DISPLAY_MODE);
+    if (
+      this._displayMode !== DISPLAY_MODE_PRIMARY &&
+      this._displayMode !== DISPLAY_MODE_ALL
+    ) {
+      this._displayMode = DISPLAY_MODE_PRIMARY;
+    }
+
+    this._indicators = [];
+    this._settingsHandlerIds = [];
+    this._panelProviderSignals = [];
+    this._rebuildIdleId = 0;
+    this._layoutManagerHandlerId = 0;
+
+    this._settingsHandlerIds.push(
+      this._settings.connect(`changed::${EXTENSION_POSITION}`, () => {
+        this._queueIndicatorsRebuild();
+      })
+    );
+    this._settingsHandlerIds.push(
+      this._settings.connect(`changed::${DISPLAY_MODE}`, () => {
+        this._queueIndicatorsRebuild();
+      })
     );
 
-    Main.panel.addToStatusArea(
-      this.uuid,
-      this._indicator,
-      index[this._extensionPosition],
-      this._extensionPosition
-    );
+    if (typeof Main.layoutManager?.connect === "function") {
+      this._layoutManagerHandlerId = Main.layoutManager.connect(
+        "monitors-changed",
+        () => {
+          if (this._isAllPanelsMode()) {
+            this._queueIndicatorsRebuild();
+          }
+        }
+      );
+    }
+
+    this._connectPanelProviderSignals();
+    this._rebuildIndicators();
   }
 
   disable() {
-    if (this._settings && this._handlerId) {
-      this._settings.disconnect(this._handlerId);
-      this._handlerId = null;
+    if (this._rebuildIdleId) {
+      GLib.Source.remove(this._rebuildIdleId);
+      this._rebuildIdleId = 0;
     }
+
+    if (this._settings && Array.isArray(this._settingsHandlerIds)) {
+      this._settingsHandlerIds.forEach((id) => {
+        if (id) {
+          this._settings.disconnect(id);
+        }
+      });
+    }
+    this._settingsHandlerIds = [];
+
+    if (
+      this._layoutManagerHandlerId &&
+      typeof Main.layoutManager?.disconnect === "function"
+    ) {
+      Main.layoutManager.disconnect(this._layoutManagerHandlerId);
+      this._layoutManagerHandlerId = 0;
+    }
+
+    this._disconnectPanelProviderSignals();
+    this._destroyIndicators();
 
     this._settings = null;
     this._logger = null;
-
-    if (this._indicator) {
-      this._indicator.destroy();
-      this._indicator = null;
-    }
   }
 }
