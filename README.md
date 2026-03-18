@@ -94,7 +94,8 @@ You can choose the preferred base in `Preferences -> Global -> Data Unit Base`.
 
 - CPU frequency and CPU thermal discovery use direct sysfs access and do not require `bash`.
 - Disk space updates in the panel use filesystem queries through Gio instead of calling `df`.
-- NVIDIA GPU monitoring still relies on `nvidia-smi`, because that command is the source for the required GPU telemetry on supported systems.
+- NVIDIA GPU monitoring uses `nvidia-smi`.
+- AMD and Intel GPU monitoring use sysfs metrics under `/sys/class/drm/card*/device`.
 
 ## Bug Reporting
 

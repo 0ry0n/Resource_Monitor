@@ -19,7 +19,7 @@ export function hasVisibleThermalCpuTemperature(indicator) {
 
 export function hasVisibleGpu(indicator) {
   return (
-    indicator._capabilities.nvidiaSmi &&
+    indicator._capabilities.gpu &&
     (indicator._gpuStatus || indicator._thermalGpuTemperatureStatus) &&
     indicator._gpuDevices.some((device) => {
       const hasUsage = device.usage && indicator._gpuStatus;

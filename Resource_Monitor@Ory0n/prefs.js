@@ -55,7 +55,11 @@ import {
   ThermalCpuElement,
   ThermalGpuElement,
 } from "./prefs/models.js";
-import { getThermalCpuSensorDescriptors } from "./services/runtime.js";
+import {
+  getAmdGpuDescriptors,
+  getIntelGpuDescriptors,
+  getThermalCpuSensorDescriptors,
+} from "./services/runtime.js";
 
 // Settings
 const REFRESH_TIME = "refreshtime";
@@ -589,6 +593,128 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return container;
     }
 
+    _clearListBox(listbox) {
+      for (
+        let child = listbox.get_first_child();
+        child !== null;
+      ) {
+        const next = child.get_next_sibling();
+        listbox.remove(child);
+        child = next;
+      }
+    }
+
+    _appendInfoRow(listbox, title, subtitle) {
+      const row = new Adw.ActionRow({
+        title,
+        subtitle,
+      });
+      listbox.append(row);
+    }
+
+    _formatBooleanLabel(value) {
+      return value ? _("Yes") : _("No");
+    }
+
+    _getGpuBackendLabel(deviceId) {
+      if (deviceId.startsWith("amd:")) {
+        return _("AMD (sysfs)");
+      }
+
+      if (deviceId.startsWith("intel:")) {
+        return _("Intel (sysfs)");
+      }
+
+      return _("NVIDIA (nvidia-smi)");
+    }
+
+    _refreshGpuDiagnostics() {
+      if (!this._gpuDiagnosticsListbox) {
+        return;
+      }
+
+      const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
+      const hasAmdSysfs = getAmdGpuDescriptors().length > 0;
+      const hasIntelSysfs = getIntelGpuDescriptors().length > 0;
+      const backendList = [];
+
+      if (hasNvidiaSmi) {
+        backendList.push(_("NVIDIA (nvidia-smi)"));
+      }
+      if (hasAmdSysfs) {
+        backendList.push(_("AMD (sysfs)"));
+      }
+      if (hasIntelSysfs) {
+        backendList.push(_("Intel (sysfs)"));
+      }
+
+      const backendsText =
+        backendList.length > 0 ? backendList.join(", ") : _("None");
+
+      this._clearListBox(this._gpuDiagnosticsListbox);
+      this._appendInfoRow(
+        this._gpuDiagnosticsListbox,
+        _("Detected Backends"),
+        backendsText
+      );
+      this._appendInfoRow(
+        this._gpuDiagnosticsListbox,
+        _("Detected GPUs"),
+        _("Scanning...")
+      );
+
+      this._readDetectedGpus()
+        .then((detectedGpus) => {
+          this._clearListBox(this._gpuDiagnosticsListbox);
+          this._appendInfoRow(
+            this._gpuDiagnosticsListbox,
+            _("Detected Backends"),
+            backendsText
+          );
+          this._appendInfoRow(
+            this._gpuDiagnosticsListbox,
+            _("Detected GPUs"),
+            `${detectedGpus.length}`
+          );
+
+          if (detectedGpus.length === 0) {
+            this._appendInfoRow(
+              this._gpuDiagnosticsListbox,
+              _("No Compatible GPU Telemetry"),
+              _(
+                "No compatible NVIDIA, AMD, or Intel GPU source was detected on this system."
+              )
+            );
+            return;
+          }
+
+          detectedGpus.forEach((gpu) => {
+            this._appendInfoRow(
+              this._gpuDiagnosticsListbox,
+              gpu.name,
+              _(
+                "Device: %s | Backend: %s | Usage: %s | Memory: %s | Thermal: %s"
+              ).format(
+                gpu.device,
+                this._getGpuBackendLabel(gpu.device),
+                this._formatBooleanLabel(gpu.hasUsage),
+                this._formatBooleanLabel(gpu.hasMemory),
+                this._formatBooleanLabel(gpu.hasThermal)
+              )
+            );
+          });
+        })
+        .catch((error) => {
+          console.error("[Resource_Monitor] Error reading GPU diagnostics:", error);
+          this._clearListBox(this._gpuDiagnosticsListbox);
+          this._appendInfoRow(
+            this._gpuDiagnosticsListbox,
+            _("GPU Diagnostics Error"),
+            _("Could not read GPU diagnostics from the current system.")
+          );
+        });
+    }
+
     _cleanupCssProvider() {
       if (!this._provider) {
         return;
@@ -671,6 +797,78 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       }
 
       return sensors;
+    }
+
+    async _readDetectedNvidiaGpus() {
+      if (GLib.find_program_in_path("nvidia-smi") === null) {
+        return [];
+      }
+
+      try {
+        const output = await executeCommand(["nvidia-smi", "-L"]);
+        return output
+          .trim()
+          .split("\n")
+          .map((line) => parseNvidiaSmiListLine(line.trim()))
+          .filter(Boolean)
+          .map(({ name, uuid }) => ({
+            device: uuid,
+            name,
+            hasUsage: true,
+            hasMemory: true,
+            hasThermal: true,
+          }));
+      } catch (error) {
+        console.error(
+          "[Resource_Monitor] Error executing nvidia-smi command:",
+          error
+        );
+        return [];
+      }
+    }
+
+    _readDetectedAmdGpus() {
+      return getAmdGpuDescriptors().map((descriptor) => ({
+        device: descriptor.device,
+        name: descriptor.name,
+        hasUsage: Boolean(descriptor.usagePath),
+        hasMemory: Boolean(descriptor.memoryTotalPath && descriptor.memoryUsedPath),
+        hasThermal: Boolean(descriptor.temperaturePath),
+      }));
+    }
+
+    _readDetectedIntelGpus() {
+      return getIntelGpuDescriptors().map((descriptor) => ({
+        device: descriptor.device,
+        name: descriptor.name,
+        hasUsage: Boolean(descriptor.usagePath),
+        hasMemory: Boolean(descriptor.memoryTotalPath && descriptor.memoryUsedPath),
+        hasThermal: Boolean(descriptor.temperaturePath),
+      }));
+    }
+
+    async _readDetectedGpus() {
+      const nvidia = await this._readDetectedNvidiaGpus();
+      const amd = this._readDetectedAmdGpus();
+      const intel = this._readDetectedIntelGpus();
+      const deduped = new Map();
+
+      [...nvidia, ...amd, ...intel].forEach((entry) => {
+        const existing = deduped.get(entry.device);
+        if (!existing) {
+          deduped.set(entry.device, entry);
+          return;
+        }
+
+        deduped.set(entry.device, {
+          ...entry,
+          hasUsage: existing.hasUsage || entry.hasUsage,
+          hasMemory: existing.hasMemory || entry.hasMemory,
+          hasThermal: existing.hasThermal || entry.hasThermal,
+        });
+      });
+
+      return Array.from(deduped.values());
     }
 
     _createListGroup(title, description, addButton, listbox) {
@@ -1493,6 +1691,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       devicesGroup.add(this._createColumnViewContainer(this._gpuDevicesColumnView));
       page.add(devicesGroup);
 
+      const diagnosticsGroup = this._createSettingsGroup(
+        _("Diagnostics"),
+        _("Review detected GPU backends and available telemetry capabilities.")
+      );
+      diagnosticsGroup.add(
+        this._wrapEmbeddedWidget(
+          this._gpuDiagnosticsListbox,
+          ["boxed-list", "resource-monitor-list"]
+        )
+      );
+      page.add(diagnosticsGroup);
+
       return page;
     }
 
@@ -2291,7 +2501,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildThermal() {
-      const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
+      const hasGpuTelemetry =
+        GLib.find_program_in_path("nvidia-smi") !== null ||
+        getAmdGpuDescriptors().length > 0 ||
+        getIntelGpuDescriptors().length > 0;
 
       this._thermalUnitCombobox = this._createComboBox([
         ["c", _("°C")],
@@ -2307,7 +2520,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._thermalGpuColorsAddButton = this._createIconButton("list-add");
       this._thermalGpuColorsListbox = this._createListBox();
       this._thermalGpuDevicesColumnView = this._createColumnView();
-      this._thermalGpuDevicesColumnView.sensitive = hasNvidiaSmi;
+      this._thermalGpuDevicesColumnView.sensitive = hasGpuTelemetry;
 
       connectComboBox(
         this._settings,
@@ -2418,51 +2631,30 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         parseThermalGpuEntry
       );
 
-      // NVIDIA GPU detection
-      if (hasNvidiaSmi) {
-        executeCommand(["nvidia-smi", "-L"])
-          .then((output) => {
-            const lines = output.trim().split("\n");
+      this._readDetectedGpus().then((detectedGpus) => {
+        detectedGpus
+          .filter((gpu) => gpu.hasThermal)
+          .forEach((gpu) => {
+            let statusButton = false;
 
-            for (const line of lines) {
-              if (!line) continue;
-
-              const parsed = parseNvidiaSmiListLine(line.trim());
-              if (!parsed) {
-                continue;
+            for (const gpuConfig of gpuTempsArray) {
+              if (gpu.device === gpuConfig.device) {
+                statusButton = gpuConfig.monitor;
+                break;
               }
-
-              const { name, uuid } = parsed;
-
-              let statusButton = false;
-
-              for (const gpuConfig of gpuTempsArray) {
-                if (uuid === gpuConfig.device) {
-                  statusButton = gpuConfig.monitor;
-                  break;
-                }
-              }
-
-              // Append the GPU data to the thermal model
-              this._thermalGpuDevicesModel.append(
-                new ThermalGpuElement(uuid, name, statusButton)
-              );
             }
 
-            // Save updated GPU temperatures to settings
-            saveArrayToSettings(
-              this._thermalGpuDevicesModel,
-              this._settings,
-              THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+            this._thermalGpuDevicesModel.append(
+              new ThermalGpuElement(gpu.device, gpu.name, statusButton)
             );
-          })
-          .catch((error) =>
-            console.error(
-              "[Resource_Monitor] Error executing nvidia-smi command:",
-              error
-            )
-          );
-      }
+          });
+
+        saveArrayToSettings(
+          this._thermalGpuDevicesModel,
+          this._settings,
+          THERMAL_GPU_TEMPERATURE_DEVICES_LIST
+        );
+      });
 
       // Update
       this._thermalGpuDevicesModel.connect(
@@ -2486,7 +2678,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _buildGpu() {
-      const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
+      const hasGpuTelemetry =
+        GLib.find_program_in_path("nvidia-smi") !== null ||
+        getAmdGpuDescriptors().length > 0 ||
+        getIntelGpuDescriptors().length > 0;
 
       this._gpuDisplay = this._createSwitch();
       this._gpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
@@ -2505,7 +2700,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       this._gpuDisplayDeviceName = this._createSwitch();
       this._gpuDevicesColumnView = this._createColumnView();
-      this._gpuDevicesColumnView.sensitive = hasNvidiaSmi;
+      this._gpuDiagnosticsListbox = this._createListBox();
+      this._gpuDevicesColumnView.sensitive = hasGpuTelemetry;
 
       connectSwitchButton(this._settings, GPU_STATUS, this._gpuDisplay);
       connectSpinButton(
@@ -2602,55 +2798,40 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         parseGpuEntry
       );
 
-      // NVIDIA GPU detection
-      if (hasNvidiaSmi) {
-        executeCommand(["nvidia-smi", "-L"])
-          .then((output) => {
-            const lines = output.trim().split("\n");
+      this._readDetectedGpus().then((detectedGpus) => {
+        detectedGpus
+          .filter((gpu) => gpu.hasUsage || gpu.hasMemory)
+          .forEach((gpu) => {
+            let usageButton = false;
+            let memoryButton = false;
+            let displayName = gpu.name;
 
-            for (const line of lines) {
-              if (!line) continue;
-
-              const parsed = parseNvidiaSmiListLine(line.trim());
-              if (!parsed) {
-                continue;
+            for (const gpuConfig of gpuDevicesArray) {
+              if (gpu.device === gpuConfig.device) {
+                usageButton = gpuConfig.usage;
+                memoryButton = gpuConfig.memory;
+                displayName = gpuConfig.displayName || gpu.name;
+                break;
               }
-
-              const { name, uuid } = parsed;
-
-              let usageButton = false;
-              let memoryButton = false;
-              let displayName = name;
-
-              for (const gpuConfig of gpuDevicesArray) {
-                if (uuid === gpuConfig.device) {
-                  usageButton = gpuConfig.usage;
-                  memoryButton = gpuConfig.memory;
-                  displayName = gpuConfig.displayName || name;
-                  break;
-                }
-              }
-
-              // Append the GPU data to the model
-              this._gpuDevicesModel.append(
-                new GpuElement(displayName, uuid, name, usageButton, memoryButton)
-              );
             }
 
-            // Save updated GPU array to settings
-            saveArrayToSettings(
-              this._gpuDevicesModel,
-              this._settings,
-              GPU_DEVICES_LIST
+            this._gpuDevicesModel.append(
+              new GpuElement(
+                displayName,
+                gpu.device,
+                gpu.name,
+                usageButton,
+                memoryButton
+              )
             );
-          })
-          .catch((error) =>
-            console.error(
-              "[Resource_Monitor] Error executing nvidia-smi command:",
-              error
-            )
-          );
-      }
+          });
+
+        saveArrayToSettings(
+          this._gpuDevicesModel,
+          this._settings,
+          GPU_DEVICES_LIST
+        );
+      });
 
       // Update
       this._gpuDevicesModel.connect(
@@ -2679,6 +2860,8 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._gpuMemoryColorsListbox,
         this._gpuMemoryColorsAddButton
       );
+
+      this._refreshGpuDiagnostics();
     }
 
   }

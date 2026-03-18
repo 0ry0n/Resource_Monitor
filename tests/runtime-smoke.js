@@ -4,7 +4,11 @@ import {
   serializeDiskEntry,
   serializeGpuEntry,
 } from "../Resource_Monitor@Ory0n/common.js";
-import { parseGpuSmiOutput } from "../Resource_Monitor@Ory0n/runtime/gpu.js";
+import {
+  buildAmdGpuDisplay,
+  buildSysfsGpuDisplay,
+  parseGpuSmiOutput,
+} from "../Resource_Monitor@Ory0n/runtime/gpu.js";
 import { buildMemoryDisplay } from "../Resource_Monitor@Ory0n/runtime/memory.js";
 import {
   parseCpuUsage,
@@ -99,6 +103,64 @@ function testGpuParser() {
   assert(binary.length === 1, "Expected one GPU entry in binary mode");
   assert(binary[0].memoryUnit === "KiB", "GPU memory unit should be KiB in binary mode");
   assertApprox(binary[0].memoryValue, 256000, 0.001, "GPU binary memory value should match");
+}
+
+function testAmdGpuDisplay() {
+  const entries = buildAmdGpuDisplay(
+    [
+      {
+        device: "amd:card0",
+        usagePercent: 42,
+        memoryTotalBytes: 8_000_000_000,
+        memoryUsedBytes: 2_000_000_000,
+        memoryFreeBytes: 6_000_000_000,
+        temperatureCelsius: 55,
+      },
+    ],
+    {
+      memoryMonitor: "used",
+      memoryUnitType: "numeric",
+      memoryUnitMeasure: "g",
+      memoryScaleBase: "decimal",
+      temperatureUnit: "c",
+    }
+  );
+
+  assert(entries.length === 1, "Expected one AMD entry");
+  assert(entries[0].uuid === "amd:card0", "AMD id should be preserved");
+  assertApprox(entries[0].usage, 42, 0.001, "AMD usage should match");
+  assertApprox(entries[0].memoryValue, 2, 0.001, "AMD memory should convert to GB");
+  assert(entries[0].memoryUnit === "GB", "AMD memory unit should be GB");
+  assertApprox(entries[0].temperatureValue, 55, 0.001, "AMD temperature should match");
+}
+
+function testIntelGpuDisplay() {
+  const entries = buildSysfsGpuDisplay(
+    [
+      {
+        device: "intel:card1",
+        usagePercent: 63,
+        memoryTotalBytes: 8_000_000_000,
+        memoryUsedBytes: 3_000_000_000,
+        memoryFreeBytes: 5_000_000_000,
+        temperatureCelsius: 61,
+      },
+    ],
+    {
+      memoryMonitor: "used",
+      memoryUnitType: "numeric",
+      memoryUnitMeasure: "g",
+      memoryScaleBase: "decimal",
+      temperatureUnit: "c",
+    }
+  );
+
+  assert(entries.length === 1, "Expected one Intel entry");
+  assert(entries[0].uuid === "intel:card1", "Intel id should be preserved");
+  assertApprox(entries[0].usage, 63, 0.001, "Intel usage should match");
+  assertApprox(entries[0].memoryValue, 3, 0.001, "Intel memory should convert to GB");
+  assert(entries[0].memoryUnit === "GB", "Intel memory unit should be GB");
+  assertApprox(entries[0].temperatureValue, 61, 0.001, "Intel temperature should match");
 }
 
 function testMemoryDisplay() {
@@ -216,6 +278,8 @@ function testNetworkCounterReset() {
 testDiskSerializationRoundtrip();
 testGpuSerializationRoundtrip();
 testGpuParser();
+testAmdGpuDisplay();
+testIntelGpuDisplay();
 testMemoryDisplay();
 testCpuUsageBaseline();
 testDiskStatsSectorConversion();

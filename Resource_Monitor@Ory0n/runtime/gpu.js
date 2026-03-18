@@ -1,10 +1,13 @@
-import { convertTemperature, convertValueToUnit } from "./metrics.js";
+import {
+  convertTemperature,
+  convertValueToUnit,
+  getBaseStorageUnit,
+  getDataScaleFactor,
+} from "./metrics.js";
 
 const BYTES_PER_MIB = 1024 * 1024;
-const BYTES_TO_DECIMAL_KILOBYTES = 1 / 1000;
-const MIB_TO_KIB = 1024;
 
-export function parseGpuSmiOutput(contents, options) {
+function _buildGpuDisplayEntry(raw, options) {
   const {
     memoryMonitor,
     memoryUnitType,
@@ -12,7 +15,69 @@ export function parseGpuSmiOutput(contents, options) {
     temperatureUnit,
     memoryScaleBase = "decimal",
   } = options;
+  const {
+    id,
+    usage,
+    memoryTotalBytes,
+    memoryUsedBytes,
+    memoryFreeBytes = null,
+    temperatureCelsius,
+  } = raw;
 
+  let memoryValue = null;
+  let memoryUnit = getBaseStorageUnit(memoryScaleBase);
+  let memoryPercent = null;
+
+  if (
+    Number.isFinite(memoryTotalBytes) &&
+    memoryTotalBytes > 0 &&
+    Number.isFinite(memoryUsedBytes) &&
+    memoryUsedBytes >= 0
+  ) {
+    const clampedUsedBytes = Math.min(memoryUsedBytes, memoryTotalBytes);
+    const freeBytes = Number.isFinite(memoryFreeBytes)
+      ? Math.max(0, memoryFreeBytes)
+      : Math.max(0, memoryTotalBytes - clampedUsedBytes);
+
+    if (memoryUnitType === "perc") {
+      const usedPercent = (100 * clampedUsedBytes) / memoryTotalBytes;
+      memoryPercent = memoryMonitor === "free" ? 100 - usedPercent : usedPercent;
+      memoryValue = memoryPercent;
+      memoryUnit = "%";
+    } else {
+      const factor = getDataScaleFactor(memoryScaleBase);
+      const memoryBytes = memoryMonitor === "free" ? freeBytes : clampedUsedBytes;
+      const baseValue = memoryBytes / factor;
+      [memoryValue, memoryUnit] = convertValueToUnit(
+        baseValue,
+        memoryUnitMeasure,
+        false,
+        memoryScaleBase
+      );
+    }
+  }
+
+  let temperatureValue = null;
+  let temperatureDisplayUnit = temperatureUnit === "f" ? "°F" : "°C";
+  if (Number.isFinite(temperatureCelsius)) {
+    [temperatureValue, temperatureDisplayUnit] = convertTemperature(
+      temperatureCelsius,
+      temperatureUnit
+    );
+  }
+
+  return {
+    uuid: id,
+    usage: Number.isFinite(usage) ? usage : null,
+    memoryValue,
+    memoryUnit,
+    memoryPercent,
+    temperatureValue,
+    temperatureUnit: temperatureDisplayUnit,
+  };
+}
+
+export function parseGpuSmiOutput(contents, options) {
   return contents
     .trim()
     .split("\n")
@@ -47,64 +112,52 @@ export function parseGpuSmiOutput(contents, options) {
       if (
         !memoryTotalMatch ||
         !memoryUsedMatch ||
-        !memoryFreeMatch ||
-        !usageMatch ||
-        !temperatureMatch
+        !memoryFreeMatch
       ) {
         return null;
       }
 
-      const memoryScaleMultiplier =
-        memoryScaleBase === "binary"
-          ? MIB_TO_KIB
-          : BYTES_PER_MIB * BYTES_TO_DECIMAL_KILOBYTES;
-      const usage = parseInt(usageMatch[1], 10);
-      const memoryTotal = parseInt(memoryTotalMatch[1], 10) * memoryScaleMultiplier;
-      const memoryUsed = parseInt(memoryUsedMatch[1], 10) * memoryScaleMultiplier;
-      const memoryFree = parseInt(memoryFreeMatch[1], 10) * memoryScaleMultiplier;
-      const rawTemperature = parseInt(temperatureMatch[1], 10);
+      const usage = usageMatch ? parseInt(usageMatch[1], 10) : null;
+      const memoryTotalBytes = parseInt(memoryTotalMatch[1], 10) * BYTES_PER_MIB;
+      const memoryUsedBytes = parseInt(memoryUsedMatch[1], 10) * BYTES_PER_MIB;
+      const memoryFreeBytes = parseInt(memoryFreeMatch[1], 10) * BYTES_PER_MIB;
+      const temperatureCelsius = temperatureMatch
+        ? parseInt(temperatureMatch[1], 10)
+        : null;
 
-      if (
-        !Number.isFinite(usage) ||
-        !Number.isFinite(memoryTotal) ||
-        !Number.isFinite(memoryUsed) ||
-        !Number.isFinite(memoryFree) ||
-        !Number.isFinite(rawTemperature)
-      ) {
-        return null;
-      }
-
-      let memoryValue = memoryMonitor === "free" ? memoryFree : memoryUsed;
-      let memoryUnit = memoryScaleBase === "binary" ? "KiB" : "KB";
-      let memoryPercent = null;
-
-      if (memoryUnitType === "perc") {
-        memoryPercent = memoryTotal > 0 ? (100 * memoryValue) / memoryTotal : 0;
-        memoryValue = memoryPercent;
-        memoryUnit = "%";
-      } else {
-        [memoryValue, memoryUnit] = convertValueToUnit(
-          memoryValue,
-          memoryUnitMeasure,
-          false,
-          memoryScaleBase
-        );
-      }
-
-      const [temperatureValue, temperatureDisplayUnit] = convertTemperature(
-        rawTemperature,
-        temperatureUnit
+      return _buildGpuDisplayEntry(
+        {
+          id: uuid,
+          usage,
+          memoryTotalBytes,
+          memoryUsedBytes,
+          memoryFreeBytes,
+          temperatureCelsius,
+        },
+        options
       );
-
-      return {
-        uuid,
-        usage,
-        memoryValue,
-        memoryUnit,
-        memoryPercent,
-        temperatureValue,
-        temperatureUnit: temperatureDisplayUnit,
-      };
     })
     .filter(Boolean);
+}
+
+export function buildSysfsGpuDisplay(readings, options) {
+  return readings
+    .map((reading) =>
+      _buildGpuDisplayEntry(
+        {
+          id: reading.device,
+          usage: reading.usagePercent,
+          memoryTotalBytes: reading.memoryTotalBytes,
+          memoryUsedBytes: reading.memoryUsedBytes,
+          memoryFreeBytes: reading.memoryFreeBytes,
+          temperatureCelsius: reading.temperatureCelsius,
+        },
+        options
+      )
+    )
+    .filter(Boolean);
+}
+
+export function buildAmdGpuDisplay(readings, options) {
+  return buildSysfsGpuDisplay(readings, options);
 }

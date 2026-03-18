@@ -1,5 +1,9 @@
 import GLib from "gi://GLib";
 
+const AMD_VENDOR_ID = "0x1002";
+const INTEL_VENDOR_ID = "0x8086";
+const DRM_SYSFS_PATH = "/sys/class/drm";
+
 function _readDirectoryEntries(path, pattern = null) {
   try {
     const directory = GLib.Dir.open(path, 0);
@@ -17,9 +21,158 @@ function _readDirectoryEntries(path, pattern = null) {
   }
 }
 
+function _readTextFile(path) {
+  try {
+    const [ok, contents] = GLib.file_get_contents(path);
+    if (!ok) {
+      return null;
+    }
+
+    return new TextDecoder().decode(contents).trim();
+  } catch (error) {
+    return null;
+  }
+}
+
+function _findFirstExistingPath(paths) {
+  for (const path of paths) {
+    if (GLib.file_test(path, GLib.FileTest.EXISTS)) {
+      return path;
+    }
+  }
+
+  return null;
+}
+
+function _buildGpuDisplayName(vendorLabel, card, basePath) {
+  const productName = _readTextFile(`${basePath}/product_name`);
+  if (productName) {
+    return productName;
+  }
+
+  const deviceId = _readTextFile(`${basePath}/device`);
+  if (deviceId) {
+    return `${vendorLabel} GPU ${deviceId}`;
+  }
+
+  return `${vendorLabel} GPU (${card})`;
+}
+
+function _findGpuTemperaturePath(basePath) {
+  const hwmonRootPath = `${basePath}/hwmon`;
+  const hwmonEntries = _readDirectoryEntries(hwmonRootPath, /^hwmon\d+$/);
+
+  for (const hwmonEntry of hwmonEntries) {
+    const hwmonPath = `${hwmonRootPath}/${hwmonEntry}`;
+    const sensorEntries = _readDirectoryEntries(hwmonPath, /^temp\d+_input$/);
+
+    if (sensorEntries.length > 0) {
+      return `${hwmonPath}/${sensorEntries[0]}`;
+    }
+  }
+
+  return null;
+}
+
+function _buildSysfsGpuDescriptors({
+  vendorId,
+  vendorPrefix,
+  vendorLabel,
+  usageCandidates = [],
+  memoryCandidates = [],
+}) {
+  return _readDirectoryEntries(DRM_SYSFS_PATH, /^card\d+$/)
+    .map((card) => {
+      const basePath = `${DRM_SYSFS_PATH}/${card}/device`;
+      const vendor = _readTextFile(`${basePath}/vendor`);
+      if (vendor !== vendorId) {
+        return null;
+      }
+
+      const usagePath = _findFirstExistingPath(
+        usageCandidates.map((candidate) => `${basePath}/${candidate}`)
+      );
+      let memoryTotalPath = null;
+      let memoryUsedPath = null;
+
+      for (const memoryCandidate of memoryCandidates) {
+        const totalPath = `${basePath}/${memoryCandidate.total}`;
+        const usedPath = `${basePath}/${memoryCandidate.used}`;
+
+        if (
+          GLib.file_test(totalPath, GLib.FileTest.EXISTS) &&
+          GLib.file_test(usedPath, GLib.FileTest.EXISTS)
+        ) {
+          memoryTotalPath = totalPath;
+          memoryUsedPath = usedPath;
+          break;
+        }
+      }
+
+      return {
+        card,
+        device: `${vendorPrefix}:${card}`,
+        name: _buildGpuDisplayName(vendorLabel, card, basePath),
+        usagePath,
+        memoryTotalPath,
+        memoryUsedPath,
+        temperaturePath: _findGpuTemperaturePath(basePath),
+      };
+    })
+    .filter(Boolean)
+    .sort((first, second) => first.card.localeCompare(second.card, undefined, { numeric: true }));
+}
+
+export function getAmdGpuDescriptors() {
+  return _buildSysfsGpuDescriptors({
+    vendorId: AMD_VENDOR_ID,
+    vendorPrefix: "amd",
+    vendorLabel: "AMD",
+    usageCandidates: ["gpu_busy_percent"],
+    memoryCandidates: [
+      {
+        total: "mem_info_vram_total",
+        used: "mem_info_vram_used",
+      },
+    ],
+  });
+}
+
+export function getIntelGpuDescriptors() {
+  return _buildSysfsGpuDescriptors({
+    vendorId: INTEL_VENDOR_ID,
+    vendorPrefix: "intel",
+    vendorLabel: "Intel",
+    usageCandidates: ["gpu_busy_percent", "gt_busy_percent"],
+    memoryCandidates: [
+      {
+        total: "mem_info_vram_total",
+        used: "mem_info_vram_used",
+      },
+      {
+        total: "lmem_total_bytes",
+        used: "lmem_used_bytes",
+      },
+      {
+        total: "local_memory_total_bytes",
+        used: "local_memory_used_bytes",
+      },
+    ],
+  });
+}
+
 export function detectCapabilities() {
+  const amdDescriptors = getAmdGpuDescriptors();
+  const intelDescriptors = getIntelGpuDescriptors();
+  const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
+  const hasAmdGpu = amdDescriptors.length > 0;
+  const hasIntelGpu = intelDescriptors.length > 0;
+
   return {
-    nvidiaSmi: GLib.find_program_in_path("nvidia-smi") !== null,
+    nvidiaSmi: hasNvidiaSmi,
+    amdGpu: hasAmdGpu,
+    intelGpu: hasIntelGpu,
+    gpu: hasNvidiaSmi || hasAmdGpu || hasIntelGpu,
     cpuFrequency: getCpuFrequencyPaths().length > 0,
     thermalHwmon: GLib.file_test("/sys/class/hwmon", GLib.FileTest.IS_DIR),
   };

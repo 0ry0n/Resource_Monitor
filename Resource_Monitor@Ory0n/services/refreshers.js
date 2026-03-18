@@ -12,10 +12,14 @@ import {
   parseDiskStatsEntries,
 } from "../runtime/disk.js";
 import { buildNetworkSample } from "../runtime/network.js";
-import { parseGpuSmiOutput } from "../runtime/gpu.js";
+import { buildSysfsGpuDisplay, parseGpuSmiOutput } from "../runtime/gpu.js";
 import { buildCpuTemperatureDisplay } from "../runtime/thermal.js";
 import { queryFilesystemInfo } from "../runtime/io.js";
-import { getCpuFrequencyPaths } from "./runtime.js";
+import {
+  getAmdGpuDescriptors,
+  getCpuFrequencyPaths,
+  getIntelGpuDescriptors,
+} from "./runtime.js";
 import {
   hasVisibleCpuFrequency,
   hasVisibleThermalCpuTemperature,
@@ -72,6 +76,63 @@ function _shouldRunGpuRefresh(indicator, force = false) {
 
   indicator._lastGpuRefreshAtUsec = now;
   return true;
+}
+
+async function _readNumericFile(indicator, path) {
+  if (!path) {
+    return null;
+  }
+
+  try {
+    const contents = await indicator._loadFile(path);
+    const value = parseInt(new TextDecoder().decode(contents).trim(), 10);
+    return Number.isFinite(value) ? value : null;
+  } catch (error) {
+    if (!indicator._isCancelledError(error)) {
+      indicator._logIssueOnce(
+        `sysfs-gpu-read-error:${path}`,
+        `[Resource_Monitor] Error reading sysfs GPU metric: ${path}.`,
+        error
+      );
+    }
+    return null;
+  }
+}
+
+async function _readSysfsGpuSamples(indicator, descriptors) {
+  const samples = await Promise.all(
+    descriptors.map(async (descriptor) => {
+      const [usagePercent, memoryTotalBytes, memoryUsedBytes, temperatureMilliCelsius] =
+        await Promise.all([
+          _readNumericFile(indicator, descriptor.usagePath),
+          _readNumericFile(indicator, descriptor.memoryTotalPath),
+          _readNumericFile(indicator, descriptor.memoryUsedPath),
+          _readNumericFile(indicator, descriptor.temperaturePath),
+        ]);
+
+      return {
+        device: descriptor.device,
+        usagePercent,
+        memoryTotalBytes,
+        memoryUsedBytes,
+        memoryFreeBytes:
+          Number.isFinite(memoryTotalBytes) && Number.isFinite(memoryUsedBytes)
+            ? Math.max(0, memoryTotalBytes - memoryUsedBytes)
+            : null,
+        temperatureCelsius: Number.isFinite(temperatureMilliCelsius)
+          ? temperatureMilliCelsius / 1000
+          : null,
+      };
+    })
+  );
+
+  return buildSysfsGpuDisplay(samples, {
+    memoryMonitor: indicator._gpuMemoryMonitor,
+    memoryUnitType: indicator._gpuMemoryUnitType,
+    memoryUnitMeasure: indicator._gpuMemoryUnitMeasure,
+    memoryScaleBase: indicator._dataScaleBase,
+    temperatureUnit: indicator._thermalTemperatureUnit,
+  });
 }
 
 export function refreshCpuValue(indicator) {
@@ -579,11 +640,11 @@ export function refreshCpuTemperatureValue(indicator) {
 export function refreshGpuValue(indicator, options = {}) {
   const { force = false } = options;
 
-  if (!indicator._capabilities.nvidiaSmi) {
+  if (!indicator._capabilities.gpu) {
     syncGpuVisibility(indicator);
     indicator._logIssueOnce(
       "gpu-unavailable",
-      "[Resource_Monitor] GPU monitoring is unavailable because nvidia-smi was not found."
+      "[Resource_Monitor] GPU monitoring is unavailable because no supported backend was found."
     );
     return;
   }
@@ -592,14 +653,17 @@ export function refreshGpuValue(indicator, options = {}) {
     return;
   }
 
-  indicator._runRefreshTask("gpu", () =>
-    indicator._executeCommand([
-      "nvidia-smi",
-      "--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
-      "--format=csv,noheader,nounits",
-    ])
-      .then((contents) => {
-        const entries = parseGpuSmiOutput(contents, {
+  indicator._runRefreshTask("gpu", async () => {
+    try {
+      const entryMap = new Map();
+
+      if (indicator._capabilities.nvidiaSmi) {
+        const contents = await indicator._executeCommand([
+          "nvidia-smi",
+          "--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
+          "--format=csv,noheader,nounits",
+        ]);
+        const nvidiaEntries = parseGpuSmiOutput(contents, {
           memoryMonitor: indicator._gpuMemoryMonitor,
           memoryUnitType: indicator._gpuMemoryUnitType,
           memoryUnitMeasure: indicator._gpuMemoryUnitMeasure,
@@ -607,58 +671,96 @@ export function refreshGpuValue(indicator, options = {}) {
           temperatureUnit: indicator._thermalTemperatureUnit,
         });
 
-        if (entries.length === 0) {
-          resetGpuDisplay(indicator);
-          syncGpuVisibility(indicator);
-          indicator._logIssueOnce(
-            "gpu-unavailable",
-            "[Resource_Monitor] GPU monitoring returned no usable samples."
-          );
-          return;
-        }
+        nvidiaEntries.forEach((entry) => entryMap.set(entry.uuid, entry));
+      }
 
-        indicator._clearLoggedIssue("gpu-unavailable");
-        indicator._clearLoggedIssue("gpu-read-error");
+      if (indicator._capabilities.amdGpu) {
+        const knownDescriptors = indicator._amdGpuDescriptors ?? [];
+        const descriptors =
+          knownDescriptors.length > 0 ? knownDescriptors : getAmdGpuDescriptors();
+        const amdEntries = await _readSysfsGpuSamples(indicator, descriptors);
+        amdEntries.forEach((entry) => entryMap.set(entry.uuid, entry));
+      }
+
+      if (indicator._capabilities.intelGpu) {
+        const knownDescriptors = indicator._intelGpuDescriptors ?? [];
+        const descriptors =
+          knownDescriptors.length > 0
+            ? knownDescriptors
+            : getIntelGpuDescriptors();
+        const intelEntries = await _readSysfsGpuSamples(indicator, descriptors);
+        intelEntries.forEach((entry) => entryMap.set(entry.uuid, entry));
+      }
+
+      if (entryMap.size === 0) {
+        resetGpuDisplay(indicator);
         syncGpuVisibility(indicator);
+        indicator._logIssueOnce(
+          "gpu-unavailable",
+          "[Resource_Monitor] GPU monitoring returned no usable samples."
+        );
+        return;
+      }
 
-        entries.forEach((entry) => {
-          indicator._gpuBox.update_element_value(
-            entry.uuid,
-            `${entry.usage}`,
-            "%",
-            indicator._getUsageColor(entry.usage, indicator._gpuColors)
-          );
+      indicator._clearLoggedIssue("gpu-unavailable");
+      indicator._clearLoggedIssue("gpu-read-error");
+      syncGpuVisibility(indicator);
 
-          indicator._gpuBox.update_element_thermal_value(
-            entry.uuid,
-            `${indicator._getValueFixed(entry.temperatureValue)}`,
-            entry.temperatureUnit,
-            indicator._getUsageColor(
-              entry.temperatureValue,
-              indicator._thermalGpuColors
-            )
-          );
+      const defaultMemoryUnit = getBaseStorageUnit(indicator._dataScaleBase);
+      const defaultTemperatureUnit =
+        indicator._thermalTemperatureUnit === "f" ? "°F" : "°C";
 
-          indicator._gpuBox.update_element_memory_value(
-            entry.uuid,
-            `${indicator._getValueFixed(entry.memoryValue)}`,
-            entry.memoryUnit,
-            indicator._getUsageColor(entry.memoryValue, indicator._gpuMemoryColors)
-          );
-        });
-      })
-      .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
-          resetGpuDisplay(indicator);
-          syncGpuVisibility(indicator);
-          indicator._logIssueOnce(
-            "gpu-read-error",
-            "[Resource_Monitor] Error reading gpu.",
-            error
-          );
-        }
-      })
-  );
+      indicator._gpuDevices.forEach((device) => {
+        const entry = entryMap.get(device.device);
+        const usageValue = Number.isFinite(entry?.usage) ? entry.usage : null;
+        const temperatureValue = Number.isFinite(entry?.temperatureValue)
+          ? entry.temperatureValue
+          : null;
+        const memoryValue = Number.isFinite(entry?.memoryValue)
+          ? entry.memoryValue
+          : null;
+
+        indicator._gpuBox.update_element_value(
+          device.device,
+          usageValue === null ? "--" : `${indicator._getValueFixed(usageValue)}`,
+          "%",
+          usageValue === null
+            ? ""
+            : indicator._getUsageColor(usageValue, indicator._gpuColors)
+        );
+
+        indicator._gpuBox.update_element_thermal_value(
+          device.device,
+          temperatureValue === null
+            ? "--"
+            : `${indicator._getValueFixed(temperatureValue)}`,
+          entry?.temperatureUnit ?? defaultTemperatureUnit,
+          temperatureValue === null
+            ? ""
+            : indicator._getUsageColor(temperatureValue, indicator._thermalGpuColors)
+        );
+
+        indicator._gpuBox.update_element_memory_value(
+          device.device,
+          memoryValue === null ? "--" : `${indicator._getValueFixed(memoryValue)}`,
+          entry?.memoryUnit ?? defaultMemoryUnit,
+          memoryValue === null
+            ? ""
+            : indicator._getUsageColor(memoryValue, indicator._gpuMemoryColors)
+        );
+      });
+    } catch (error) {
+      if (!indicator._isCancelledError(error)) {
+        resetGpuDisplay(indicator);
+        syncGpuVisibility(indicator);
+        indicator._logIssueOnce(
+          "gpu-read-error",
+          "[Resource_Monitor] Error reading gpu.",
+          error
+        );
+      }
+    }
+  });
 }
 
 export function refreshHandler(indicator, forceGpu = false) {

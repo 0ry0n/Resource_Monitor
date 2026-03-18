@@ -53,6 +53,8 @@ import {
 import { buildMainGui, createMainGui } from "./panel/mainGui.js";
 import {
   detectCapabilities,
+  getAmdGpuDescriptors,
+  getIntelGpuDescriptors,
   getThermalCpuSensorDescriptors,
   IssueLogger,
   RefreshTaskRunner,
@@ -286,6 +288,8 @@ const ResourceMonitor = GObject.registerClass(
       this._refreshTaskRunner = new RefreshTaskRunner();
       this._issueLogger = new IssueLogger(this._logger);
       this._capabilities = detectCapabilities();
+      this._amdGpuDescriptors = getAmdGpuDescriptors();
+      this._intelGpuDescriptors = getIntelGpuDescriptors();
       this._nm = null;
       this._nmClient = null;
       this._networkManagerAvailable = false;
@@ -1624,10 +1628,18 @@ const ResourceMonitor = GObject.registerClass(
 
     _gpuDevicesListChanged() {
       this._gpuDevices = this._parseSettingsArray(GPU_DEVICES_LIST, parseGpuEntry);
+      this._amdGpuDescriptors = getAmdGpuDescriptors();
+      this._intelGpuDescriptors = getIntelGpuDescriptors();
+      this._capabilities.amdGpu = this._amdGpuDescriptors.length > 0;
+      this._capabilities.intelGpu = this._intelGpuDescriptors.length > 0;
+      this._capabilities.gpu =
+        this._capabilities.nvidiaSmi ||
+        this._capabilities.amdGpu ||
+        this._capabilities.intelGpu;
 
       this._gpuBox.cleanup_elements();
 
-      if (!this._capabilities.nvidiaSmi) {
+      if (!this._capabilities.gpu) {
         this._syncGpuVisibility();
         return;
       }
