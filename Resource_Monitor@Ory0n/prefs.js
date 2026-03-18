@@ -57,6 +57,8 @@ import {
 } from "./prefs/models.js";
 import {
   getAmdGpuDescriptors,
+  getDiskStableId,
+  getMountedDiskEntries,
   getIntelGpuDescriptors,
   getThermalCpuSensorDescriptors,
 } from "./services/runtime.js";
@@ -737,40 +739,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     async _readMountEntries() {
-      const mounts = await loadFile("/proc/self/mounts");
-      const lines = new TextDecoder().decode(mounts).split("\n");
-      const entries = [];
-      const ignoredFs = new Set(["squashfs", "tmpfs"]);
-
-      for (const line of lines) {
-        if (!line.trim()) {
-          continue;
-        }
-
-        const parts = line.split(" ");
-        if (parts.length < 3) {
-          continue;
-        }
-
-        const device = parts[0];
-        const mountPoint = parts[1]
-          .replaceAll("\\040", " ")
-          .replaceAll("\\011", "\t")
-          .replaceAll("\\012", "\n")
-          .replaceAll("\\134", "\\");
-        const fsType = parts[2];
-
-        if (ignoredFs.has(fsType) || !device.startsWith("/dev/")) {
-          continue;
-        }
-
-        entries.push({
-          filesystem: device,
-          mountPoint,
-        });
-      }
-
-      return entries;
+      return getMountedDiskEntries();
     }
 
     async _readThermalCpuSensors() {
@@ -2321,6 +2290,28 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
     }
 
+    _findDiskConfig(disksArray, { filesystem, stableId = "", mountPoint = "" }) {
+      for (const diskConfig of disksArray) {
+        if ((diskConfig.mountPoint ?? "") !== mountPoint) {
+          continue;
+        }
+
+        if (
+          stableId &&
+          diskConfig.stableId &&
+          stableId === diskConfig.stableId
+        ) {
+          return diskConfig;
+        }
+
+        if (filesystem === diskConfig.device) {
+          return diskConfig;
+        }
+      }
+
+      return null;
+    }
+
     _readDiskDevices(settings, model, loadAll) {
       const generation = ++this._diskReadGeneration;
       model.remove_all();
@@ -2337,22 +2328,20 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
             return;
           }
 
-          for (const { filesystem, mountPoint } of entries) {
+          for (const { filesystem, mountPoint, stableId = "" } of entries) {
 
             let statsButton = false;
             let spaceButton = false;
             let displayName = filesystem;
-
-            for (const diskConfig of disksArray) {
-              if (
-                filesystem === diskConfig.device &&
-                mountPoint === diskConfig.mountPoint
-              ) {
-                statsButton = diskConfig.stats;
-                spaceButton = diskConfig.space;
-                displayName = diskConfig.displayName || filesystem;
-                break;
-              }
+            const diskConfig = this._findDiskConfig(disksArray, {
+              filesystem,
+              stableId,
+              mountPoint,
+            });
+            if (diskConfig) {
+              statsButton = diskConfig.stats;
+              spaceButton = diskConfig.space;
+              displayName = diskConfig.displayName || filesystem;
             }
 
             // Append disk entry to the model
@@ -2360,6 +2349,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
               new DiskElement(
                 displayName,
                 filesystem,
+                stableId,
                 mountPoint,
                 statsButton,
                 spaceButton
@@ -2382,6 +2372,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
                   const entry = line.trim().split(/\s+/);
                   const devicePath = `/dev/${entry[2]}`;
+                  const stableId = getDiskStableId(devicePath);
 
                   // Skip loop devices
                   if (/^loop/.test(entry[2])) continue;
@@ -2389,7 +2380,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                   // Check if device is already listed
                   let isListed = false;
                   for (let iter = 0; iter < model.get_n_items(); iter++) {
-                    if (devicePath === model.get_item(iter).device) {
+                    const item = model.get_item(iter);
+                    if (
+                      devicePath === item.device ||
+                      (stableId && stableId === item.stableId)
+                    ) {
                       isListed = true;
                       break; // Stop the for
                     }
@@ -2399,23 +2394,22 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
                     let statsButton = false;
                     let spaceButton = false;
                     let displayName = devicePath;
-
-                    for (const diskConfig of disksArray) {
-                      if (
-                        devicePath === diskConfig.device &&
-                        diskConfig.mountPoint === ""
-                      ) {
-                        statsButton = diskConfig.stats;
-                        spaceButton = diskConfig.space;
-                        displayName = diskConfig.displayName || devicePath;
-                        break;
-                      }
+                    const diskConfig = this._findDiskConfig(disksArray, {
+                      filesystem: devicePath,
+                      stableId,
+                      mountPoint: "",
+                    });
+                    if (diskConfig) {
+                      statsButton = diskConfig.stats;
+                      spaceButton = diskConfig.space;
+                      displayName = diskConfig.displayName || devicePath;
                     }
 
                     model.append(
                       new DiskElement(
                         displayName,
                         devicePath,
+                        stableId,
                         "",
                         statsButton,
                         spaceButton

@@ -28,9 +28,23 @@ function assertApprox(actual, expected, tolerance, message) {
   }
 }
 
+function assertThrows(callback, message) {
+  let didThrow = false;
+  try {
+    callback();
+  } catch (error) {
+    didThrow = true;
+  }
+
+  if (!didThrow) {
+    throw new Error(message);
+  }
+}
+
 function testDiskSerializationRoundtrip() {
   const serialized = serializeDiskEntry({
     device: "/dev/nvme0n1p2",
+    stableId: "/dev/disk/by-uuid/1111-2222",
     mountPoint: "/",
     stats: true,
     space: true,
@@ -39,10 +53,25 @@ function testDiskSerializationRoundtrip() {
 
   const parsed = parseDiskEntry(serialized);
   assert(parsed.device === "/dev/nvme0n1p2", "Disk device should roundtrip");
+  assert(
+    parsed.stableId === "/dev/disk/by-uuid/1111-2222",
+    "Disk stable id should roundtrip"
+  );
   assert(parsed.mountPoint === "/", "Disk mountpoint should roundtrip");
   assert(parsed.stats === true, "Disk stats flag should roundtrip");
   assert(parsed.space === true, "Disk space flag should roundtrip");
   assert(parsed.displayName === "Root", "Disk display name should roundtrip");
+}
+
+function testLegacySettingsEntriesAreRejected() {
+  assertThrows(
+    () => parseDiskEntry("/dev/sda1 / true true Root"),
+    "Legacy disk entry should be rejected"
+  );
+  assertThrows(
+    () => parseGpuEntry("GPU-uuid-0:NVIDIA:true:false:Main GPU"),
+    "Legacy GPU entry should be rejected"
+  );
 }
 
 function testGpuSerializationRoundtrip() {
@@ -276,6 +305,7 @@ function testNetworkCounterReset() {
 }
 
 testDiskSerializationRoundtrip();
+testLegacySettingsEntriesAreRejected();
 testGpuSerializationRoundtrip();
 testGpuParser();
 testAmdGpuDisplay();

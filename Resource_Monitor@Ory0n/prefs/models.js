@@ -9,9 +9,10 @@ import {
 
 export const DiskElement = GObject.registerClass(
   class DiskElement extends GObject.Object {
-    _init(displayName, device, mountPoint, stats, space) {
+    _init(displayName, device, stableId, mountPoint, stats, space) {
       super._init();
       this.device = device;
+      this.stableId = stableId ?? "";
       this.mountPoint = mountPoint;
       this.stats = stats;
       this.space = space;
@@ -32,6 +33,7 @@ export const DiskElement = GObject.registerClass(
     getFormattedString() {
       return serializeDiskEntry({
         device: this.device,
+        stableId: this.stableId,
         mountPoint: this.mountPoint,
         stats: this.stats,
         space: this.space,

@@ -54,7 +54,11 @@ import { buildMainGui, createMainGui } from "./panel/mainGui.js";
 import {
   detectCapabilities,
   getAmdGpuDescriptors,
+  getDiskStableId,
+  getDiskStableIdIndex,
+  getMountedDiskEntries,
   getIntelGpuDescriptors,
+  resolveDiskDevicePath,
   getThermalCpuSensorDescriptors,
   IssueLogger,
   RefreshTaskRunner,
@@ -1331,8 +1335,56 @@ const ResourceMonitor = GObject.registerClass(
       }
     }
 
+    _resolveConfiguredDiskDevices(devices) {
+      const stableIdIndex = getDiskStableIdIndex();
+      const stableIdToDevice = new Map();
+      stableIdIndex.forEach((stableId, devicePath) => {
+        if (stableId && !stableIdToDevice.has(stableId)) {
+          stableIdToDevice.set(stableId, devicePath);
+        }
+      });
+
+      const mountedByMountPoint = new Map();
+      getMountedDiskEntries().forEach((entry) => {
+        if (entry.mountPoint && !mountedByMountPoint.has(entry.mountPoint)) {
+          mountedByMountPoint.set(entry.mountPoint, entry);
+        }
+      });
+
+      return devices.map((device) => {
+        let resolvedDevice = resolveDiskDevicePath(device.device) || device.device;
+        let stableId = device.stableId ?? "";
+        const mountedEntry = device.mountPoint
+          ? mountedByMountPoint.get(device.mountPoint)
+          : null;
+
+        if (stableId && stableIdToDevice.has(stableId)) {
+          resolvedDevice = stableIdToDevice.get(stableId);
+        } else if (mountedEntry?.filesystem) {
+          resolvedDevice = mountedEntry.filesystem;
+          if (!stableId && mountedEntry.stableId) {
+            stableId = mountedEntry.stableId;
+          }
+        }
+
+        if (!stableId) {
+          stableId = getDiskStableId(resolvedDevice, stableIdIndex);
+        }
+
+        return {
+          ...device,
+          device: resolvedDevice,
+          stableId,
+        };
+      });
+    }
+
     _diskDevicesListChanged() {
-      this._diskDevices = this._parseSettingsArray(DISK_DEVICES_LIST, parseDiskEntry);
+      const configuredDevices = this._parseSettingsArray(
+        DISK_DEVICES_LIST,
+        parseDiskEntry
+      );
+      this._diskDevices = this._resolveConfiguredDiskDevices(configuredDevices);
 
       this._diskStatsBox.cleanup_elements();
       this._diskSpaceBox.cleanup_elements();

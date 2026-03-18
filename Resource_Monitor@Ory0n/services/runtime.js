@@ -3,6 +3,15 @@ import GLib from "gi://GLib";
 const AMD_VENDOR_ID = "0x1002";
 const INTEL_VENDOR_ID = "0x8086";
 const DRM_SYSFS_PATH = "/sys/class/drm";
+const DISK_STABLE_ID_DIRECTORIES = [
+  "/dev/disk/by-uuid",
+  "/dev/disk/by-partuuid",
+  "/dev/disk/by-id",
+];
+const DISK_IGNORED_FILESYSTEMS = new Set([
+  "squashfs",
+  "tmpfs",
+]);
 
 function _readDirectoryEntries(path, pattern = null) {
   try {
@@ -32,6 +41,129 @@ function _readTextFile(path) {
   } catch (error) {
     return null;
   }
+}
+
+function _canonicalizePath(path, relativeTo = null) {
+  try {
+    return GLib.canonicalize_filename(path, relativeTo);
+  } catch (error) {
+    return path;
+  }
+}
+
+function _resolveSymlinkPath(path, maxDepth = 8) {
+  if (!path) {
+    return path;
+  }
+
+  let currentPath = _canonicalizePath(path);
+  let depth = 0;
+
+  while (
+    depth < maxDepth &&
+    GLib.file_test(currentPath, GLib.FileTest.IS_SYMLINK)
+  ) {
+    try {
+      const target = GLib.file_read_link(currentPath);
+      currentPath = _canonicalizePath(target, GLib.path_get_dirname(currentPath));
+    } catch (error) {
+      break;
+    }
+    depth++;
+  }
+
+  return currentPath;
+}
+
+function _decodeProcMountField(field) {
+  return field
+    .replaceAll("\\040", " ")
+    .replaceAll("\\011", "\t")
+    .replaceAll("\\012", "\n")
+    .replaceAll("\\134", "\\");
+}
+
+export function resolveDiskDevicePath(devicePath) {
+  if (!devicePath || !devicePath.startsWith("/dev/")) {
+    return devicePath;
+  }
+
+  return _resolveSymlinkPath(devicePath);
+}
+
+export function getDiskStableIdIndex() {
+  const index = new Map();
+
+  DISK_STABLE_ID_DIRECTORIES.forEach((directory) => {
+    if (!GLib.file_test(directory, GLib.FileTest.IS_DIR)) {
+      return;
+    }
+
+    _readDirectoryEntries(directory).forEach((entry) => {
+      const symlinkPath = `${directory}/${entry}`;
+      if (!GLib.file_test(symlinkPath, GLib.FileTest.IS_SYMLINK)) {
+        return;
+      }
+
+      const resolvedPath = resolveDiskDevicePath(symlinkPath);
+      if (!resolvedPath || !resolvedPath.startsWith("/dev/")) {
+        return;
+      }
+
+      if (!index.has(resolvedPath)) {
+        index.set(resolvedPath, symlinkPath);
+      }
+    });
+  });
+
+  return index;
+}
+
+export function getDiskStableId(devicePath, stableIdIndex = null) {
+  const resolvedPath = resolveDiskDevicePath(devicePath);
+  if (!resolvedPath || !resolvedPath.startsWith("/dev/")) {
+    return "";
+  }
+
+  const index = stableIdIndex ?? getDiskStableIdIndex();
+  return index.get(resolvedPath) ?? "";
+}
+
+export function getMountedDiskEntries() {
+  const stableIdIndex = getDiskStableIdIndex();
+  const [ok, contents] = GLib.file_get_contents("/proc/self/mounts");
+
+  if (!ok) {
+    return [];
+  }
+
+  return new TextDecoder()
+    .decode(contents)
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => line.split(" "))
+    .filter((parts) => parts.length >= 3)
+    .map((parts) => {
+      const source = parts[0];
+      const mountPoint = _decodeProcMountField(parts[1]);
+      const fsType = parts[2];
+
+      if (
+        DISK_IGNORED_FILESYSTEMS.has(fsType) ||
+        !source.startsWith("/dev/")
+      ) {
+        return null;
+      }
+
+      const resolvedDevice = resolveDiskDevicePath(source);
+      return {
+        filesystem: resolvedDevice,
+        mountPoint,
+        stableId: getDiskStableId(resolvedDevice, stableIdIndex),
+      };
+    })
+    .filter(Boolean);
 }
 
 function _findFirstExistingPath(paths) {

@@ -9,20 +9,23 @@ function _serialize(type, payload) {
 }
 
 function _parseJsonEntry(serialized, type) {
+  let parsed = null;
+
   try {
-    const parsed = JSON.parse(serialized);
-    if (
-      parsed &&
-      parsed.version === SETTINGS_ENTRY_VERSION &&
-      parsed.type === type
-    ) {
-      return parsed;
-    }
+    parsed = JSON.parse(serialized);
   } catch (error) {
-    // Fall back to legacy separators.
+    throw new Error(`Invalid JSON for ${type} entry.`);
   }
 
-  return null;
+  if (
+    !parsed ||
+    parsed.version !== SETTINGS_ENTRY_VERSION ||
+    parsed.type !== type
+  ) {
+    throw new Error(`Unsupported ${type} entry version or type.`);
+  }
+
+  return parsed;
 }
 
 function _toBoolean(value, fallback = false) {
@@ -37,12 +40,9 @@ function _toBoolean(value, fallback = false) {
   return fallback;
 }
 
-function _joinLegacyParts(parts, startIndex, endIndex) {
-  return parts.slice(startIndex, endIndex).join(":");
-}
-
 export function serializeDiskEntry({
   device,
+  stableId = "",
   mountPoint = "",
   stats = false,
   space = false,
@@ -50,6 +50,7 @@ export function serializeDiskEntry({
 }) {
   return _serialize("disk", {
     device,
+    stableId,
     mountPoint,
     stats: Boolean(stats),
     space: Boolean(space),
@@ -59,26 +60,15 @@ export function serializeDiskEntry({
 
 export function parseDiskEntry(serialized) {
   const parsed = _parseJsonEntry(serialized, "disk");
-  if (parsed) {
-    const device = parsed.device ?? "";
-    return {
-      device,
-      mountPoint: parsed.mountPoint ?? "",
-      stats: _toBoolean(parsed.stats),
-      space: _toBoolean(parsed.space),
-      displayName: parsed.displayName || device,
-    };
-  }
-
-  const [device = "", mountPoint = "", stats = "false", space = "false", ...name] =
-    serialized.split(" ");
+  const device = parsed.device ?? "";
 
   return {
     device,
-    mountPoint,
-    stats: _toBoolean(stats),
-    space: _toBoolean(space),
-    displayName: name.join(" ") || device,
+    stableId: parsed.stableId ?? "",
+    mountPoint: parsed.mountPoint ?? "",
+    stats: _toBoolean(parsed.stats),
+    space: _toBoolean(parsed.space),
+    displayName: parsed.displayName || device,
   };
 }
 
@@ -96,22 +86,11 @@ export function serializeThermalCpuEntry({
 
 export function parseThermalCpuEntry(serialized) {
   const parsed = _parseJsonEntry(serialized, "thermal-cpu");
-  if (parsed) {
-    return {
-      name: parsed.name ?? "",
-      monitor: _toBoolean(parsed.monitor),
-      path: parsed.path ?? "",
-    };
-  }
-
-  const parts = serialized.split("-");
-  const path = parts.pop() ?? "";
-  const monitor = parts.pop() ?? "false";
 
   return {
-    name: parts.join("-"),
-    monitor: _toBoolean(monitor),
-    path,
+    name: parsed.name ?? "",
+    monitor: _toBoolean(parsed.monitor),
+    path: parsed.path ?? "",
   };
 }
 
@@ -129,22 +108,11 @@ export function serializeThermalGpuEntry({
 
 export function parseThermalGpuEntry(serialized) {
   const parsed = _parseJsonEntry(serialized, "thermal-gpu");
-  if (parsed) {
-    return {
-      device: parsed.device ?? "",
-      name: parsed.name ?? "",
-      monitor: _toBoolean(parsed.monitor),
-    };
-  }
-
-  const parts = serialized.split(":");
-  const device = parts.shift() ?? "";
-  const monitor = parts.pop() ?? "false";
 
   return {
-    device,
-    name: parts.join(":"),
-    monitor: _toBoolean(monitor),
+    device: parsed.device ?? "",
+    name: parsed.name ?? "",
+    monitor: _toBoolean(parsed.monitor),
   };
 }
 
@@ -166,28 +134,13 @@ export function serializeGpuEntry({
 
 export function parseGpuEntry(serialized) {
   const parsed = _parseJsonEntry(serialized, "gpu");
-  if (parsed) {
-    const name = parsed.name ?? "";
-    return {
-      device: parsed.device ?? "",
-      name,
-      usage: _toBoolean(parsed.usage),
-      memory: _toBoolean(parsed.memory),
-      displayName: parsed.displayName || name,
-    };
-  }
-
-  const parts = serialized.split(":");
-  const device = parts.shift() ?? "";
-  const displayName = parts.pop() ?? "";
-  const memory = parts.pop() ?? "false";
-  const usage = parts.pop() ?? "false";
+  const name = parsed.name ?? "";
 
   return {
-    device,
-    name: _joinLegacyParts(parts, 0, parts.length),
-    usage: _toBoolean(usage),
-    memory: _toBoolean(memory),
-    displayName: displayName || _joinLegacyParts(parts, 0, parts.length),
+    device: parsed.device ?? "",
+    name,
+    usage: _toBoolean(parsed.usage),
+    memory: _toBoolean(parsed.memory),
+    displayName: parsed.displayName || name,
   };
 }
