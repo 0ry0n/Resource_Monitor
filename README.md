@@ -1,152 +1,62 @@
 [ego]: https://extensions.gnome.org/extension/1634/resource-monitor/
 
-# Resource_Monitor GNOME Shell Extension [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
+# Resource Monitor (GNOME Shell Extension) [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
 
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://opensource.org/licenses/GPL-3.0)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-Resource_Monitor is a GNOME Shell extension that provides real-time monitoring of key system resources directly in the GNOME Shell top bar. It tracks CPU usage, load average, and temperature; RAM and swap usage; disk stats and space; GPU usage, memory, and temperature; and network activity for both WLAN and Ethernet connections.
+Resource Monitor is a GNOME Shell extension that shows live system metrics directly in the top bar.
 
-| Main View                      |
-| ------------------------------ |
-| ![Main View](/images/main.png) |
+It can display CPU load and temperature, RAM and swap usage, disk activity and free space, GPU usage and temperature, and network traffic.
 
-## GNOME Shell versions supported
+![Resource Monitor main view](images/main.png)
 
-**45, 46, 47, 48, 49**
+## Supported GNOME Shell Versions
 
-The repository currently declares support only for the GNOME Shell versions that have been explicitly validated in this branch. GNOME Shell 50 is not advertised yet in `metadata.json` and should be added only after verification on a stable release.
+- `45`, `46`, `47`, `48`, `49`, `50`
 
-- For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) or [gnome-40-44](../../tree/gnome-40-44) branch.
+For older releases, use the dedicated maintenance branches:
 
-## How-To Install
+- [gnome-3.28-3.38](../../tree/gnome-3.28-3.38)
+- [gnome-40-44](../../tree/gnome-40-44)
 
-### From GNOME Extensions
+## Installation
 
-- Visit [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/) and install from there.
+### GNOME Extensions (recommended)
 
-### Using the Latest Release
+Install from [extensions.gnome.org](https://extensions.gnome.org/extension/1634/resource-monitor/).
 
-1. Download the latest [Release](../../releases/latest) from GitHub.
-2. Unzip `Resource_Monitor@Ory0n.zip`.
-3. Move the `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/`.
-4. Activate the extension using GNOME Extensions.
+### Manual installation from GitHub release
+
+1. Download the latest [GitHub release](../../releases/latest).
+2. Extract `Resource_Monitor@Ory0n.zip`.
+3. Move `Resource_Monitor@Ory0n` to `~/.local/share/gnome-shell/extensions/`.
+4. Enable the extension from the GNOME Extensions app.
 
 ## Development
 
-The repository now includes a small maintenance workflow for local development.
+Common local tasks:
 
-- `make schema`
-  Compiles the GSettings schema locally.
-- `make test`
-  Runs runtime smoke tests for parsers and data-format conversions.
-- `make pot`
-  Regenerates the gettext template at `po/Resource_Monitor@Ory0n.pot`.
-- `make po-update`
-  Updates language catalogs from the template.
-- `make validate`
-  Runs schema compilation, runtime smoke tests, gettext template refresh, and translation format checks.
-- `make package`
-  Builds a distributable zip archive in `build/` including compiled translations.
-- `make install`
-  Installs the extension into `~/.local/share/gnome-shell/extensions/Resource_Monitor@Ory0n/` including compiled translations.
+- `make schema` compiles GSettings schemas.
+- `make test` runs runtime smoke tests.
+- `make pot` regenerates `po/Resource_Monitor@Ory0n.pot`.
+- `make po-update` updates translations from the template.
+- `make validate` runs schema, tests, POT refresh, and PO checks.
+- `make package` builds `build/Resource_Monitor@Ory0n.zip`.
+- `make install` installs into `~/.local/share/gnome-shell/extensions/`.
 
-## Project Conventions
+## Project Documentation
 
-- The extension follows the modern GNOME Shell extension layout with `metadata.json`, `extension.js`, `prefs.js`, GTK4/Libadwaita preferences, and a dedicated GSettings schema.
-- The GSettings schema id used by the project is `org.gnome.shell.extensions.resource-monitor`, aligned with GNOME extension conventions.
-- User-visible strings are localized through gettext (`gettext-domain` in metadata) with catalogs in `po/` and compiled `.mo` files included at package/install time.
-- Display placement supports a primary-only mode and an all-available-panels mode; when no secondary panel provider is present, primary-only behavior is preserved.
-- Supported GNOME Shell versions must stay synchronized between `metadata.json`, release notes, and this README.
-- New compatibility claims should only be added after validation on the corresponding stable GNOME Shell release.
+- [Contributing guidelines](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Support](SUPPORT.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
-## Release Workflow
+## Reporting Bugs
 
-GitHub Actions now includes:
-
-- `Validate`
-  Compiles schemas, runs smoke tests, refreshes gettext template, and validates translation catalogs on pushes and pull requests.
-- `Release`
-  Builds the extension zip (including compiled translations) on demand and automatically attaches it to GitHub releases for tags matching `v*`.
-
-## Preferences
-
-| Global Preferences                        | CPU Preferences                     | RAM Preferences                     |
-| ----------------------------------------- | ----------------------------------- | ----------------------------------- |
-| ![Global Preferences](/images/global.png) | ![CPU Preferences](/images/cpu.png) | ![RAM Preferences](/images/ram.png) |
-
-| SWAP Preferences                      | DISK Preferences                      | NET Preferences                     |
-| ------------------------------------- | ------------------------------------- | ----------------------------------- |
-| ![SWAP Preferences](/images/swap.png) | ![DISK Preferences](/images/disk.png) | ![NET Preferences](/images/net.png) |
-
-| THERMAL Preferences                         | GPU Preferences                     |
-| ------------------------------------------- | ----------------------------------- |
-| ![THERMAL Preferences](/images/thermal.png) | ![GPU Preferences](/images/gpu.png) |
-
-## About Units
-
-Resource_Monitor supports both data scaling standards:
-
-- SI (`1000`): `KB`, `MB`, `GB`, ...
-- IEC (`1024`): `KiB`, `MiB`, `GiB`, ...
-
-You can choose the preferred base in `Preferences -> Global -> Data Unit Base`.
-
-## Runtime Dependencies
-
-- CPU frequency and CPU thermal discovery use direct sysfs access and do not require `bash`.
-- Disk space updates in the panel use filesystem queries through Gio instead of calling `df`.
-- NVIDIA GPU monitoring uses `nvidia-smi`.
-- AMD and Intel GPU monitoring use sysfs metrics under `/sys/class/drm/card*/device`.
-
-## Bug Reporting
-
-To report issues or request features, please use the [GitHub Issues](../../issues) tracker. Include relevant details to help us understand and address the problem efficiently.
-
-## Change Log
-
-**Version 26 (Sep 11, 2025)**
-
-- Add option to show device name in disk statistics.
-- Added support for GNOME 48 and 49.
-- Other bug fixes.
-
-**Version 25 (Nov 5, 2024)**
-
-- Cleanup code.
-- Other bug fixes.
-
-**Version 24 (Oct 28, 2024)**
-
-- Removed deprecated TreeView component.
-- Added custom peripheral name support.
-- Adjusted width with scale factor for better sizing.
-- Enhanced UI for improved user experience.
-- Other bug fixes.
-
-**Version 23 (Oct 18, 2024)**
-
-- Added support for GNOME 47.
-- Introduced memory alerts for RAM and SWAP usage to enhance monitoring capabilities.
-- Improved CPU frequency monitoring by reading all CPU core frequencies and displaying the highest value.
-- Added color coding for all items to enhance visual clarity and differentiation.
-- Integrated Zenpower thermal sensors; thanks to @mclvren for the contribution.
-- Fixed issues with CPU temperature reading.
-- Other bug fixes.
-
-**Version 22 (Jun 3, 2024)**
-
-- Added support for GNOME 46: thanks to @DanielusG.
-
-**Version 21 (Jan 2, 2024)**
-
-- Added support for GNOME 45.
-- Fixed left-click custom-program functionality.
-- Other bug fixes.
-
-## Authors
-
-- **Giuseppe Silvestro** - _Initial work_ - [0ry0n](https://github.com/0ry0n)
+Use [GitHub Issues](../../issues) and choose the bug template.
+Please include GNOME Shell version, distribution, clear reproduction steps, and logs when available.
 
 ## License
 
-This project is licensed under the GNU GPL-3.0 License - see the [LICENSE.md](/LICENSE) file for details.
+GPL-3.0. See [LICENSE](LICENSE).

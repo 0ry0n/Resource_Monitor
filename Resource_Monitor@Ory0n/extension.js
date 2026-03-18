@@ -1,6 +1,6 @@
 /* -*- mode: js2; js2-basic-offset: 4; indent-tabs-mode: nil -*- */
 /*
- * Resource_Monitor is Copyright © 2018-2024 Giuseppe Silvestro
+ * Resource_Monitor is Copyright © 2018-2026 Giuseppe Silvestro
  *
  * This file is part of Resource_Monitor.
  *
