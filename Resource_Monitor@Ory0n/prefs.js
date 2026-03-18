@@ -241,11 +241,80 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return row;
     }
 
+    _createPageIntroGroup({ title, subtitle, iconName }) {
+      const group = new Adw.PreferencesGroup();
+      group.margin_start = 10;
+      group.margin_end = 10;
+      const row = new Adw.ActionRow({
+        title,
+        subtitle,
+      });
+      row.add_css_class("resource-monitor-page-intro");
+      row.activatable = false;
+      row.selectable = false;
+      row.add_prefix(
+        new Gtk.Image({
+          icon_name: iconName,
+          pixel_size: 28,
+          valign: Gtk.Align.CENTER,
+        })
+      );
+      group.add(row);
+      return group;
+    }
+
+    _createEmbeddedExpanderSection({
+      title,
+      subtitle = null,
+      child,
+      expanded = false,
+    }) {
+      const expander = new Gtk.Expander({
+        expanded,
+        hexpand: true,
+        halign: Gtk.Align.FILL,
+      });
+      expander.add_css_class("resource-monitor-expander");
+
+      const heading = new Gtk.Box({
+        orientation: Gtk.Orientation.VERTICAL,
+        spacing: 2,
+        hexpand: true,
+      });
+      const titleLabel = new Gtk.Label({
+        label: title,
+        xalign: 0,
+        hexpand: true,
+      });
+      titleLabel.add_css_class("resource-monitor-expander-title");
+      heading.append(titleLabel);
+
+      if (subtitle) {
+        const subtitleLabel = new Gtk.Label({
+          label: subtitle,
+          xalign: 0,
+          wrap: true,
+          hexpand: true,
+        });
+        subtitleLabel.add_css_class("dim-label");
+        heading.append(subtitleLabel);
+      }
+
+      child.hexpand = true;
+      child.halign = Gtk.Align.FILL;
+      expander.set_label_widget(heading);
+      expander.set_child(child);
+
+      return expander;
+    }
+
     _createSectionPage({ name, title, iconName = null }) {
       const page = new Adw.PreferencesPage({
         name,
         title,
       });
+      page.hexpand = true;
+      page.halign = Gtk.Align.FILL;
 
       if (iconName) {
         page.icon_name = iconName;
@@ -255,10 +324,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _createSettingsGroup(title, description = null) {
-      return new Adw.PreferencesGroup({
+      const group = new Adw.PreferencesGroup({
         title,
         description,
       });
+      group.margin_start = 10;
+      group.margin_end = 10;
+      return group;
     }
 
     _createSwitch() {
@@ -501,13 +573,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         }
       });
 
-      view.append_column(
-        new Gtk.ColumnViewColumn({
-          title,
-          factory,
-          resizable: true,
-        })
-      );
+      const column = new Gtk.ColumnViewColumn({
+        title,
+        factory,
+        resizable: true,
+      });
+      this._setColumnExpand(column, true);
+      view.append_column(column);
     }
 
     _appendToggleColumn(view, model, { title, getValue, setValue, sensitive }) {
@@ -544,13 +616,33 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         }
       });
 
-      view.append_column(
-        new Gtk.ColumnViewColumn({
-          title,
-          factory,
-          resizable: true,
-        })
-      );
+      const column = new Gtk.ColumnViewColumn({
+        title,
+        factory,
+        resizable: true,
+      });
+      this._setColumnFixedWidth(column, 110);
+      view.append_column(column);
+    }
+
+    _setColumnExpand(column, expand = true) {
+      if (typeof column?.set_expand === "function") {
+        column.set_expand(expand);
+      } else if (column && "expand" in column) {
+        column.expand = expand;
+      }
+    }
+
+    _setColumnFixedWidth(column, width) {
+      if (!Number.isFinite(width) || width <= 0 || !column) {
+        return;
+      }
+
+      if (typeof column.set_fixed_width === "function") {
+        column.set_fixed_width(width);
+      } else if ("fixed_width" in column) {
+        column.fixed_width = width;
+      }
     }
 
     _prepareEmbeddedWidget(widget, cssClasses = []) {
@@ -601,6 +693,40 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
 
       return container;
+    }
+
+    _relaxPreferencesWindowClamps(window) {
+      const stack = [window];
+
+      while (stack.length > 0) {
+        const widget = stack.pop();
+        if (!widget) {
+          continue;
+        }
+
+        if (widget instanceof Adw.Clamp) {
+          widget.hexpand = true;
+          widget.halign = Gtk.Align.FILL;
+
+          if (typeof widget.set_maximum_size === "function") {
+            widget.set_maximum_size(2400);
+          } else if ("maximum_size" in widget) {
+            widget.maximum_size = 2400;
+          }
+
+          if (typeof widget.set_tightening_threshold === "function") {
+            widget.set_tightening_threshold(800);
+          } else if ("tightening_threshold" in widget) {
+            widget.tightening_threshold = 800;
+          }
+        }
+
+        let child = widget.get_first_child?.() ?? null;
+        while (child) {
+          stack.push(child);
+          child = child.get_next_sibling?.() ?? null;
+        }
+      }
     }
 
     _clearListBox(listbox) {
@@ -864,7 +990,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       group.add(addRow);
       group.add(
-        this._wrapEmbeddedWidget(listbox, ["boxed-list", "resource-monitor-list"])
+        this._createEmbeddedExpanderSection({
+          title: _("Threshold Rules"),
+          subtitle: _(
+            "Expand to manage thresholds and colors for this metric."
+          ),
+          child: this._wrapEmbeddedWidget(
+            listbox,
+            ["boxed-list", "resource-monitor-list"]
+          ),
+          expanded: false,
+        })
       );
 
       return group;
@@ -883,6 +1019,21 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       };
 
       return labels[item] ?? item;
+    }
+
+    _getPanelItemIconName(item) {
+      const icons = {
+        cpu: "utilities-system-monitor-symbolic",
+        ram: "computer-symbolic",
+        swap: "media-floppy-symbolic",
+        stats: "drive-harddisk-symbolic",
+        space: "drive-harddisk-symbolic",
+        eth: "network-wired-symbolic",
+        wlan: "network-wireless-signal-excellent-symbolic",
+        gpu: "video-display-symbolic",
+      };
+
+      return icons[item] ?? "applications-system-symbolic";
     }
 
     _resolveLeftClickPreset(activeCommand, customCommand) {
@@ -908,22 +1059,35 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         iconName: "preferences-system-symbolic",
       });
 
-      const generalGroup = this._createSettingsGroup(_("General"));
-      generalGroup.add(
+      page.add(
+        this._createPageIntroGroup({
+          title: _("Global Preferences"),
+          subtitle: _(
+            "Control panel placement, interaction behavior, and shared formatting options."
+          ),
+          iconName: "preferences-system-symbolic",
+        })
+      );
+
+      const behaviorGroup = this._createSettingsGroup(
+        _("Behavior"),
+        _("Define how the indicator behaves in GNOME Shell.")
+      );
+      behaviorGroup.add(
         this._createActionRow(
           _("Refresh Interval"),
           _("Controls how often resource values are updated."),
           this._secondsSpinbutton
         )
       );
-      generalGroup.add(
+      behaviorGroup.add(
         this._createActionRow(
           _("Panel Position"),
           _("Choose where the indicator appears in the panel."),
           this._extensionPositionCombobox
         )
       );
-      generalGroup.add(
+      behaviorGroup.add(
         this._createActionRow(
           _("Display Mode"),
           _(
@@ -932,47 +1096,53 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._displayModeCombobox
         )
       );
-      generalGroup.add(
+      behaviorGroup.add(
         this._createActionRow(
           _("Open Preferences on Right-click"),
           _("Show the preferences window when the indicator is right-clicked."),
           this._extensionRightClickPrefs
         )
       );
-      generalGroup.add(
+      page.add(behaviorGroup);
+
+      const appearanceGroup = this._createSettingsGroup(
+        _("Appearance"),
+        _("Adjust how values are formatted and displayed in the panel.")
+      );
+      appearanceGroup.add(
         this._createActionRow(
           _("Show Decimal Digits"),
           _("Enable fractional digits in the panel values."),
           this._decimalsDisplay
         )
       );
-      generalGroup.add(
+      appearanceGroup.add(
         this._createActionRow(
           _("Data Unit Base"),
           _("Choose whether data units use SI (1000) or IEC (1024) scaling."),
           this._dataScaleBaseCombobox
         )
       );
-      generalGroup.add(
+      appearanceGroup.add(
         this._createActionRow(
           _("Show Icons"),
           _("Display symbolic icons next to monitored resources."),
           this._iconsDisplay
         )
       );
-      generalGroup.add(
+      appearanceGroup.add(
         this._createActionRow(
           _("Icon Position"),
           _("Choose whether icons appear before or after the values."),
           this._iconsPositionCombobox
         )
       );
-      page.add(generalGroup);
+      page.add(appearanceGroup);
 
-      const launchGroup = new Adw.PreferencesGroup({
-        title: _("Launch Action"),
-        description: _("Choose what happens when the indicator is left-clicked."),
-      });
+      const launchGroup = this._createSettingsGroup(
+        _("Launch Action"),
+        _("Choose what happens when the indicator is left-clicked.")
+      );
       launchGroup.add(
         this._createActionRow(
           _("Left-click Action"),
@@ -989,10 +1159,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       page.add(launchGroup);
 
-      const orderingGroup = new Adw.PreferencesGroup({
-        title: _("Items Order"),
-        description: _("Reorder how resources appear in the panel."),
-      });
+      const orderingGroup = this._createSettingsGroup(
+        _("Items Order"),
+        _("Reorder how resources appear in the panel.")
+      );
       orderingGroup.add(
         this._wrapEmbeddedWidget(
           this._itemsPositionListbox,
@@ -1010,6 +1180,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         title: _("CPU"),
         iconName: "utilities-system-monitor-symbolic",
       });
+
+      page.add(
+        this._createPageIntroGroup({
+          title: _("CPU Preferences"),
+          subtitle: _("Configure CPU usage, frequency, and load-average indicators."),
+          iconName: "utilities-system-monitor-symbolic",
+        })
+      );
 
       const usageGroup = this._createSettingsGroup(
         _("Usage"),
@@ -1112,6 +1290,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         iconName: "computer-symbolic",
       });
 
+      page.add(
+        this._createPageIntroGroup({
+          title: _("RAM Preferences"),
+          subtitle: _("Configure memory metrics, scale, and alert thresholds."),
+          iconName: "computer-symbolic",
+        })
+      );
+
       const monitorGroup = this._createSettingsGroup(
         _("Memory"),
         _("Configure how RAM usage is presented in the panel.")
@@ -1190,8 +1376,16 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "swap",
         title: _("Swap"),
-        iconName: "computer-symbolic",
+        iconName: "media-floppy-symbolic",
       });
+
+      page.add(
+        this._createPageIntroGroup({
+          title: _("Swap Preferences"),
+          subtitle: _("Configure swap metrics, scale, and low-memory alerts."),
+          iconName: "media-floppy-symbolic",
+        })
+      );
 
       const monitorGroup = this._createSettingsGroup(
         _("Swap"),
@@ -1273,6 +1467,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         title: _("Network"),
         iconName: "network-workgroup-symbolic",
       });
+
+      page.add(
+        this._createPageIntroGroup({
+          title: _("Network Preferences"),
+          subtitle: _("Configure throughput units and per-interface indicators."),
+          iconName: "network-workgroup-symbolic",
+        })
+      );
 
       const commonGroup = this._createSettingsGroup(
         _("Common"),
@@ -1368,6 +1570,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         title: _("Disk"),
         iconName: "drive-harddisk-symbolic",
       });
+
+      page.add(
+        this._createPageIntroGroup({
+          title: _("Disk Preferences"),
+          subtitle: _("Configure activity, space monitoring, and device selection."),
+          iconName: "drive-harddisk-symbolic",
+        })
+      );
 
       const commonGroup = this._createSettingsGroup(
         _("Common"),
@@ -1501,6 +1711,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         iconName: "weather-clear-symbolic",
       });
 
+      page.add(
+        this._createPageIntroGroup({
+          title: _("Thermal Preferences"),
+          subtitle: _("Configure CPU/GPU temperature units, sensors, and visibility."),
+          iconName: "weather-clear-symbolic",
+        })
+      );
+
       const commonGroup = this._createSettingsGroup(
         _("Common"),
         _("Configure shared temperature display settings.")
@@ -1598,6 +1816,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         iconName: "video-display-symbolic",
       });
 
+      page.add(
+        this._createPageIntroGroup({
+          title: _("GPU Preferences"),
+          subtitle: _("Configure usage, memory telemetry, devices, and diagnostics."),
+          iconName: "video-display-symbolic",
+        })
+      );
+
       const usageGroup = this._createSettingsGroup(
         _("Usage"),
         _("Configure how GPU usage appears in the panel.")
@@ -1693,7 +1919,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     fillPreferencesWindow(window) {
-      window.set_default_size(980, 760);
+      window.add_css_class("resource-monitor-preferences");
 
       if (window.set_title) {
         window.set_title(this._metadata?.name ?? _("Resource Monitor"));
@@ -1716,6 +1942,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       window.add(this._buildNativeNetPage());
       window.add(this._buildNativeThermalPage());
       window.add(this._buildNativeGpuPage());
+
+      GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+        this._relaxPreferencesWindowClamps(window);
+        return GLib.SOURCE_REMOVE;
+      });
     }
 
     _buildGlobal() {
@@ -1874,6 +2105,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           valign: Gtk.Align.CENTER,
         });
         up.add_css_class("flat");
+        up.add_css_class("resource-monitor-reorder-button");
         up.connect("clicked", (button) => {
           const index = row.get_index();
           if (index > 0) {
@@ -1893,6 +2125,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           valign: Gtk.Align.CENTER,
         });
         down.add_css_class("flat");
+        down.add_css_class("resource-monitor-reorder-button");
         down.connect("clicked", (button) => {
           const index = row.get_index();
           if (index < itemsPositionArray.length - 1) {
@@ -1912,7 +2145,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           hexpand: true,
           halign: Gtk.Align.START,
         });
+        const icon = new Gtk.Image({
+          icon_name: this._getPanelItemIconName(element),
+          pixel_size: 16,
+          valign: Gtk.Align.CENTER,
+        });
+        icon.add_css_class("resource-monitor-reorder-icon");
         label.add_css_class("resource-monitor-reorder-label");
+        box.append(icon);
         box.append(label);
         box.append(up);
         box.append(down);
@@ -2225,6 +2465,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         factory: mountPointFactory,
         resizable: true,
       });
+      this._setColumnExpand(mountPointCol, true);
       this._diskDevicesColumnView.append_column(mountPointCol);
 
       // Stats Column
@@ -2791,6 +3032,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         factory: nameFactory,
         resizable: true,
       });
+      this._setColumnExpand(nameCol, true);
       this._gpuDevicesColumnView.append_column(nameCol);
 
       // Usage Column

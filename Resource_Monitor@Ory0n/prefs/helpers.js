@@ -255,6 +255,11 @@ export function makeThermalColumnView(view, type, onToggle) {
     factory: createLabelFactory((item) => item.name),
     resizable: true,
   });
+  if (typeof nameCol.set_expand === "function") {
+    nameCol.set_expand(true);
+  } else if ("expand" in nameCol) {
+    nameCol.expand = true;
+  }
   view.append_column(nameCol);
 
   const monitorFactory = new Gtk.SignalListItemFactory();
@@ -291,13 +296,17 @@ export function makeThermalColumnView(view, type, onToggle) {
     }
   });
 
-  view.append_column(
-    new Gtk.ColumnViewColumn({
-      title: _("Monitor"),
-      factory: monitorFactory,
-      resizable: true,
-    })
-  );
+  const monitorCol = new Gtk.ColumnViewColumn({
+    title: _("Monitor"),
+    factory: monitorFactory,
+    resizable: true,
+  });
+  if (typeof monitorCol.set_fixed_width === "function") {
+    monitorCol.set_fixed_width(110);
+  } else if ("fixed_width" in monitorCol) {
+    monitorCol.fixed_width = 110;
+  }
+  view.append_column(monitorCol);
 
   return model;
 }

@@ -5,6 +5,10 @@
 .embedded-widget {
   margin-top: 6px;
   margin-bottom: 6px;
+  border-radius: 12px;
+  padding: 6px;
+  background-color: alpha(@window_fg_color, 0.04);
+  border: 1px solid alpha(@window_fg_color, 0.08);
 }
 
 .resource-monitor-list {
@@ -23,6 +27,30 @@
   background: transparent;
 }
 
+.resource-monitor-page-intro {
+  border-radius: 12px;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  background-color: alpha(@window_fg_color, 0.03);
+}
+
+.resource-monitor-page-intro image {
+  margin-right: 6px;
+}
+
+.resource-monitor-expander {
+  margin-top: 4px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  padding: 6px 8px;
+  background-color: alpha(@window_fg_color, 0.03);
+  border: 1px solid alpha(@window_fg_color, 0.08);
+}
+
+.resource-monitor-expander-title {
+  font-weight: 600;
+}
+
 .resource-monitor-threshold-preview {
   min-width: 4.5em;
   font-weight: 600;
@@ -31,8 +59,19 @@
 .resource-monitor-reorder-row {
   padding-left: 6px;
   padding-right: 6px;
+  min-height: 38px;
 }
 
 .resource-monitor-reorder-label {
   font-weight: 600;
+}
+
+.resource-monitor-reorder-icon {
+  margin-right: 10px;
+  opacity: 0.85;
+}
+
+.resource-monitor-reorder-button {
+  min-width: 30px;
+  min-height: 30px;
 }
