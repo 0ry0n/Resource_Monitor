@@ -28,7 +28,6 @@ import Shell from "gi://Shell";
 
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
-import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import * as Util from "resource:///org/gnome/shell/misc/util.js";
 import {
   Extension,
@@ -351,7 +350,6 @@ const ResourceMonitor = GObject.registerClass(
 
       this._createMainGui();
       this._setupAccessibility();
-      this._setupMenu();
 
       this._initSettings();
       this._updateGpuRefreshInterval();
@@ -387,71 +385,12 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       this._setPanelTooltip(
-        _(
-          "Left-click launches the configured action. Right-click opens preferences."
-        )
+        _("Left-click launches the configured action.")
       );
 
       if (this._box) {
         this._box.accessible_name = accessibleName;
       }
-    }
-
-    _setupMenu() {
-      this.menu.removeAll();
-
-      this._menuPrimaryActionInfoItem = new PopupMenu.PopupMenuItem("", {
-        reactive: false,
-        can_focus: false,
-      });
-      this._menuPrimaryActionInfoItem.add_style_class_name(
-        "resource-monitor-menu-info"
-      );
-      this.menu.addMenuItem(this._menuPrimaryActionInfoItem);
-
-      this._menuRefreshInfoItem = new PopupMenu.PopupMenuItem("", {
-        reactive: false,
-        can_focus: false,
-      });
-      this._menuRefreshInfoItem.add_style_class_name("resource-monitor-menu-info");
-      this.menu.addMenuItem(this._menuRefreshInfoItem);
-
-      this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-      this._menuLaunchPrimaryActionItem = new PopupMenu.PopupMenuItem(
-        _("Run Primary Action")
-      );
-      this._menuLaunchPrimaryActionItem.connect("activate", () => {
-        this._launchPrimaryAction();
-      });
-      this.menu.addMenuItem(this._menuLaunchPrimaryActionItem);
-
-      const refreshItem = new PopupMenu.PopupMenuItem(_("Refresh Now"));
-      refreshItem.connect("activate", () => {
-        this._refreshHandler(true);
-      });
-      this.menu.addMenuItem(refreshItem);
-
-      const preferencesItem = new PopupMenu.PopupMenuItem(_("Preferences"));
-      preferencesItem.connect("activate", () => {
-        this._openPreferences();
-      });
-      this.menu.addMenuItem(preferencesItem);
-
-      this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-      this._menuRightClickToggleItem = new PopupMenu.PopupSwitchMenuItem(
-        _("Right-click opens preferences"),
-        Boolean(this._rightClickStatus)
-      );
-      this._menuRightClickToggleItem.connect("toggled", (item, state) => {
-        if (state !== this._rightClickStatus) {
-          this._settings.set_boolean(RIGHT_CLICK_STATUS, state);
-        }
-      });
-      this.menu.addMenuItem(this._menuRightClickToggleItem);
-
-      this._updateMenuState();
     }
 
     _setPanelTooltip(text) {
@@ -492,46 +431,13 @@ const ResourceMonitor = GObject.registerClass(
     _updatePanelTooltip() {
       const rightClickAction = this._rightClickStatus
         ? _("Open preferences")
-        : _("Open indicator menu");
+        : _("Disabled");
       this._setPanelTooltip(
         `${_("Left-click")}: ${this._getPrimaryActionDisplayName()}\n${_("Right-click")}: ${rightClickAction}`
       );
     }
 
-    _updateMenuState() {
-      if (
-        !this._menuPrimaryActionInfoItem ||
-        !this._menuRefreshInfoItem ||
-        !this._menuLaunchPrimaryActionItem
-      ) {
-        return;
-      }
-
-      const primaryAction = this._getPrimaryActionDisplayName();
-      const refreshInterval = Number.isFinite(this._refreshTime)
-        ? this._refreshTime
-        : this._settings.get_int(REFRESH_TIME);
-      const hasPrimaryAction = this._isPrimaryActionConfigured();
-
-      this._menuPrimaryActionInfoItem.label.text =
-        `${_("Primary Action")}: ${primaryAction}`;
-      this._menuRefreshInfoItem.label.text =
-        `${_("Refresh Interval")}: ${refreshInterval} s`;
-
-      this._menuLaunchPrimaryActionItem.setSensitive(hasPrimaryAction);
-      this._menuLaunchPrimaryActionItem.label.text = hasPrimaryAction
-        ? _("Run Primary Action")
-        : _("Primary Action Disabled");
-
-      if (this._menuRightClickToggleItem) {
-        this._menuRightClickToggleItem.setToggleState(
-          Boolean(this._rightClickStatus)
-        );
-      }
-    }
-
     _syncInteractionUi() {
-      this._updateMenuState();
       this._updatePanelTooltip();
     }
 
@@ -754,8 +660,6 @@ const ResourceMonitor = GObject.registerClass(
         case 3: // Right-click
           if (this._rightClickStatus) {
             this._openPreferences();
-          } else {
-            this.menu.toggle();
           }
 
           return Clutter.EVENT_STOP;
@@ -779,8 +683,11 @@ const ResourceMonitor = GObject.registerClass(
           return Clutter.EVENT_STOP;
 
         case Clutter.KEY_Menu:
-          this.menu.toggle();
-          return Clutter.EVENT_STOP;
+          if (this._rightClickStatus) {
+            this._openPreferences();
+            return Clutter.EVENT_STOP;
+          }
+          return Clutter.EVENT_PROPAGATE;
 
         default:
           return Clutter.EVENT_PROPAGATE;
@@ -906,7 +813,6 @@ const ResourceMonitor = GObject.registerClass(
     _refreshTimeChanged() {
       this._refreshTime = this._settings.get_int(REFRESH_TIME);
       this._updateGpuRefreshInterval();
-      this._syncInteractionUi();
 
       if (this._mainTimer) {
         GLib.Source.remove(this._mainTimer);

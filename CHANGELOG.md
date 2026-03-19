@@ -6,6 +6,7 @@ All notable changes are documented in this file.
 
 - Added support for GNOME Shell 50.
 - Improved Dash to Panel integration for multi-panel display mode, including clearer preferences and runtime fallback handling.
+- Removed the indicator popup menu; left-click still launches the configured action and right-click can open preferences.
 
 ## 26 - 2025-09-11
 

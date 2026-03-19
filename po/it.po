@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Resource_Monitor 1\n"
 "Report-Msgid-Bugs-To: https://github.com/0ry0n/Resource_Monitor/issues\n"
-"POT-Creation-Date: 2026-03-19 19:51+0100\n"
+"POT-Creation-Date: 2026-03-19 19:58+0100\n"
 "PO-Revision-Date: 2026-03-18 14:36+0100\n"
 "Last-Translator: Resource_Monitor Contributors\n"
 "Language-Team: Italian\n"
@@ -12,67 +12,32 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
 
-#: Resource_Monitor@Ory0n/extension.js:391
-msgid ""
-"Left-click launches the configured action. Right-click opens preferences."
-msgstr ""
-"Il clic sinistro avvia l'azione configurata. Il clic destro apre le "
-"preferenze."
+#: Resource_Monitor@Ory0n/extension.js:388
+msgid "Left-click launches the configured action."
+msgstr "Il clic sinistro avvia l'azione configurata."
 
-#: Resource_Monitor@Ory0n/extension.js:422
-#: Resource_Monitor@Ory0n/extension.js:523
-msgid "Run Primary Action"
-msgstr "Esegui azione principale"
-
-#: Resource_Monitor@Ory0n/extension.js:429
-msgid "Refresh Now"
-msgstr "Aggiorna ora"
-
-#: Resource_Monitor@Ory0n/extension.js:435
-msgid "Preferences"
-msgstr "Preferenze"
-
-#: Resource_Monitor@Ory0n/extension.js:444
-msgid "Right-click opens preferences"
-msgstr "Il clic destro apre le preferenze"
-
-#: Resource_Monitor@Ory0n/extension.js:479
+#: Resource_Monitor@Ory0n/extension.js:418
+#: Resource_Monitor@Ory0n/extension.js:434
 msgid "Disabled"
 msgstr "Disabilitata"
 
-#: Resource_Monitor@Ory0n/extension.js:494
+#: Resource_Monitor@Ory0n/extension.js:433
 msgid "Open preferences"
 msgstr "Apri preferenze"
 
-#: Resource_Monitor@Ory0n/extension.js:495
-msgid "Open indicator menu"
-msgstr "Apri menu indicatore"
-
-#: Resource_Monitor@Ory0n/extension.js:497
+#: Resource_Monitor@Ory0n/extension.js:436
 msgid "Left-click"
 msgstr "Clic sinistro"
 
-#: Resource_Monitor@Ory0n/extension.js:497
+#: Resource_Monitor@Ory0n/extension.js:436
 msgid "Right-click"
 msgstr "Clic destro"
 
-#: Resource_Monitor@Ory0n/extension.js:517
-msgid "Primary Action"
-msgstr "Azione principale"
-
-#: Resource_Monitor@Ory0n/extension.js:519 Resource_Monitor@Ory0n/prefs.js:1114
-msgid "Refresh Interval"
-msgstr "Intervallo aggiornamento"
-
-#: Resource_Monitor@Ory0n/extension.js:524
-msgid "Primary Action Disabled"
-msgstr "Azione principale disabilitata"
-
-#: Resource_Monitor@Ory0n/extension.js:812 Resource_Monitor@Ory0n/prefs.js:1970
+#: Resource_Monitor@Ory0n/extension.js:719 Resource_Monitor@Ory0n/prefs.js:1970
 msgid "Resource Monitor"
 msgstr "Monitor Risorse"
 
-#: Resource_Monitor@Ory0n/extension.js:813
+#: Resource_Monitor@Ory0n/extension.js:720
 msgid "Unable to launch the configured action."
 msgstr "Impossibile avviare l'azione configurata."
 
@@ -316,6 +281,10 @@ msgstr ""
 #: Resource_Monitor@Ory0n/prefs.js:1110
 msgid "Define how the indicator behaves in GNOME Shell."
 msgstr "Scegli dove mostrare l'indicatore nel pannello."
+
+#: Resource_Monitor@Ory0n/prefs.js:1114
+msgid "Refresh Interval"
+msgstr "Intervallo aggiornamento"
 
 #: Resource_Monitor@Ory0n/prefs.js:1115
 msgid "Controls how often resource values are updated."
@@ -1126,6 +1095,33 @@ msgid ""
 msgstr ""
 "La swap disponibile è scesa sotto il %d%%. Libera memoria per evitare "
 "rallentamenti."
+
+#~ msgid ""
+#~ "Left-click launches the configured action. Right-click opens preferences."
+#~ msgstr ""
+#~ "Il clic sinistro avvia l'azione configurata. Il clic destro apre le "
+#~ "preferenze."
+
+#~ msgid "Run Primary Action"
+#~ msgstr "Esegui azione principale"
+
+#~ msgid "Refresh Now"
+#~ msgstr "Aggiorna ora"
+
+#~ msgid "Preferences"
+#~ msgstr "Preferenze"
+
+#~ msgid "Right-click opens preferences"
+#~ msgstr "Il clic destro apre le preferenze"
+
+#~ msgid "Open indicator menu"
+#~ msgstr "Apri menu indicatore"
+
+#~ msgid "Primary Action"
+#~ msgstr "Azione principale"
+
+#~ msgid "Primary Action Disabled"
+#~ msgstr "Azione principale disabilitata"
 
 #~ msgid "General"
 #~ msgstr "Generali"

@@ -18,7 +18,7 @@
             <description>Chooses whether the indicator is shown only on the primary panel or on all Dash to Panel panels when Dash to Panel is available.</description>
         </key>
         <key name="decimalsstatus" type="b">
-            <default>true</default>
+            <default>false</default>
             <summary>Show decimal digits</summary>
             <description>Enables fractional digits for values shown in the panel.</description>
         </key>
@@ -48,7 +48,7 @@
             <description>Displays symbolic icons next to monitored resources in the panel.</description>
         </key>
         <key name="iconsposition" type="s">
-            <default>"right"</default>
+            <default>"left"</default>
             <summary>Icon position</summary>
             <description>Controls whether icons are shown to the left or right of their associated values.</description>
         </key>
@@ -69,7 +69,7 @@
             <description>Reserved width in pixels for the CPU usage label. Zero keeps the label adaptive.</description>
         </key>
         <key name="cpucolors" type="as">
-            <default>[]</default>
+            <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
             <summary>CPU usage color thresholds</summary>
             <description>Stores threshold and color rules applied to CPU usage values.</description>
         </key>
@@ -122,12 +122,12 @@
             <description>Reserved width in pixels for the RAM label. Zero keeps the label adaptive.</description>
         </key>
         <key name="ramcolors" type="as">
-            <default>[]</default>
+            <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
             <summary>RAM color thresholds</summary>
             <description>Stores threshold and color rules applied to RAM values.</description>
         </key>
         <key name="ramunit" type="s">
-            <default>"numeric"</default>
+            <default>"perc"</default>
             <summary>RAM display mode</summary>
             <description>Chooses whether RAM is shown as a numeric value or percentage.</description>
         </key>
@@ -164,7 +164,7 @@
             <description>Reserved width in pixels for the swap label. Zero keeps the label adaptive.</description>
         </key>
         <key name="swapcolors" type="as">
-            <default>[]</default>
+            <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
             <summary>Swap color thresholds</summary>
             <description>Stores threshold and color rules applied to swap values.</description>
         </key>
@@ -195,7 +195,7 @@
             <description>Minimum available swap percentage before a low-memory notification is shown.</description>
         </key>
         <key name="diskshowdevicename" type="b">
-            <default>true</default>
+            <default>false</default>
             <summary>Show disk display names</summary>
             <description>Displays the configured disk labels next to disk indicators in the panel.</description>
         </key>
@@ -237,12 +237,12 @@
             <description>Reserved width in pixels for disk space values. Zero keeps the labels adaptive.</description>
         </key>
         <key name="diskspacecolors" type="as">
-            <default>[]</default>
+            <default>["0 0.8784313797950745 0.10588235408067703 0.1411764770746231", "15 1 0.47058823704719543 0", "30 0.9647058844566345 0.8274509906768799 0.1764705926179886", "50 0.18039216101169586 0.7607843279838562 0.4941176474094391"]</default>
             <summary>Disk space color thresholds</summary>
             <description>Stores threshold and color rules applied to disk space values.</description>
         </key>
         <key name="diskspaceunit" type="s">
-            <default>"numeric"</default>
+            <default>"perc"</default>
             <summary>Disk space display mode</summary>
             <description>Chooses whether disk space is shown as a numeric value or as a percentage.</description>
         </key>
@@ -252,7 +252,7 @@
             <description>Selects the preferred unit used for disk space values when numeric mode is enabled.</description>
         </key>
         <key name="diskspacemonitor" type="s">
-            <default>"used"</default>
+            <default>"free"</default>
             <summary>Disk space metric</summary>
             <description>Chooses whether the extension displays used or free disk space.</description>
         </key>
@@ -267,7 +267,7 @@
             <description>Stores the disk devices enabled for throughput or space monitoring.</description>
         </key>
         <key name="netautohidestatus" type="b">
-            <default>false</default>
+            <default>true</default>
             <summary>Auto-hide inactive network entries</summary>
             <description>Hides Ethernet and Wi-Fi indicators when no active matching NetworkManager connection exists.</description>
         </key>
@@ -372,7 +372,7 @@
             <description>Reserved width in pixels for GPU usage and memory values. Zero keeps the labels adaptive.</description>
         </key>
         <key name="gpucolors" type="as">
-            <default>[]</default>
+            <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
             <summary>GPU usage color thresholds</summary>
             <description>Stores threshold and color rules applied to GPU usage values.</description>
         </key>
