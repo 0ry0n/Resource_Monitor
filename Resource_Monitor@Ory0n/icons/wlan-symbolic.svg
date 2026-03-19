@@ -36,10 +36,8 @@
      transform="translate(0.42966752,-1.3299238)">
     <path
        id="path4"
-       opacity="0.35"
        overflow="visible"
-       color="#000000"
-       style="opacity:1;fill:#2e3436;fill-opacity:1;stroke-width:1.225;stroke-miterlimit:4;stroke-dasharray:none;marker:none"
+       style="fill:currentColor"
        d="m 7.5703329,3.3299237 c -2.814,0 -5.172,1 -6.99999997,2.586 L 7.5703327,15.329924 14.570332,5.9499237 c -1.64,-1.467 -4.186,-2.62 -6.9999991,-2.62 z"
        sodipodi:nodetypes="scccs" />
   </g>
