@@ -45,6 +45,12 @@ const IndicatorName = Me.metadata.name;
 
 const Domain = Gettext.domain(Me.metadata.uuid);
 
+const GpuBackend = Me.imports.gpu.backend.GpuBackend
+const AmdBackend = Me.imports.gpu.amd.AmdBackend
+const NvidiaBackend = Me.imports.gpu.nvidia.NvidiaBackend
+
+const _executeCommand = Me.imports.utils.executeCommand
+
 const _ = Domain.gettext;
 const ngettext = Domain.ngettext;
 
@@ -1783,7 +1789,7 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _refreshDiskSpaceValue() {
-            this._executeCommand(['df', '-BKB', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
+            _executeCommand(['df', '-BKB', '-x', 'squashfs', '-x', 'tmpfs']).then(output => {
                 const lines = output.split('\n');
 
                 // Excludes the first line of output
@@ -2247,155 +2253,26 @@ const ResourceMonitor = GObject.registerClass(
         }
 
         _refreshGpuValue() {
-            this._executeCommand(['nvidia-smi', '--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu', '--format=csv,noheader']).then(output => {
-                const lines = output.split('\n');
 
-                for (let i = 0; i < lines.length - 1; i++) {
-                    const line = lines[i];
-                    const entry = line.trim().split(/\,\s/);
-
-                    const uuid = entry[0];
-                    let memoryTotal = entry[1].slice(0, -4);
-                    let memoryUsed = entry[2].slice(0, -4);
-                    let memoryFree = entry[3].slice(0, -4);
-                    const usage = entry[4].slice(0, -1);
-                    const temperature = entry[5];
-
-                    // mebibyte
-                    memoryTotal = parseInt(memoryTotal);
-                    memoryUsed = parseInt(memoryUsed);
-                    memoryFree = parseInt(memoryFree);
-
-                    // kibibyte
-                    memoryTotal *= 1024;
-                    memoryUsed *= 1024;
-                    memoryFree *= 1024;
-
-                    // kilobyte
-                    memoryTotal *= 1.024;
-                    memoryUsed *= 1.024;
-                    memoryFree *= 1.024;
-
-                    this._gpuBox.update_element_value(uuid, usage, '%');
-
-                    let value = 0;
-                    let unit = 'KB';
-                    switch (this._gpuMemoryUnitType) {
-                        case 'perc':
-                            const used = (100 * memoryUsed) / memoryTotal;
-                            unit = '%';
-
-                            switch (this._gpuMemoryMonitor) {
-                                case 'free':
-                                    value = 100 - used;
-
-                                    break;
-
-                                case 'used':
-
-                                default:
-                                    value = used;
-
-                                    break;
-                            }
-
-                            break;
-
-                        case 'numeric':
-
-                        default:
-                            switch (this._gpuMemoryMonitor) {
-                                case 'free':
-                                    value = memoryFree;
-
-                                    break;
-
-                                case 'used':
-
-                                default:
-                                    value = memoryUsed;
-
-                                    break;
-                            }
-
-                            switch (this._gpuMemoryUnitMeasure) {
-                                case 'k':
-                                    unit = 'KB';
-                                    break;
-
-                                case 'm':
-                                    unit = 'MB';
-                                    value /= 1000;
-
-                                    break;
-
-                                case 'g':
-                                    unit = 'GB';
-                                    value /= 1000;
-                                    value /= 1000;
-
-                                    break;
-
-                                case 't':
-                                    unit = 'TB';
-                                    value /= 1000;
-                                    value /= 1000;
-                                    value /= 1000;
-
-                                    break;
-
-                                case 'auto':
-
-                                default:
-                                    if (value > 1000) {
-                                        unit = 'MB';
-                                        value /= 1000;
-                                        if (value > 1000) {
-                                            unit = 'GB';
-                                            value /= 1000;
-                                            if (value > 1000) {
-                                                unit = 'TB';
-                                                value /= 1000;
-                                            }
-                                        }
-                                    } else {
-                                        unit = 'KB';
-                                    }
-
-                                    break;
-                            }
-
-                            break;
-                    }
-
-                    let valueT = parseInt(temperature);
-                    let unitT = '°C';
-                    switch (this._thermalTemperatureUnit) {
-                        case 'f':
-                            valueT = (valueT * 1.8) + 32;
-                            unitT = '°F';
-
-                            break;
-
-                        case 'c':
-
-                        default:
-                            unitT = '°C';
-
-                            break;
-                    }
-
-                    if (this._decimalsStatus) {
-                        this._gpuBox.update_element_memory_value(uuid, `${value.toFixed(1)}`, unit);
-                        this._gpuBox.update_element_thermal_value(uuid, `${valueT.toFixed(1)}`, unitT);
-                    } else {
-                        this._gpuBox.update_element_memory_value(uuid, `${value.toFixed(0)}`, unit);
-                        this._gpuBox.update_element_thermal_value(uuid, `${valueT.toFixed(0)}`, unitT);
-                    }
-                }
+            const context = {
+                gpuBox: this._gpuBox,
+                gpuMemoryMonitor: this._gpuMemoryMonitor,
+                gpuMemoryUnitType: this._gpuMemoryUnitType,
+                gpuMemoryUnitMeasure: this._gpuMemoryUnitMeasure,
+                thermalTemperatureUnit: this._thermalTemperatureUnit,
+                decimalsStatus: this._decimalsStatus,
+            };
+            let gpu = new GpuBackend(context);
+            if(NvidiaBackend.detect()){
+                gpu = new NvidiaBackend(context);
+            }
+            else if(AmdBackend.detect()){
+                gpu = new AmdBackend(context);
+            }
+            gpu.query().catch((error)=>{
+                log('[Resource_Monitor] Load GPU error (' + error + ')');
             });
         }
-
         // Common Function
         _basicItemStatus(status, iconCondition, icon, ...elements) {
             if (status) {
@@ -2451,34 +2328,6 @@ const ResourceMonitor = GObject.registerClass(
             }
         }
 
-        _readOutput(proc, cancellable = null) {
-            return new Promise((resolve, reject) => {
-                proc.communicate_utf8_async(null, cancellable, (source_object, res) => {
-                    try {
-                        const [ok, stdout, stderr] = source_object.communicate_utf8_finish(res);
-
-                        if (source_object.get_successful()) {
-                            resolve(stdout);
-                        } else {
-                            throw new Error(stderr);
-                        }
-                    } catch (e) {
-                        reject(e);
-                    }
-                });
-            });
-        }
-
-        async _executeCommand(command, cancellable = null) {
-            try {
-                const proc = Gio.Subprocess.new(command, Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE);
-                const output = await this._readOutput(proc, cancellable);
-
-                return output;
-            } catch (error) {
-                log('[Resource_Monitor] Execute Command Error (' + error + ')');
-            }
-        }
     });
 
 const DiskContainer = GObject.registerClass(
