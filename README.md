@@ -8,6 +8,8 @@ Resource Monitor is a GNOME Shell extension that shows live system metrics direc
 
 It can display CPU load and temperature, RAM and swap usage, disk activity and free space, GPU usage and temperature, and network traffic.
 
+Multi-panel mode is supported through Dash to Panel. Without Dash to Panel, the indicator is shown on the primary panel only.
+
 ![Resource Monitor main view](images/main.png)
 
 ## Supported GNOME Shell Versions

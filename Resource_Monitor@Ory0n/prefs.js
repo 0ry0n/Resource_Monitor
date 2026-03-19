@@ -153,6 +153,12 @@ const GPU_MEMORY_UNIT_MEASURE = "gpumemoryunitmeasure";
 const GPU_MEMORY_MONITOR = "gpumemorymonitor";
 const GPU_DISPLAY_DEVICE_NAME = "gpudisplaydevicename";
 const GPU_DEVICES_LIST = "gpudeviceslist";
+const DISPLAY_MODE_PRIMARY = "primary";
+const DISPLAY_MODE_ALL = "all";
+const GNOME_SHELL_SCHEMA = "org.gnome.shell";
+const ENABLED_EXTENSIONS_KEY = "enabled-extensions";
+const DISABLE_USER_EXTENSIONS_KEY = "disable-user-extensions";
+const DASH_TO_PANEL_UUID = "dash-to-panel@jderose9.github.com";
 
 function parseNvidiaSmiListLine(line) {
   const match = line.match(/^(GPU \d+):\s+(.*)\s+\(UUID:\s+([^)]+)\)$/);
@@ -397,11 +403,41 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       ];
     }
 
+    _isDashToPanelEnabled() {
+      try {
+        const shellSettings = new Gio.Settings({
+          schema_id: GNOME_SHELL_SCHEMA,
+        });
+        if (shellSettings.get_boolean(DISABLE_USER_EXTENSIONS_KEY)) {
+          return false;
+        }
+        const enabledExtensions = shellSettings.get_strv(ENABLED_EXTENSIONS_KEY);
+        return enabledExtensions.includes(DASH_TO_PANEL_UUID);
+      } catch (error) {
+        return false;
+      }
+    }
+
     _getDisplayModeOptions() {
       return [
-        ["primary", _("Primary Display Only")],
-        ["all", _("All Available Panels")],
+        [DISPLAY_MODE_PRIMARY, _("Primary Display Only")],
+        [
+          DISPLAY_MODE_ALL,
+          this._isDashToPanelEnabled()
+            ? _("All Dash to Panel Panels")
+            : _("All Dash to Panel Panels (requires Dash to Panel)"),
+        ],
       ];
+    }
+
+    _getDisplayModeDescription() {
+      return this._isDashToPanelEnabled()
+        ? _(
+            "Show the indicator only on the primary panel or mirror it on every Dash to Panel panel."
+          )
+        : _(
+            "Show the indicator on the primary panel. Multi-panel mode requires Dash to Panel."
+          );
     }
 
     _getMemoryMonitorOptions() {
@@ -1090,12 +1126,21 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       behaviorGroup.add(
         this._createActionRow(
           _("Display Mode"),
-          _(
-            "Choose whether the indicator is shown only on the primary panel or on every available panel."
-          ),
+          this._getDisplayModeDescription(),
           this._displayModeCombobox
         )
       );
+      if (!this._isDashToPanelEnabled()) {
+        const integrationNote = new Adw.ActionRow({
+          title: _("Dash to Panel Integration"),
+          subtitle: _(
+            "Enable Dash to Panel to use the All Dash to Panel Panels display mode."
+          ),
+        });
+        integrationNote.activatable = false;
+        integrationNote.selectable = false;
+        behaviorGroup.add(integrationNote);
+      }
       behaviorGroup.add(
         this._createActionRow(
           _("Open Preferences on Right-click"),
@@ -2003,6 +2048,15 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         DISPLAY_MODE,
         this._displayModeCombobox
       );
+      this._displayModeCombobox.connect("changed", (widget) => {
+        if (
+          widget.get_active_id() === DISPLAY_MODE_ALL &&
+          !this._isDashToPanelEnabled()
+        ) {
+          this._settings.set_string(DISPLAY_MODE, DISPLAY_MODE_PRIMARY);
+          widget.set_active_id(DISPLAY_MODE_PRIMARY);
+        }
+      });
       connectSwitchButton(
         this._settings,
         RIGHT_CLICK_STATUS,

@@ -183,6 +183,7 @@ const GPU_DEVICES_LIST = "gpudeviceslist";
 const GPU_MIN_REFRESH_INTERVAL_SECONDS = 5;
 const DISPLAY_MODE_PRIMARY = "primary";
 const DISPLAY_MODE_ALL = "all";
+const DASH_TO_PANEL_UUID = "dash-to-panel@jderose9.github.com";
 const PANEL_POSITION_INDEX = {
   left: -1,
   center: 0,
@@ -1961,6 +1962,15 @@ export default class ResourceMonitorExtension extends Extension {
     return this._displayMode === DISPLAY_MODE_ALL;
   }
 
+  _syncPanelProviderSignals() {
+    if (this._isAllPanelsMode()) {
+      this._connectPanelProviderSignals();
+      return;
+    }
+
+    this._disconnectPanelProviderSignals();
+  }
+
   _destroyIndicators() {
     if (!Array.isArray(this._indicators)) {
       return;
@@ -2011,6 +2021,27 @@ export default class ResourceMonitorExtension extends Extension {
     });
   }
 
+  _connectExtensionManagerSignals() {
+    if (typeof Main.extensionManager?.connect !== "function") {
+      return;
+    }
+
+    this._extensionManagerHandlerId = Main.extensionManager.connect(
+      "extension-state-changed",
+      (manager, extension) => {
+        if (extension?.uuid !== DASH_TO_PANEL_UUID) {
+          return;
+        }
+
+        this._allPanelsFallbackLogged = false;
+        this._syncPanelProviderSignals();
+        if (this._isAllPanelsMode()) {
+          this._queueIndicatorsRebuild();
+        }
+      }
+    );
+  }
+
   _getPanelTargets() {
     if (!this._isAllPanelsMode()) {
       return [{ panel: Main.panel, id: "primary" }];
@@ -2044,7 +2075,15 @@ export default class ResourceMonitorExtension extends Extension {
     }
 
     if (targets.length === 0) {
+      if (!this._allPanelsFallbackLogged) {
+        this._logger?.warn?.(
+          "[Resource_Monitor] Display mode 'all' requires Dash to Panel. Falling back to the primary panel."
+        );
+        this._allPanelsFallbackLogged = true;
+      }
       appendTarget(Main.panel, "primary");
+    } else {
+      this._allPanelsFallbackLogged = false;
     }
 
     return targets;
@@ -2087,6 +2126,7 @@ export default class ResourceMonitorExtension extends Extension {
 
       this._extensionPosition = this._settings.get_string(EXTENSION_POSITION);
       this._displayMode = this._settings.get_string(DISPLAY_MODE);
+      this._syncPanelProviderSignals();
       this._rebuildIndicators();
 
       return GLib.SOURCE_REMOVE;
@@ -2111,6 +2151,8 @@ export default class ResourceMonitorExtension extends Extension {
     this._panelProviderSignals = [];
     this._rebuildIdleId = 0;
     this._layoutManagerHandlerId = 0;
+    this._extensionManagerHandlerId = 0;
+    this._allPanelsFallbackLogged = false;
 
     this._settingsHandlerIds.push(
       this._settings.connect(`changed::${EXTENSION_POSITION}`, () => {
@@ -2119,6 +2161,7 @@ export default class ResourceMonitorExtension extends Extension {
     );
     this._settingsHandlerIds.push(
       this._settings.connect(`changed::${DISPLAY_MODE}`, () => {
+        this._syncPanelProviderSignals();
         this._queueIndicatorsRebuild();
       })
     );
@@ -2134,7 +2177,8 @@ export default class ResourceMonitorExtension extends Extension {
       );
     }
 
-    this._connectPanelProviderSignals();
+    this._connectExtensionManagerSignals();
+    this._syncPanelProviderSignals();
     this._rebuildIndicators();
   }
 
@@ -2159,6 +2203,14 @@ export default class ResourceMonitorExtension extends Extension {
     ) {
       Main.layoutManager.disconnect(this._layoutManagerHandlerId);
       this._layoutManagerHandlerId = 0;
+    }
+
+    if (
+      this._extensionManagerHandlerId &&
+      typeof Main.extensionManager?.disconnect === "function"
+    ) {
+      Main.extensionManager.disconnect(this._extensionManagerHandlerId);
+      this._extensionManagerHandlerId = 0;
     }
 
     this._disconnectPanelProviderSignals();

@@ -5,6 +5,7 @@ All notable changes are documented in this file.
 ## Unreleased
 
 - Added support for GNOME Shell 50.
+- Improved Dash to Panel integration for multi-panel display mode, including clearer preferences and runtime fallback handling.
 
 ## 26 - 2025-09-11
 

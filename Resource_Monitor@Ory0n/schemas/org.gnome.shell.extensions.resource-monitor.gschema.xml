@@ -15,7 +15,7 @@
         <key name="displaymode" type="s">
             <default>"primary"</default>
             <summary>Display mode</summary>
-            <description>Chooses whether the indicator is shown only on the primary panel or on all available panels provided by the current desktop setup.</description>
+            <description>Chooses whether the indicator is shown only on the primary panel or on all Dash to Panel panels when Dash to Panel is available.</description>
         </key>
         <key name="decimalsstatus" type="b">
             <default>true</default>
