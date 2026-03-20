@@ -12,6 +12,11 @@ const DISK_IGNORED_FILESYSTEMS = new Set([
   "squashfs",
   "tmpfs",
 ]);
+const SUPPORTED_CPU_THERMAL_CHIPS = new Set([
+  "coretemp",
+  "k10temp",
+  "zenpower",
+]);
 
 function _readDirectoryEntries(path, pattern = null) {
   try {
@@ -345,6 +350,10 @@ export function getThermalCpuSensorDescriptors() {
   });
 
   return descriptors;
+}
+
+export function isSupportedCpuThermalChip(chipName) {
+  return SUPPORTED_CPU_THERMAL_CHIPS.has(chipName);
 }
 
 export class IssueLogger {

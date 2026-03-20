@@ -340,7 +340,7 @@ export function parseNetworkTotals(contents, pattern) {
   const lines = new TextDecoder().decode(contents).split("\n");
   const totals = [0, 0];
 
-  for (let index = 2; index < lines.length - 1; index++) {
+  for (let index = 2; index < lines.length; index++) {
     const line = lines[index].trim();
     const splitLine = line.split(":");
     if (splitLine.length < 2) {
@@ -377,5 +377,7 @@ export function parseLoadAverage(contents) {
     .slice(0, 3)
     .map(parseFloat);
 
-  return [one, five, fifteen];
+  return [one, five, fifteen].map((value) =>
+    Number.isFinite(value) ? value : 0
+  );
 }

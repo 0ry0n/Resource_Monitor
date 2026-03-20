@@ -13,6 +13,7 @@ import { buildMemoryDisplay } from "../Resource_Monitor@Ory0n/runtime/memory.js"
 import {
   parseCpuUsage,
   parseDiskStats,
+  parseLoadAverage,
 } from "../Resource_Monitor@Ory0n/runtime/metrics.js";
 import { buildNetworkSample } from "../Resource_Monitor@Ory0n/runtime/network.js";
 
@@ -304,6 +305,41 @@ function testNetworkCounterReset() {
   );
 }
 
+function testNetworkParsingWithoutTrailingNewline() {
+  const netDev = new TextEncoder().encode(
+    "Inter-|   Receive                                                |  Transmit\n" +
+      " face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed\n" +
+      "  eth0: 1000 0 0 0 0 0 0 0 2000 0 0 0 0 0 0 0"
+  );
+
+  const sample = buildNetworkSample(netDev, {
+    pattern: /^eth[0-9]+$/,
+    unit: "bytes",
+    unitMeasure: "b",
+    scaleBase: "decimal",
+    previousTotals: [0, 0],
+    previousIdle: 1000,
+    currentIdle: 2000,
+  });
+
+  assertApprox(sample.values[0], 1000, 0.001, "Network rx should be parsed");
+  assertApprox(sample.values[1], 2000, 0.001, "Network tx should be parsed");
+}
+
+function testLoadAverageInvalidInputFallback() {
+  const invalid = new TextEncoder().encode("not-a-number ??? ??\n");
+  const parsed = parseLoadAverage(invalid);
+
+  assertApprox(parsed[0], 0, 0.001, "Invalid load average one should be 0");
+  assertApprox(parsed[1], 0, 0.001, "Invalid load average five should be 0");
+  assertApprox(
+    parsed[2],
+    0,
+    0.001,
+    "Invalid load average fifteen should be 0"
+  );
+}
+
 testDiskSerializationRoundtrip();
 testLegacySettingsEntriesAreRejected();
 testGpuSerializationRoundtrip();
@@ -314,5 +350,7 @@ testMemoryDisplay();
 testCpuUsageBaseline();
 testDiskStatsSectorConversion();
 testNetworkCounterReset();
+testNetworkParsingWithoutTrailingNewline();
+testLoadAverageInvalidInputFallback();
 
 console.log("Runtime smoke tests passed.");

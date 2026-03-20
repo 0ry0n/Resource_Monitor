@@ -4,6 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DOMAIN="Resource_Monitor@Ory0n"
 POT_PATH="${1:-$ROOT_DIR/po/$DOMAIN.pot}"
+CHANGELOG_PATH="$ROOT_DIR/CHANGELOG.md"
+PACKAGE_VERSION="$(
+  sed -n \
+    -e 's/^## \[\([0-9][0-9]*\)\] - .*/\1/p' \
+    -e 's/^## \([0-9][0-9]*\) - .*/\1/p' \
+    "$CHANGELOG_PATH" \
+    | head -n1
+)"
+PACKAGE_VERSION="${PACKAGE_VERSION:-1}"
+CURRENT_POT_DATE="$(date '+%Y-%m-%d %H:%M%z')"
 
 mapfile -t JS_FILES < <(
   cd "$ROOT_DIR"
@@ -20,7 +30,7 @@ if command -v xgettext >/dev/null 2>&1; then
       --language=JavaScript \
       --keyword=_ \
       --package-name="Resource_Monitor" \
-      --package-version="1" \
+      --package-version="$PACKAGE_VERSION" \
       --msgid-bugs-address="https://github.com/0ry0n/Resource_Monitor/issues" \
       --output="$POT_PATH" \
       "${JS_FILES[@]}"
@@ -28,16 +38,16 @@ if command -v xgettext >/dev/null 2>&1; then
   exit 0
 fi
 
-cat > "$POT_PATH" <<'HEADER'
+cat > "$POT_PATH" <<HEADER
 # Resource_Monitor translations template.
 # Copyright (C) 2026
 # This file is distributed under the same license as Resource_Monitor.
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Resource_Monitor\\n"
+"Project-Id-Version: Resource_Monitor $PACKAGE_VERSION\\n"
 "Report-Msgid-Bugs-To: https://github.com/0ry0n/Resource_Monitor/issues\\n"
-"POT-Creation-Date: 2026-03-18 00:00+0000\\n"
+"POT-Creation-Date: $CURRENT_POT_DATE\\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\\n"
 "Language-Team: LANGUAGE <LL@li.org>\\n"

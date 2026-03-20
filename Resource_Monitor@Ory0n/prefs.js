@@ -60,6 +60,7 @@ import {
   getDiskStableId,
   getMountedDiskEntries,
   getIntelGpuDescriptors,
+  isSupportedCpuThermalChip,
   getThermalCpuSensorDescriptors,
 } from "./services/runtime.js";
 
@@ -915,14 +916,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     async _readThermalCpuSensors() {
       const decoder = new TextDecoder();
-      const allowedSensorNames = new Set(["coretemp", "k10temp", "zenpower"]);
       const descriptors = getThermalCpuSensorDescriptors();
       const sensors = [];
 
       for (const descriptor of descriptors) {
         try {
           const chipName = decoder.decode(await loadFile(descriptor.namePath)).trim();
-          if (!allowedSensorNames.has(chipName)) {
+          if (!isSupportedCpuThermalChip(chipName)) {
             continue;
           }
 
@@ -1139,17 +1139,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._displayModeCombobox
         )
       );
-      if (!this._isDashToPanelEnabled()) {
-        const integrationNote = new Adw.ActionRow({
-          title: _("Dash to Panel Integration"),
-          subtitle: _(
-            "Enable Dash to Panel to use the All Dash to Panel Panels display mode."
-          ),
-        });
-        integrationNote.activatable = false;
-        integrationNote.selectable = false;
-        behaviorGroup.add(integrationNote);
-      }
       behaviorGroup.add(
         this._createActionRow(
           _("Open Preferences on Right-click"),

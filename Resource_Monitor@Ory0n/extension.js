@@ -61,6 +61,7 @@ import {
   getDiskStableIdIndex,
   getMountedDiskEntries,
   getIntelGpuDescriptors,
+  isSupportedCpuThermalChip,
   resolveDiskDevicePath,
   getThermalCpuSensorDescriptors,
   IssueLogger,
@@ -535,7 +536,6 @@ const ResourceMonitor = GObject.registerClass(
 
       try {
         const decoder = new TextDecoder();
-        const allowedSensorNames = new Set(["coretemp", "k10temp", "zenpower"]);
         const descriptors = getThermalCpuSensorDescriptors();
 
         if (this._destroyed || descriptors.length === 0) {
@@ -550,7 +550,7 @@ const ResourceMonitor = GObject.registerClass(
                 .decode(await this._loadFile(descriptor.namePath))
                 .trim();
 
-              if (!allowedSensorNames.has(chipName)) {
+              if (!isSupportedCpuThermalChip(chipName)) {
                 return null;
               }
 
