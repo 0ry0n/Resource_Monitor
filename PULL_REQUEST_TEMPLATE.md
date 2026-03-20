@@ -1,12 +1,36 @@
-Thank you for your contribution to the Resource_Monitor repo.
+## Summary
 
-## Motivation
+Describe the goal of this change and the user impact.
 
-## Description
+## Type of Change
 
-## Checklist
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactor
+- [ ] Documentation only
+- [ ] Translation update
 
-- [ ] Your code builds clean without any errors or warnings.
-- [ ] You are using approved terminology.
+## Validation
 
-## Please, submit your changes to the develop branch.
+- [ ] `make validate` passes locally.
+- [ ] I tested this change in GNOME Shell.
+- [ ] Tested on GNOME Shell version(s):
+
+## Documentation and i18n
+
+- [ ] I updated docs where needed (`README`, `CHANGELOG`, etc.).
+- [ ] I updated translatable strings and catalogs when needed.
+
+## GNOME Consistency Checklist
+
+- [ ] UI behavior remains coherent with GNOME conventions.
+- [ ] Preferences follow existing GTK4/Libadwaita patterns.
+- [ ] Schema/settings changes are backward compatible.
+
+## Linked Issues
+
+Fixes #
+
+## Target Branch
+
+Please open this PR against `develop`.

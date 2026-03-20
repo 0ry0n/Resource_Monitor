@@ -1,0 +1,55 @@
+.resource-monitor-box {
+  spacing: 0.35em;
+}
+
+.resource-monitor-group {
+  spacing: 0.05em;
+}
+
+.resource-monitor-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.resource-monitor-unit {
+  padding-left: 0.125em;
+  padding-right: 0.3em;
+}
+
+.resource-monitor-bracket {
+  padding-left: 0.05em;
+  padding-right: 0.05em;
+  opacity: 0.7;
+}
+
+.resource-monitor-secondary-value {
+  font-size: 0.92em;
+  opacity: 0.85;
+}
+
+.resource-monitor-secondary-unit {
+  font-size: 0.9em;
+  opacity: 0.72;
+}
+
+.resource-monitor-secondary-bracket {
+  opacity: 0.45;
+}
+
+.resource-monitor-name {
+  padding-left: 0.35em;
+  opacity: 0.9;
+}
+
+.resource-monitor-icon {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.resource-monitor-box.resource-monitor-icons-left .resource-monitor-icon {
+  padding-right: 0.22em;
+}
+
+.resource-monitor-box.resource-monitor-icons-right .resource-monitor-icon {
+  padding-left: 0.22em;
+}

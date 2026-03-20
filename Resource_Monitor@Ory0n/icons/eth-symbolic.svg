@@ -36,41 +36,41 @@
      transform="translate(-13.422588,-2.2504002)">
     <path
        d="m 15.121588,12.2504 c -1.203125,0 -1.699,0.499781 -1.699,1.699 v 2.602 c 0,1.199219 0.495875,1.699 1.699,1.699 h 2.606 c 1.203124,0 1.695,-0.499781 1.695,-1.699 v -2.602 c 0,-1.199219 -0.491876,-1.699 -1.695,-1.699 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path147-3"
        sodipodi:nodetypes="sssssssss" />
     <path
        d="m 27.422588,11.2504 h -12 V 9.2504002 h 12 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path145-7-5"
        sodipodi:nodetypes="ccccc"
        style="stroke-width:2.92768" />
     <path
        d="M 17.422588,10.250317 V 12.3504 h -2 v -2.100083 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path145-7-5-3"
        sodipodi:nodetypes="ccccc"
        style="stroke-width:1.22476" />
     <path
        d="M 27.422588,10.250317 V 12.3504 h -2 v -2.100083 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path145-7-5-3-5"
        sodipodi:nodetypes="ccccc"
        style="stroke-width:1.22476" />
     <path
        d="M 20.422588,10.250484 V 8.1504002 h 2 v 2.1000838 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path145-7-5-3-5-6"
        sodipodi:nodetypes="ccccc"
        style="stroke-width:1.22476" />
     <path
        d="m 25.121588,12.2504 c -1.203125,0 -1.699,0.499781 -1.699,1.699 v 2.602 c 0,1.199219 0.495875,1.699 1.699,1.699 h 2.606 c 1.203124,0 1.695,-0.499781 1.695,-1.699 v -2.602 c 0,-1.199219 -0.491876,-1.699 -1.695,-1.699 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path147-3-2"
        sodipodi:nodetypes="sssssssss" />
     <path
        d="m 20.121588,2.2504002 c -1.203125,0 -1.699,0.499781 -1.699,1.699 v 2.602 c 0,1.199219 0.495875,1.699 1.699,1.699 h 2.606 c 1.203124,0 1.695,-0.499781 1.695,-1.699 v -2.602 c 0,-1.199219 -0.491876,-1.699 -1.695,-1.699 z"
-       fill="#2e3436"
+       fill="currentColor"
        id="path147-3-9"
        sodipodi:nodetypes="sssssssss" />
   </g>

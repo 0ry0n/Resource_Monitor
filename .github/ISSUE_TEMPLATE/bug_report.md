@@ -1,31 +1,44 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+about: Report a reproducible problem
+title: "[Bug]: "
+labels: bug
+assignees:
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Checklist
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+- [ ] I verified this issue on the latest extension release.
+- [ ] I checked existing issues for duplicates.
+- [ ] I included clear reproduction steps.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Environment
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+- GNOME Shell version:
+- Distribution and version:
+- Session type (Wayland/X11):
+- Extension install source (EGO/manual):
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Version [e.g. 22]
+## Steps to Reproduce
 
-**Additional context**
-Add any other context about the problem here.
+1.
+2.
+3.
+
+## Actual Behavior
+
+What happened?
+
+## Expected Behavior
+
+What should have happened?
+
+## Logs and Screenshots
+
+If available, include relevant logs and screenshots.
+
+For logs you can use:
+
+```bash
+journalctl --user -b --grep gnome-shell
+```

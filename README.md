@@ -1,101 +1,66 @@
 [ego]: https://extensions.gnome.org/extension/1634/resource-monitor/
 
-# Resource_Monitor GNOME Shell Extension [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
+# Resource Monitor (GNOME Shell Extension) [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
 
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](https://opensource.org/licenses/GPL-3.0)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
-Resource_Monitor is a GNOME Shell extension that provides real-time monitoring of key system resources directly in the GNOME Shell top bar. It tracks CPU usage, load average, and temperature; RAM and swap usage; disk stats and space; GPU usage, memory, and temperature; and network activity for both WLAN and Ethernet connections.
+Resource Monitor is a GNOME Shell extension that shows live system metrics directly in the top bar.
 
-| Main View                      |
-| ------------------------------ |
-| ![Main View](/images/main.png) |
+It can display CPU load and temperature, RAM and swap usage, disk activity and free space, GPU usage and temperature, and network traffic.
 
-## GNOME Shell versions supported
+Multi-panel mode is supported through Dash to Panel. Without Dash to Panel, the indicator is shown on the primary panel only.
 
-**45, 46, 47, 48, 49**
+Current stable release: `27` (`2026-03-20`).
 
-- For older GNOME versions see the [gnome-3.28-3.38](../../tree/gnome-3.28-3.38) or [gnome-40-44](../../tree/gnome-40-44) branch.
+![Resource Monitor main view](images/main.png)
 
-## How-To Install
+## Supported GNOME Shell Versions
 
-### From GNOME Extensions
+- `45`, `46`, `47`, `48`, `49`, `50`
 
-- Visit [GNOME Extensions](https://extensions.gnome.org/extension/1634/resource-monitor/) and install from there.
+For older releases, use the dedicated maintenance branches:
 
-### Using the Latest Release
+- [gnome-3.28-3.38](../../tree/gnome-3.28-3.38)
+- [gnome-40-44](../../tree/gnome-40-44)
 
-1. Download the latest [Release](../../releases/latest) from GitHub.
-2. Unzip `Resource_Monitor@Ory0n.zip`.
-3. Move the `Resource_Monitor@Ory0n` folder to `~/.local/share/gnome-shell/extensions/`.
-4. Activate the extension using GNOME Extensions.
+## Installation
 
-## Preferences
+### GNOME Extensions (recommended)
 
-| Global Preferences                        | CPU Preferences                     | RAM Preferences                     |
-| ----------------------------------------- | ----------------------------------- | ----------------------------------- |
-| ![Global Preferences](/images/global.png) | ![CPU Preferences](/images/cpu.png) | ![RAM Preferences](/images/ram.png) |
+Install from [extensions.gnome.org](https://extensions.gnome.org/extension/1634/resource-monitor/).
 
-| SWAP Preferences                      | DISK Preferences                      | NET Preferences                     |
-| ------------------------------------- | ------------------------------------- | ----------------------------------- |
-| ![SWAP Preferences](/images/swap.png) | ![DISK Preferences](/images/disk.png) | ![NET Preferences](/images/net.png) |
+### Manual installation from GitHub release
 
-| THERMAL Preferences                         | GPU Preferences                     |
-| ------------------------------------------- | ----------------------------------- |
-| ![THERMAL Preferences](/images/thermal.png) | ![GPU Preferences](/images/gpu.png) |
+1. Download the latest [GitHub release](../../releases/latest).
+2. Extract `Resource_Monitor@Ory0n.zip`.
+3. Move `Resource_Monitor@Ory0n` to `~/.local/share/gnome-shell/extensions/`.
+4. Enable the extension from the GNOME Extensions app.
 
-## About Units
+## Development
 
-The units displayed in Resource_Monitor are in K, M, ... (powers of 1024), or KB, MB, ... (powers of 1000).
+Common local tasks:
 
-## Bug Reporting
+- `make schema` compiles GSettings schemas.
+- `make test` runs runtime smoke tests.
+- `make pot` regenerates `po/Resource_Monitor@Ory0n.pot`.
+- `make po-update` updates translations from the template.
+- `make validate` runs schema, tests, POT refresh, and PO checks.
+- `make package` builds `build/Resource_Monitor@Ory0n.zip`.
+- `make install` installs into `~/.local/share/gnome-shell/extensions/`.
 
-To report issues or request features, please use the [GitHub Issues](../../issues) tracker. Include relevant details to help us understand and address the problem efficiently.
+## Project Documentation
 
-## Change Log
+- [Contributing guidelines](CONTRIBUTING.md)
+- [Changelog](CHANGELOG.md)
+- [Support](SUPPORT.md)
+- [Security policy](SECURITY.md)
+- [Code of conduct](CODE_OF_CONDUCT.md)
 
-**Version 26 (Sep 11, 2025)**
+## Reporting Bugs
 
-- Add option to show device name in disk statistics.
-- Added support for GNOME 48 and 49.
-- Other bug fixes.
-
-**Version 25 (Nov 5, 2024)**
-
-- Cleanup code.
-- Other bug fixes.
-
-**Version 24 (Oct 28, 2024)**
-
-- Removed deprecated TreeView component.
-- Added custom peripheral name support.
-- Adjusted width with scale factor for better sizing.
-- Enhanced UI for improved user experience.
-- Other bug fixes.
-
-**Version 23 (Oct 18, 2024)**
-
-- Added support for GNOME 47.
-- Introduced memory alerts for RAM and SWAP usage to enhance monitoring capabilities.
-- Improved CPU frequency monitoring by reading all CPU core frequencies and displaying the highest value.
-- Added color coding for all items to enhance visual clarity and differentiation.
-- Integrated Zenpower thermal sensors; thanks to @mclvren for the contribution.
-- Fixed issues with CPU temperature reading.
-- Other bug fixes.
-
-**Version 22 (Jun 3, 2024)**
-
-- Added support for GNOME 46: thanks to @DanielusG.
-
-**Version 21 (Jan 2, 2024)**
-
-- Added support for GNOME 45.
-- Fixed left-click custom-program functionality.
-- Other bug fixes.
-
-## Authors
-
-- **Giuseppe Silvestro** - _Initial work_ - [0ry0n](https://github.com/0ry0n)
+Use [GitHub Issues](../../issues) and choose the bug template.
+Please include GNOME Shell version, distribution, clear reproduction steps, and logs when available.
 
 ## License
 
-This project is licensed under the GNU GPL-3.0 License - see the [LICENSE.md](/LICENSE) file for details.
+GPL-3.0. See [LICENSE](LICENSE).
