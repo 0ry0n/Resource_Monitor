@@ -75,6 +75,7 @@ const CUSTOM_LEFT_CLICK_STATUS = "customleftclickstatus";
 
 const ICONS_STATUS = "iconsstatus";
 const ICONS_POSITION = "iconsposition";
+const SECONDARY_SEPARATOR_STYLE = "secondaryseparatorstyle";
 
 const ITEMS_POSITION = "itemsposition";
 
@@ -400,6 +401,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return [
         ["decimal", _("SI (1000)")],
         ["binary", _("IEC (1024)")],
+      ];
+    }
+
+    _getSecondarySeparatorStyleOptions() {
+      return [
+        ["dot", _("Minimal Dot")],
+        ["slash", _("Slash")],
+        ["brackets", _("Brackets")],
       ];
     }
 
@@ -1180,6 +1189,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Icon Position"),
           _("Choose whether icons appear before or after the values."),
           this._iconsPositionCombobox
+        )
+      );
+      appearanceGroup.add(
+        this._createActionRow(
+          _("Secondary Metrics Separator"),
+          _("Choose how secondary metrics are separated in the panel."),
+          this._secondarySeparatorStyleCombobox
         )
       );
       page.add(appearanceGroup);
@@ -2030,6 +2046,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         ["left", _("Left")],
         ["right", _("Right")],
       ]);
+      this._secondarySeparatorStyleCombobox = this._createComboBox(
+        this._getSecondarySeparatorStyleOptions()
+      );
       this._itemsPositionListbox = this._createListBox();
       this._itemsPositionListbox.add_css_class("boxed-list");
 
@@ -2081,6 +2100,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._settings,
         ICONS_POSITION,
         this._iconsPositionCombobox
+      );
+      connectComboBox(
+        this._settings,
+        SECONDARY_SEPARATOR_STYLE,
+        this._secondarySeparatorStyleCombobox
       );
 
       this._iconsDisplay.connect("notify::active", (button) => {

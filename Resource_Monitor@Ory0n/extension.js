@@ -49,7 +49,11 @@ import {
   executeCommand as executeRuntimeCommand,
   loadFile as loadRuntimeFile,
 } from "./runtime/io.js";
-import { buildMainGui, createMainGui } from "./panel/mainGui.js";
+import {
+  applySecondarySeparatorStyle,
+  buildMainGui,
+  createMainGui,
+} from "./panel/mainGui.js";
 import {
   detectCapabilities,
   getAmdGpuDescriptors,
@@ -102,6 +106,7 @@ const RIGHT_CLICK_STATUS = "rightclickstatus";
 
 const ICONS_STATUS = "iconsstatus";
 const ICONS_POSITION = "iconsposition";
+const SECONDARY_SEPARATOR_STYLE = "secondaryseparatorstyle";
 
 const ITEMS_POSITION = "itemsposition";
 
@@ -209,6 +214,7 @@ const SETTINGS_KEYS = {
   RIGHT_CLICK_STATUS,
   ICONS_STATUS,
   ICONS_POSITION,
+  SECONDARY_SEPARATOR_STYLE,
   ITEMS_POSITION,
   CPU_STATUS,
   CPU_WIDTH,
@@ -904,6 +910,16 @@ const ResourceMonitor = GObject.registerClass(
       this._box.remove_all_children();
 
       this._buildMainGui();
+    }
+
+    _secondarySeparatorStyleChanged() {
+      const style = this._settings.get_string(SECONDARY_SEPARATOR_STYLE);
+      this._secondarySeparatorStyle = ["dot", "slash", "brackets"].includes(
+        style
+      )
+        ? style
+        : "dot";
+      applySecondarySeparatorStyle(this);
     }
 
     _itemsPositionChanged() {
@@ -1635,6 +1651,7 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuBox.set_element_thermal_width(
         this._thermalGpuTemperatureWidth * this._scaleFactor
       );
+      this._gpuBox.set_separator_style(this._secondarySeparatorStyle);
       this._syncGpuVisibility();
     }
 

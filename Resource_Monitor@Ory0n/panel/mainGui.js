@@ -60,6 +60,43 @@ function _createIcon(path) {
   return icon;
 }
 
+function _getSecondarySeparatorPair(style) {
+  switch (style) {
+    case "dot":
+      return { start: " · ", end: "" };
+    case "slash":
+      return { start: " / ", end: "" };
+    case "brackets":
+      return { start: "[", end: "]" };
+    default:
+      return { start: " · ", end: "" };
+  }
+}
+
+export function applySecondarySeparatorStyle(indicator) {
+  const style = indicator._secondarySeparatorStyle;
+  const { start, end } = _getSecondarySeparatorPair(style);
+
+  const cpuSeparators = [
+    [indicator._cpuTemperatureBracketStart, indicator._cpuTemperatureBracketEnd],
+    [indicator._cpuFrequencyBracketStart, indicator._cpuFrequencyBracketEnd],
+    [indicator._cpuLoadAverageBracketStart, indicator._cpuLoadAverageBracketEnd],
+  ];
+
+  cpuSeparators.forEach(([startLabel, endLabel]) => {
+    if (startLabel) {
+      startLabel.text = start;
+    }
+    if (endLabel) {
+      endLabel.text = end;
+    }
+  });
+
+  if (typeof indicator._gpuBox?.set_separator_style === "function") {
+    indicator._gpuBox.set_separator_style(style);
+  }
+}
+
 function _appendCpuChildren(indicator, addChild, iconsPosition) {
   if (iconsPosition === "left") {
     addChild(indicator._cpuIcon);
@@ -286,6 +323,8 @@ export function buildMainGui(indicator) {
       indicator._box.add_child(group);
     }
   });
+
+  applySecondarySeparatorStyle(indicator);
 
   if (indicator._box.get_parent() !== indicator) {
     indicator.add_child(indicator._box);

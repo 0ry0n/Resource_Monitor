@@ -45,6 +45,19 @@ function _createBracketLabel(text, extraClasses = []) {
   return widget;
 }
 
+function _getSeparatorPair(style) {
+  switch (style) {
+    case "dot":
+      return { start: " · ", end: "" };
+    case "slash":
+      return { start: " / ", end: "" };
+    case "brackets":
+      return { start: "[", end: "]" };
+    default:
+      return { start: " · ", end: "" };
+  }
+}
+
 const DiskContainer = GObject.registerClass(
   class DiskContainer extends St.BoxLayout {
     _init() {
@@ -239,6 +252,7 @@ export const GpuContainer = GObject.registerClass(
       this._elementsMemoryUnit = [];
       this._elementsThermalValue = [];
       this._elementsThermalUnit = [];
+      this._separatorPairs = [];
     }
 
     set_element_width(width) {
@@ -299,6 +313,7 @@ export const GpuContainer = GObject.registerClass(
       this._elementsMemoryUnit = [];
       this._elementsThermalValue = [];
       this._elementsThermalUnit = [];
+      this._separatorPairs = [];
 
       this.remove_all_children();
     }
@@ -316,10 +331,13 @@ export const GpuContainer = GObject.registerClass(
 
         this._elementsUnit[uuid] = _createUnitLabel("%");
 
-        this.add_child(_createBracketLabel("["));
+        const separatorStart = _createBracketLabel("[");
+        const separatorEnd = _createBracketLabel("]");
+        this._separatorPairs.push({ start: separatorStart, end: separatorEnd });
+        this.add_child(separatorStart);
         this.add_child(this._elementsValue[uuid]);
         this.add_child(this._elementsUnit[uuid]);
-        this.add_child(_createBracketLabel("]"));
+        this.add_child(separatorEnd);
       }
 
       if (memory) {
@@ -331,10 +349,17 @@ export const GpuContainer = GObject.registerClass(
           "resource-monitor-secondary-unit",
         ]);
 
-        this.add_child(_createBracketLabel("[", ["resource-monitor-secondary-bracket"]));
+        const separatorStart = _createBracketLabel("[", [
+          "resource-monitor-secondary-bracket",
+        ]);
+        const separatorEnd = _createBracketLabel("]", [
+          "resource-monitor-secondary-bracket",
+        ]);
+        this._separatorPairs.push({ start: separatorStart, end: separatorEnd });
+        this.add_child(separatorStart);
         this.add_child(this._elementsMemoryValue[uuid]);
         this.add_child(this._elementsMemoryUnit[uuid]);
-        this.add_child(_createBracketLabel("]", ["resource-monitor-secondary-bracket"]));
+        this.add_child(separatorEnd);
       }
 
       if (thermal) {
@@ -346,11 +371,27 @@ export const GpuContainer = GObject.registerClass(
           "resource-monitor-secondary-unit",
         ]);
 
-        this.add_child(_createBracketLabel("[", ["resource-monitor-secondary-bracket"]));
+        const separatorStart = _createBracketLabel("[", [
+          "resource-monitor-secondary-bracket",
+        ]);
+        const separatorEnd = _createBracketLabel("]", [
+          "resource-monitor-secondary-bracket",
+        ]);
+        this._separatorPairs.push({ start: separatorStart, end: separatorEnd });
+        this.add_child(separatorStart);
         this.add_child(this._elementsThermalValue[uuid]);
         this.add_child(this._elementsThermalUnit[uuid]);
-        this.add_child(_createBracketLabel("]", ["resource-monitor-secondary-bracket"]));
+        this.add_child(separatorEnd);
       }
+    }
+
+    set_separator_style(style) {
+      const { start, end } = _getSeparatorPair(style);
+
+      this._separatorPairs.forEach((pair) => {
+        pair.start.text = start;
+        pair.end.text = end;
+      });
     }
 
     update_element_value(uuid, value, unit, style = "") {

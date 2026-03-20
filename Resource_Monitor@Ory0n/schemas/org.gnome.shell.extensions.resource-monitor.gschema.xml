@@ -52,6 +52,11 @@
             <summary>Icon position</summary>
             <description>Controls whether icons are shown to the left or right of their associated values.</description>
         </key>
+        <key name="secondaryseparatorstyle" type="s">
+            <default>"dot"</default>
+            <summary>Secondary metrics separator style</summary>
+            <description>Chooses how secondary metrics are separated in the panel: dot, slash, or brackets.</description>
+        </key>
         <key name="itemsposition" type="as">
             <default>["cpu", "ram", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
             <summary>Resource ordering</summary>

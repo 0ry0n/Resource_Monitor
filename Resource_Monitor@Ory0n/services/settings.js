@@ -7,6 +7,9 @@ export function initializeSettings(indicator, keys) {
 
   indicator._iconsStatus = indicator._settings.get_boolean(keys.ICONS_STATUS);
   indicator._iconsPosition = indicator._settings.get_string(keys.ICONS_POSITION);
+  indicator._secondarySeparatorStyle = indicator._settings.get_string(
+    keys.SECONDARY_SEPARATOR_STYLE
+  );
   indicator._itemsPosition = indicator._settings.get_strv(keys.ITEMS_POSITION);
 
   indicator._cpuStatus = indicator._settings.get_boolean(keys.CPU_STATUS);
@@ -148,6 +151,7 @@ export function connectSettingsSignals(indicator, keys) {
     [keys.RIGHT_CLICK_STATUS, "_rightClickStatusChanged"],
     [keys.ICONS_STATUS, "_iconsStatusChanged"],
     [keys.ICONS_POSITION, "_iconsPositionChanged"],
+    [keys.SECONDARY_SEPARATOR_STYLE, "_secondarySeparatorStyleChanged"],
     [keys.ITEMS_POSITION, "_itemsPositionChanged"],
     [keys.CPU_STATUS, "_cpuStatusChanged"],
     [keys.CPU_WIDTH, "_cpuWidthChanged"],
@@ -228,6 +232,7 @@ export function connectSettingsSignals(indicator, keys) {
 export function refreshGui(indicator) {
   indicator._rightClickStatusChanged();
   indicator._iconsStatusChanged();
+  indicator._secondarySeparatorStyleChanged();
   indicator._cpuStatusChanged();
   indicator._cpuWidthChanged();
   indicator._cpuFrequencyStatusChanged();
