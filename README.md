@@ -3,6 +3,8 @@
 # Resource Monitor (GNOME Shell Extension) [<img src="https://raw.githubusercontent.com/andyholmes/gnome-shell-extensions-badge/master/get-it-on-ego.svg?sanitize=true" alt="Get it on GNOME Extensions" height="100" align="right">][ego]
 
 [![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![Sponsor](https://img.shields.io/badge/Sponsor-GitHub-pink?logo=githubsponsors)](https://github.com/sponsors/0ry0n)
+[![Donate](https://img.shields.io/badge/Donate-PayPal-00457C?logo=paypal&logoColor=white)](https://www.paypal.com/paypalme/0ry0n)
 
 Resource Monitor is a GNOME Shell extension that shows live system metrics directly in the top bar.
 
@@ -13,6 +15,10 @@ Multi-panel mode is supported through Dash to Panel. Without Dash to Panel, the 
 Current stable release: `27` (`2026-03-20`).
 
 ![Resource Monitor main view](images/main.png)
+
+## Support the Project
+
+If this extension is useful to you, you can support ongoing development via [GitHub Sponsors](https://github.com/sponsors/0ry0n) or [PayPal](https://www.paypal.com/paypalme/0ry0n).
 
 ## Supported GNOME Shell Versions
 
