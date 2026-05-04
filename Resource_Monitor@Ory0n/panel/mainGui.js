@@ -3,6 +3,7 @@ import Gio from "gi://Gio";
 import St from "gi://St";
 
 import { DiskContainerSpace, DiskContainerStats, GpuContainer } from "./containers.js";
+import { getPanelGroupVisibility } from "../services/visibility.js";
 
 function _addStyleClasses(actor, classes) {
   classes.forEach((cssClass) => actor.add_style_class_name(cssClass));
@@ -325,8 +326,35 @@ export function buildMainGui(indicator) {
   });
 
   applySecondarySeparatorStyle(indicator);
+  syncMainGuiVisibility(indicator);
 
   if (indicator._box.get_parent() !== indicator) {
     indicator.add_child(indicator._box);
   }
+}
+
+export function syncMainGuiVisibility(indicator) {
+  const visibility = getPanelGroupVisibility(indicator);
+  const groupsByItem = {
+    cpu: indicator._cpuGroup,
+    ram: indicator._ramGroup,
+    swap: indicator._swapGroup,
+    stats: indicator._diskStatsGroup,
+    space: indicator._diskSpaceGroup,
+    eth: indicator._ethGroup,
+    wlan: indicator._wlanGroup,
+    gpu: indicator._gpuGroup,
+  };
+
+  Object.entries(groupsByItem).forEach(([item, group]) => {
+    if (!group) {
+      return;
+    }
+
+    if (visibility[item]) {
+      group.show();
+    } else {
+      group.hide();
+    }
+  });
 }

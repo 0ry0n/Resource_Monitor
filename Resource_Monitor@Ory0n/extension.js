@@ -53,6 +53,7 @@ import {
   applySecondarySeparatorStyle,
   buildMainGui,
   createMainGui,
+  syncMainGuiVisibility,
 } from "./panel/mainGui.js";
 import {
   detectCapabilities,
@@ -1679,6 +1680,10 @@ const ResourceMonitor = GObject.registerClass(
       syncThermalCpuVisibility(this);
     }
 
+    _syncMainGuiVisibility() {
+      syncMainGuiVisibility(this);
+    }
+
     _refreshHandler(forceGpu = false) {
       return refreshHandler(this, forceGpu);
     }
@@ -1839,6 +1844,8 @@ const ResourceMonitor = GObject.registerClass(
           element.hide();
         });
       }
+
+      this._syncMainGuiVisibility();
     }
 
     _basicItemWidth(width, element) {
