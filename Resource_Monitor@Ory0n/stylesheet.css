@@ -2,6 +2,10 @@
   spacing: 0.35em;
 }
 
+.resource-monitor-box.resource-monitor-icons-hidden {
+  spacing: 0.65em;
+}
+
 .resource-monitor-group {
   spacing: 0.05em;
 }
@@ -14,6 +18,10 @@
 .resource-monitor-unit {
   padding-left: 0.125em;
   padding-right: 0.3em;
+}
+
+.resource-monitor-box.resource-monitor-icons-hidden .resource-monitor-unit {
+  padding-right: 0;
 }
 
 .resource-monitor-bracket {

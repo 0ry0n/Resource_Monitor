@@ -633,8 +633,8 @@ const ResourceMonitor = GObject.registerClass(
       createMainGui(this);
     }
 
-    _buildMainGui() {
-      buildMainGui(this);
+    _buildMainGui(options = {}) {
+      buildMainGui(this, options);
     }
 
     // SETTINGS
@@ -855,7 +855,13 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _iconsStatusChanged() {
+      const previousIconsStatus = this._iconsStatus;
       this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
+
+      if (previousIconsStatus !== this._iconsStatus && this._box?.get_parent()) {
+        this._box.remove_all_children();
+        this._buildMainGui({ refresh: false });
+      }
 
       if (this._iconsStatus) {
         if (
