@@ -366,6 +366,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._connectSettingsSignals();
 
+      this.clear_actions();
       this.connect("button-press-event", this._clickManager.bind(this));
       this.connect("key-press-event", this._onKeyPressEvent.bind(this));
 
