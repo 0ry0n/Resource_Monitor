@@ -16,6 +16,7 @@ import {
   parseLoadAverage,
 } from "../Resource_Monitor@Ory0n/runtime/metrics.js";
 import { buildNetworkSample } from "../Resource_Monitor@Ory0n/runtime/network.js";
+import { getPanelGroupVisibility } from "../Resource_Monitor@Ory0n/services/visibility.js";
 
 function assert(condition, message) {
   if (!condition) {
@@ -40,6 +41,43 @@ function assertThrows(callback, message) {
   if (!didThrow) {
     throw new Error(message);
   }
+}
+
+function createVisibilityIndicator(overrides = {}) {
+  const defaults = {
+    _capabilities: {
+      cpuFrequency: false,
+      gpu: false,
+      thermalHwmon: false,
+    },
+    _cpuStatus: false,
+    _cpuFrequencyStatus: false,
+    _cpuLoadAverageStatus: false,
+    _thermalCpuTemperatureStatus: false,
+    _thermalCpuTemperatureDevices: [],
+    _ramStatus: false,
+    _swapStatus: false,
+    _diskStatsStatus: false,
+    _diskSpaceStatus: false,
+    _netEthStatus: false,
+    _netWlanStatus: false,
+    _netAutoHideStatus: false,
+    _nmEthStatus: false,
+    _nmWlanStatus: false,
+    _gpuStatus: false,
+    _thermalGpuTemperatureStatus: false,
+    _gpuDevices: [],
+    _thermalGpuTemperatureDevices: [],
+  };
+
+  return {
+    ...defaults,
+    ...overrides,
+    _capabilities: {
+      ...defaults._capabilities,
+      ...(overrides._capabilities ?? {}),
+    },
+  };
 }
 
 function testDiskSerializationRoundtrip() {
@@ -340,6 +378,68 @@ function testLoadAverageInvalidInputFallback() {
   );
 }
 
+function testPanelGroupVisibilityRamOnly() {
+  const visibility = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _ramStatus: true,
+    })
+  );
+
+  assert(visibility.ram === true, "RAM group should be visible");
+  assert(visibility.cpu === false, "CPU group should be hidden");
+  assert(visibility.swap === false, "Swap group should be hidden");
+  assert(visibility.stats === false, "Disk stats group should be hidden");
+  assert(visibility.space === false, "Disk space group should be hidden");
+  assert(visibility.eth === false, "Ethernet group should be hidden");
+  assert(visibility.wlan === false, "Wi-Fi group should be hidden");
+  assert(visibility.gpu === false, "GPU group should be hidden");
+}
+
+function testPanelGroupVisibilityCpuSecondaryMetric() {
+  const visibility = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _capabilities: {
+        cpuFrequency: true,
+      },
+      _cpuFrequencyStatus: true,
+    })
+  );
+
+  assert(
+    visibility.cpu === true,
+    "CPU group should be visible for CPU frequency without CPU usage"
+  );
+  assert(visibility.ram === false, "RAM group should be hidden");
+}
+
+function testPanelGroupVisibilityNetworkAutoHide() {
+  const disconnected = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _netAutoHideStatus: true,
+      _netEthStatus: true,
+      _nmEthStatus: false,
+    })
+  );
+
+  assert(
+    disconnected.eth === false,
+    "Ethernet group should be hidden when auto-hide is enabled and disconnected"
+  );
+
+  const connected = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _netAutoHideStatus: true,
+      _netEthStatus: true,
+      _nmEthStatus: true,
+    })
+  );
+
+  assert(
+    connected.eth === true,
+    "Ethernet group should be visible when auto-hide is enabled and connected"
+  );
+}
+
 testDiskSerializationRoundtrip();
 testLegacySettingsEntriesAreRejected();
 testGpuSerializationRoundtrip();
@@ -352,5 +452,8 @@ testDiskStatsSectorConversion();
 testNetworkCounterReset();
 testNetworkParsingWithoutTrailingNewline();
 testLoadAverageInvalidInputFallback();
+testPanelGroupVisibilityRamOnly();
+testPanelGroupVisibilityCpuSecondaryMetric();
+testPanelGroupVisibilityNetworkAutoHide();
 
 console.log("Runtime smoke tests passed.");
