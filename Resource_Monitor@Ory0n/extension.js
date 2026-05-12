@@ -40,6 +40,7 @@ import {
   parseThermalGpuEntry,
   serializeThermalCpuEntry,
 } from "./common.js";
+import { readIndicatorFormattingSettings } from "./indicatorFormatting.js";
 import {
   convertValuesToUnit,
   getUsageColor,
@@ -101,7 +102,6 @@ import {
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
 const DISPLAY_MODE = "displaymode";
-const DECIMALS_STATUS = "decimalsstatus";
 const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
 const RIGHT_CLICK_STATUS = "rightclickstatus";
@@ -210,7 +210,6 @@ async function _loadNetworkManager() {
 
 const SETTINGS_KEYS = {
   REFRESH_TIME,
-  DECIMALS_STATUS,
   DATA_SCALE_BASE,
   LEFT_CLICK_STATUS,
   RIGHT_CLICK_STATUS,
@@ -834,14 +833,13 @@ const ResourceMonitor = GObject.registerClass(
       );
     }
 
-    _decimalsStatusChanged() {
-      this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
-
+    _dataScaleBaseChanged() {
+      this._dataScaleBase = this._settings.get_string(DATA_SCALE_BASE);
       this._refreshHandler(true);
     }
 
-    _dataScaleBaseChanged() {
-      this._dataScaleBase = this._settings.get_string(DATA_SCALE_BASE);
+    _indicatorFormattingChanged() {
+      this._indicatorFormatting = readIndicatorFormattingSettings(this._settings);
       this._refreshHandler(true);
     }
 
@@ -1738,6 +1736,7 @@ const ResourceMonitor = GObject.registerClass(
         valueLabel,
         unitLabel,
         colors,
+        formattingId,
       } = options;
 
       if (
@@ -1754,7 +1753,7 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       valueLabel.style = this._getUsageColor(display.value, colors);
-      valueLabel.text = `${this._getValueFixed(display.value)}`;
+      valueLabel.text = `${this._getValueFixed(display.value, formattingId)}`;
       unitLabel.text = display.unit;
     }
 
@@ -1772,8 +1771,11 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     // Decimal precision
-    _getValueFixed(value) {
-      return getValueFixed(value, this._decimalsStatus);
+    _getValueFixed(value, indicatorId) {
+      return getValueFixed(
+        value,
+        indicatorId ? this._indicatorFormatting?.[indicatorId] : {}
+      );
     }
 
     // Conversion of array of values (network/disk)

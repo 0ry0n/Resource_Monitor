@@ -151,7 +151,7 @@ export function refreshCpuValue(indicator) {
           usage,
           indicator._cpuColors
         );
-        indicator._cpuValue.text = `${indicator._getValueFixed(usage)}`;
+        indicator._cpuValue.text = `${indicator._getValueFixed(usage, "cpu")}`;
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
@@ -194,6 +194,7 @@ export function refreshRamValue(indicator) {
             valueLabel: indicator._ramValue,
             unitLabel: indicator._ramUnit,
             colors: indicator._ramColors,
+            formattingId: "ram",
           }
         );
       })
@@ -238,6 +239,7 @@ export function refreshSwapValue(indicator) {
             valueLabel: indicator._swapValue,
             unitLabel: indicator._swapUnit,
             colors: indicator._swapColors,
+            formattingId: "swap",
           }
         );
       })
@@ -294,7 +296,7 @@ export function refreshDiskStatsValue(indicator) {
 
           indicator._diskStatsBox.update_element_value(
             filesystem,
-            `${indicator._getValueFixed(rw[0])}|${indicator._getValueFixed(rw[1])}`,
+            `${indicator._getValueFixed(rw[0], "diskStats")}|${indicator._getValueFixed(rw[1], "diskStats")}`,
             unit,
             indicator._getUsageColor(rw, indicator._diskStatsColors)
           );
@@ -388,9 +390,7 @@ export function refreshDiskSpaceValue(indicator) {
 
           indicator._diskSpaceBox.update_element_value(
             entry.filesystem,
-            display.isPercent
-              ? `${display.value}`
-              : `${indicator._getValueFixed(display.value)}`,
+            `${indicator._getValueFixed(display.value, "diskSpace")}`,
             display.unit,
             indicator._getUsageColor(display.value, indicator._diskSpaceColors)
           );
@@ -441,8 +441,9 @@ export function refreshEthValue(indicator) {
           indicator._netEthColors
         );
         indicator._ethValue.text = `${indicator._getValueFixed(
-          sample.values[0]
-        )}|${indicator._getValueFixed(sample.values[1])}`;
+          sample.values[0],
+          "netEth"
+        )}|${indicator._getValueFixed(sample.values[1], "netEth")}`;
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
@@ -479,8 +480,9 @@ export function refreshWlanValue(indicator) {
           indicator._netWlanColors
         );
         indicator._wlanValue.text = `${indicator._getValueFixed(
-          sample.values[0]
-        )}|${indicator._getValueFixed(sample.values[1])}`;
+          sample.values[0],
+          "netWlan"
+        )}|${indicator._getValueFixed(sample.values[1], "netWlan")}`;
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
@@ -538,7 +540,8 @@ export function refreshCpuFrequencyValue(indicator) {
           indicator._cpuFrequencyColors
         );
         indicator._cpuFrequencyValue.text = `${indicator._getValueFixed(
-          display.value
+          display.value,
+          "cpuFrequency"
         )}`;
         indicator._cpuFrequencyUnit.text = display.unit;
       })
@@ -566,7 +569,9 @@ export function refreshCpuLoadAverageValue(indicator) {
           display.values[0],
           indicator._cpuLoadAverageColors
         );
-        indicator._cpuLoadAverageValue.text = display.text;
+        indicator._cpuLoadAverageValue.text = display.values
+          .map((value) => indicator._getValueFixed(value, "cpuLoadAverage"))
+          .join(" ");
       })
       .catch((error) => {
         if (!indicator._isCancelledError(error)) {
@@ -611,7 +616,8 @@ export function refreshCpuTemperatureValue(indicator) {
           indicator._clearLoggedIssue("thermal-cpu-read-error");
           syncThermalCpuVisibility(indicator);
           indicator._cpuTemperatureValue.text = `${indicator._getValueFixed(
-            display.value
+            display.value,
+            "thermalCpu"
           )}`;
           indicator._cpuTemperatureUnit.text = display.unit;
           indicator._cpuTemperatureValue.style = indicator._getUsageColor(
@@ -722,7 +728,9 @@ export function refreshGpuValue(indicator, options = {}) {
 
         indicator._gpuBox.update_element_value(
           device.device,
-          usageValue === null ? "--" : `${indicator._getValueFixed(usageValue)}`,
+          usageValue === null
+            ? "--"
+            : `${indicator._getValueFixed(usageValue, "gpu")}`,
           "%",
           usageValue === null
             ? ""
@@ -733,7 +741,7 @@ export function refreshGpuValue(indicator, options = {}) {
           device.device,
           temperatureValue === null
             ? "--"
-            : `${indicator._getValueFixed(temperatureValue)}`,
+            : `${indicator._getValueFixed(temperatureValue, "thermalGpu")}`,
           entry?.temperatureUnit ?? defaultTemperatureUnit,
           temperatureValue === null
             ? ""
@@ -742,7 +750,9 @@ export function refreshGpuValue(indicator, options = {}) {
 
         indicator._gpuBox.update_element_memory_value(
           device.device,
-          memoryValue === null ? "--" : `${indicator._getValueFixed(memoryValue)}`,
+          memoryValue === null
+            ? "--"
+            : `${indicator._getValueFixed(memoryValue, "gpuMemory")}`,
           entry?.memoryUnit ?? defaultMemoryUnit,
           memoryValue === null
             ? ""

@@ -11,6 +11,7 @@ import {
 } from "../Resource_Monitor@Ory0n/runtime/gpu.js";
 import { buildMemoryDisplay } from "../Resource_Monitor@Ory0n/runtime/memory.js";
 import {
+  getValueFixed,
   parseCpuUsage,
   parseDiskStats,
   parseLoadAverage,
@@ -378,6 +379,42 @@ function testLoadAverageInvalidInputFallback() {
   );
 }
 
+function testIndicatorValueFormatting() {
+  assert(
+    getValueFixed(12.34, {
+      decimals: 2,
+    }) === "12.34",
+    "Precise formatting should honor indicator decimals"
+  );
+
+  assert(
+    getValueFixed(12.34, {
+      decimals: 0,
+      renderMode: "step",
+      renderStep: 5,
+    }) === "10",
+    "Step formatting should quantize to the lower configured step"
+  );
+
+  assert(
+    getValueFixed(7.99, {
+      decimals: 1,
+      renderMode: "step",
+      renderStep: 2,
+    }) === "6.0",
+    "Step formatting should use integer-only steps after quantization"
+  );
+
+  assert(
+    getValueFixed(17, {
+      decimals: 0,
+      renderMode: "step",
+      renderStep: 5,
+    }) === "15",
+    "Step formatting should also apply cleanly to percentage-like integer values"
+  );
+}
+
 function testPanelGroupVisibilityRamOnly() {
   const visibility = getPanelGroupVisibility(
     createVisibilityIndicator({
@@ -452,6 +489,7 @@ testDiskStatsSectorConversion();
 testNetworkCounterReset();
 testNetworkParsingWithoutTrailingNewline();
 testLoadAverageInvalidInputFallback();
+testIndicatorValueFormatting();
 testPanelGroupVisibilityRamOnly();
 testPanelGroupVisibilityCpuSecondaryMetric();
 testPanelGroupVisibilityNetworkAutoHide();

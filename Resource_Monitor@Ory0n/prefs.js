@@ -37,6 +37,11 @@ import {
   parseThermalGpuEntry,
 } from "./common.js";
 import {
+  INDICATOR_FORMATTING_SPECS,
+  RENDER_MODE_PRECISE,
+  RENDER_MODE_STEP,
+} from "./indicatorFormatting.js";
+import {
   connectComboBox,
   connectSpinButton,
   connectSwitchButton,
@@ -68,7 +73,6 @@ import {
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
 const DISPLAY_MODE = "displaymode";
-const DECIMALS_STATUS = "decimalsstatus";
 const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
 const RIGHT_CLICK_STATUS = "rightclickstatus";
@@ -347,7 +351,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
     }
 
-    _createSpinButton({ upper, lower = 0, step = 1, page = 10 }) {
+    _createSpinButton({ upper, lower = 0, step = 1, page = 10, digits = 0 }) {
       return new Gtk.SpinButton({
         adjustment: new Gtk.Adjustment({
           lower,
@@ -355,6 +359,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           step_increment: step,
           page_increment: page,
         }),
+        digits,
         numeric: true,
         valign: Gtk.Align.CENTER,
       });
@@ -402,6 +407,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       return [
         ["decimal", _("SI (1000)")],
         ["binary", _("IEC (1024)")],
+      ];
+    }
+
+    _getRenderModeOptions() {
+      return [
+        [RENDER_MODE_PRECISE, _("Precise")],
+        [RENDER_MODE_STEP, _("Step")],
       ];
     }
 
@@ -469,6 +481,64 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         ["bytes", _("B/s")],
         ["bits", _("b/s")],
       ];
+    }
+
+    _getIndicatorFormattingSpec(indicatorId) {
+      return INDICATOR_FORMATTING_SPECS.find((spec) => spec.id === indicatorId) ?? null;
+    }
+
+    _createIndicatorFormattingControls(
+      indicatorId,
+      {
+        decimalsUpper = 3,
+        stepUpper = 1000,
+      } = {}
+    ) {
+      const spec = this._getIndicatorFormattingSpec(indicatorId);
+      if (!spec) {
+        throw new Error(`Unknown indicator formatting id: ${indicatorId}`);
+      }
+
+      const decimals = this._createSpinButton({
+        upper: decimalsUpper,
+        step: 1,
+        page: 1,
+      });
+      const renderMode = this._createComboBox(this._getRenderModeOptions());
+      const renderStep = this._createSpinButton({
+        upper: stepUpper,
+        lower: 1,
+        step: 1,
+        page: 1,
+      });
+
+      connectSpinButton(this._settings, spec.decimalsKey, decimals);
+      connectComboBox(this._settings, spec.renderModeKey, renderMode);
+      connectSpinButton(this._settings, spec.renderStepKey, renderStep);
+
+      return {
+        decimals,
+        renderMode,
+        renderStep,
+      };
+    }
+
+    _initializeIndicatorFormattingControls({ display = null, controls }) {
+      const syncSensitivity = () => {
+        const displayActive = display ? display.active : true;
+
+        controls.decimals.sensitive = displayActive;
+        controls.renderMode.sensitive = displayActive;
+        controls.renderStep.sensitive =
+          displayActive &&
+          controls.renderMode.get_active_id() === RENDER_MODE_STEP;
+      };
+
+      if (display) {
+        display.connect("notify::active", syncSensitivity);
+      }
+      controls.renderMode.connect("changed", syncSensitivity);
+      syncSensitivity();
     }
 
     _getCurrentDataScaleBaseLabel() {
@@ -1154,13 +1224,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       appearanceGroup.add(
         this._createActionRow(
-          _("Show Decimal Digits"),
-          _("Enable fractional digits in the panel values."),
-          this._decimalsDisplay
-        )
-      );
-      appearanceGroup.add(
-        this._createActionRow(
           _("Data Unit Base"),
           _("Choose whether data units use SI (1000) or IEC (1024) scaling."),
           this._dataScaleBaseCombobox
@@ -1257,6 +1320,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._cpuWidthSpinbutton
         )
       );
+      usageGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for CPU usage."),
+          this._cpuFormattingControls.decimals
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._cpuFormattingControls.renderMode
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._cpuFormattingControls.renderStep
+        )
+      );
       page.add(usageGroup);
       page.add(
         this._createListGroup(
@@ -1292,6 +1376,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._cpuFrequencyUnitMeasureCombobox
         )
       );
+      frequencyGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for CPU frequency."),
+          this._cpuFrequencyFormattingControls.decimals
+        )
+      );
+      frequencyGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._cpuFrequencyFormattingControls.renderMode
+        )
+      );
+      frequencyGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._cpuFrequencyFormattingControls.renderStep
+        )
+      );
       page.add(frequencyGroup);
       page.add(
         this._createListGroup(
@@ -1318,6 +1423,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Reserved Width"),
           _("Reserve a fixed amount of space for the load average value."),
           this._cpuLoadAverageWidthSpinbutton
+        )
+      );
+      loadAverageGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for load average."),
+          this._cpuLoadAverageFormattingControls.decimals
+        )
+      );
+      loadAverageGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._cpuLoadAverageFormattingControls.renderMode
+        )
+      );
+      loadAverageGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._cpuLoadAverageFormattingControls.renderStep
         )
       );
       page.add(loadAverageGroup);
@@ -1387,6 +1513,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Tracked Value"),
           _("Choose whether to track used or free memory."),
           this._ramMonitorCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for RAM values."),
+          this._ramFormattingControls.decimals
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._ramFormattingControls.renderMode
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._ramFormattingControls.renderStep
         )
       );
       page.add(monitorGroup);
@@ -1476,6 +1623,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Tracked Value"),
           _("Choose whether to track used or free swap."),
           this._swapMonitorCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for swap values."),
+          this._swapFormattingControls.decimals
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._swapFormattingControls.renderMode
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._swapFormattingControls.renderStep
         )
       );
       page.add(monitorGroup);
@@ -1573,6 +1741,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._netEthWidthSpinbutton
         )
       );
+      ethernetGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for Ethernet throughput."),
+          this._netEthFormattingControls.decimals
+        )
+      );
+      ethernetGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._netEthFormattingControls.renderMode
+        )
+      );
+      ethernetGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._netEthFormattingControls.renderStep
+        )
+      );
       page.add(ethernetGroup);
       page.add(
         this._createListGroup(
@@ -1599,6 +1788,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Reserved Width"),
           _("Reserve a fixed amount of space for Wi-Fi throughput."),
           this._netWlanWidthSpinbutton
+        )
+      );
+      wirelessGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for Wi-Fi throughput."),
+          this._netWlanFormattingControls.decimals
+        )
+      );
+      wirelessGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._netWlanFormattingControls.renderMode
+        )
+      );
+      wirelessGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._netWlanFormattingControls.renderStep
         )
       );
       page.add(wirelessGroup);
@@ -1676,6 +1886,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._diskStatsUnitMeasureCombobox
         )
       );
+      statsGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for disk activity."),
+          this._diskStatsFormattingControls.decimals
+        )
+      );
+      statsGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._diskStatsFormattingControls.renderMode
+        )
+      );
+      statsGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._diskStatsFormattingControls.renderStep
+        )
+      );
       page.add(statsGroup);
       page.add(
         this._createListGroup(
@@ -1725,6 +1956,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Tracked Value"),
           _("Choose whether to track used or free space."),
           this._diskSpaceMonitorCombobox
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for disk space values."),
+          this._diskSpaceFormattingControls.decimals
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._diskSpaceFormattingControls.renderMode
+        )
+      );
+      spaceGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._diskSpaceFormattingControls.renderStep
         )
       );
       page.add(spaceGroup);
@@ -1800,6 +2052,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._thermalCpuWidthSpinbutton
         )
       );
+      cpuGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for CPU temperature."),
+          this._thermalCpuFormattingControls.decimals
+        )
+      );
+      cpuGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._thermalCpuFormattingControls.renderMode
+        )
+      );
+      cpuGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._thermalCpuFormattingControls.renderStep
+        )
+      );
       page.add(cpuGroup);
       page.add(
         this._createListGroup(
@@ -1835,6 +2108,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Reserved Width"),
           _("Reserve a fixed amount of space for GPU temperature values."),
           this._thermalGpuWidthSpinbutton
+        )
+      );
+      gpuGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for GPU temperature."),
+          this._thermalGpuFormattingControls.decimals
+        )
+      );
+      gpuGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._thermalGpuFormattingControls.renderMode
+        )
+      );
+      gpuGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._thermalGpuFormattingControls.renderStep
         )
       );
       page.add(gpuGroup);
@@ -1899,6 +2193,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           this._gpuDisplayDeviceName
         )
       );
+      usageGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for GPU usage."),
+          this._gpuFormattingControls.decimals
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._gpuFormattingControls.renderMode
+        )
+      );
+      usageGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._gpuFormattingControls.renderStep
+        )
+      );
       page.add(usageGroup);
       page.add(
         this._createListGroup(
@@ -1934,6 +2249,27 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           _("Tracked Value"),
           _("Choose whether to track used or free GPU memory."),
           this._gpuMemoryMonitorCombobox
+        )
+      );
+      memoryGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for GPU memory."),
+          this._gpuMemoryFormattingControls.decimals
+        )
+      );
+      memoryGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between direct rendering and quantized step rendering."),
+          this._gpuMemoryFormattingControls.renderMode
+        )
+      );
+      memoryGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("When step rendering is enabled, values change only after this increment."),
+          this._gpuMemoryFormattingControls.renderStep
         )
       );
       page.add(memoryGroup);
@@ -2026,7 +2362,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       this._extensionLeftClickEntryCustom.width_chars = 28;
       this._extensionRightClickPrefs = this._createSwitch();
-      this._decimalsDisplay = this._createSwitch();
       this._dataScaleBaseCombobox = this._createComboBox(
         this._getDataScaleBaseOptions()
       );
@@ -2069,11 +2404,6 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._settings,
         RIGHT_CLICK_STATUS,
         this._extensionRightClickPrefs
-      );
-      connectSwitchButton(
-        this._settings,
-        DECIMALS_STATUS,
-        this._decimalsDisplay
       );
       connectComboBox(
         this._settings,
@@ -2233,12 +2563,20 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     _buildCpu() {
       this._cpuDisplay = this._createSwitch();
       this._cpuWidthSpinbutton = this._createSpinButton({ upper: 400 });
+      this._cpuFormattingControls =
+        this._createIndicatorFormattingControls("cpu", {
+          stepUpper: 100,
+        });
       this._cpuColorsAddButton = this._createIconButton("list-add");
       this._cpuColorsListbox = this._createListBox();
       this._cpuFrequencyDisplay = this._createSwitch();
       this._cpuFrequencyWidthSpinbutton = this._createSpinButton({
         upper: 400,
       });
+      this._cpuFrequencyFormattingControls =
+        this._createIndicatorFormattingControls("cpuFrequency", {
+          stepUpper: 10000,
+        });
       this._cpuFrequencyColorsAddButton = this._createIconButton("list-add");
       this._cpuFrequencyColorsListbox = this._createListBox();
       this._cpuFrequencyUnitMeasureCombobox = this._createComboBox(
@@ -2248,6 +2586,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._cpuLoadAverageWidthSpinbutton = this._createSpinButton({
         upper: 400,
       });
+      this._cpuLoadAverageFormattingControls =
+        this._createIndicatorFormattingControls("cpuLoadAverage", {
+          stepUpper: 100,
+        });
       this._cpuLoadAverageColorsAddButton = this._createIconButton("list-add");
       this._cpuLoadAverageColorsListbox = this._createListBox();
 
@@ -2293,6 +2635,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._initializeToggleControlledSection(this._cpuLoadAverageDisplay, [
         this._cpuLoadAverageWidthSpinbutton,
       ]);
+      this._initializeIndicatorFormattingControls({
+        display: this._cpuDisplay,
+        controls: this._cpuFormattingControls,
+      });
+      this._initializeIndicatorFormattingControls({
+        display: this._cpuFrequencyDisplay,
+        controls: this._cpuFrequencyFormattingControls,
+      });
+      this._initializeIndicatorFormattingControls({
+        display: this._cpuLoadAverageDisplay,
+        controls: this._cpuLoadAverageFormattingControls,
+      });
 
       // Cpu Colors
       makeColors(
@@ -2322,6 +2676,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     _buildRam() {
       this._ramDisplay = this._createSwitch();
       this._ramWidthSpinbutton = this._createSpinButton({ upper: 400 });
+      this._ramFormattingControls =
+        this._createIndicatorFormattingControls("ram", {
+          stepUpper: 1000,
+        });
       this._ramColorsAddButton = this._createIconButton("list-add");
       this._ramColorsListbox = this._createListBox();
       this._ramUnitCombobox = this._createComboBox(
@@ -2357,11 +2715,19 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         colorsListbox: this._ramColorsListbox,
         colorsAddButton: this._ramColorsAddButton,
       });
+      this._initializeIndicatorFormattingControls({
+        display: this._ramDisplay,
+        controls: this._ramFormattingControls,
+      });
     }
 
     _buildSwap() {
       this._swapDisplay = this._createSwitch();
       this._swapWidthSpinbutton = this._createSpinButton({ upper: 400 });
+      this._swapFormattingControls =
+        this._createIndicatorFormattingControls("swap", {
+          stepUpper: 1000,
+        });
       this._swapColorsAddButton = this._createIconButton("list-add");
       this._swapColorsListbox = this._createListBox();
       this._swapUnitCombobox = this._createComboBox(
@@ -2397,12 +2763,20 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         colorsListbox: this._swapColorsListbox,
         colorsAddButton: this._swapColorsAddButton,
       });
+      this._initializeIndicatorFormattingControls({
+        display: this._swapDisplay,
+        controls: this._swapFormattingControls,
+      });
     }
 
     _buildDisk() {
       this._diskShowDeviceName = this._createSwitch();
       this._diskStatsDisplay = this._createSwitch();
       this._diskStatsWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._diskStatsFormattingControls =
+        this._createIndicatorFormattingControls("diskStats", {
+          stepUpper: 10000,
+        });
       this._diskStatsColorsAddButton = this._createIconButton("list-add");
       this._diskStatsColorsListbox = this._createListBox();
       this._diskStatsModeCombobox = this._createComboBox([
@@ -2414,6 +2788,10 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       );
       this._diskSpaceDisplay = this._createSwitch();
       this._diskSpaceWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._diskSpaceFormattingControls =
+        this._createIndicatorFormattingControls("diskSpace", {
+          stepUpper: 1000,
+        });
       this._diskSpaceColorsAddButton = this._createIconButton("list-add");
       this._diskSpaceColorsListbox = this._createListBox();
       this._diskSpaceUnitCombobox = this._createComboBox(
@@ -2495,6 +2873,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._diskSpaceMonitorCombobox,
         this._diskSpaceUnitMeasureCombobox,
       ]);
+      this._initializeIndicatorFormattingControls({
+        display: this._diskStatsDisplay,
+        controls: this._diskStatsFormattingControls,
+      });
+      this._initializeIndicatorFormattingControls({
+        display: this._diskSpaceDisplay,
+        controls: this._diskSpaceFormattingControls,
+      });
 
       // ColumnView
       this._diskDevicesModel = new Gio.ListStore({
@@ -2764,10 +3150,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       ]);
       this._netEthDisplay = this._createSwitch();
       this._netEthWidthSpinbutton = this._createSpinButton({ upper: 400 });
+      this._netEthFormattingControls =
+        this._createIndicatorFormattingControls("netEth", {
+          stepUpper: 10000,
+        });
       this._netEthColorsAddButton = this._createIconButton("list-add");
       this._netEthColorsListbox = this._createListBox();
       this._netWlanDisplay = this._createSwitch();
       this._netWlanWidthSpinbutton = this._createSpinButton({ upper: 400 });
+      this._netWlanFormattingControls =
+        this._createIndicatorFormattingControls("netWlan", {
+          stepUpper: 10000,
+        });
       this._netWlanColorsAddButton = this._createIconButton("list-add");
       this._netWlanColorsListbox = this._createListBox();
 
@@ -2809,6 +3203,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._initializeToggleControlledSection(this._netWlanDisplay, [
         this._netWlanWidthSpinbutton,
       ]);
+      this._initializeIndicatorFormattingControls({
+        display: this._netEthDisplay,
+        controls: this._netEthFormattingControls,
+      });
+      this._initializeIndicatorFormattingControls({
+        display: this._netWlanDisplay,
+        controls: this._netWlanFormattingControls,
+      });
 
       // Eth Colors
       makeColors(
@@ -2839,11 +3241,19 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       ]);
       this._thermalCpuDisplay = this._createSwitch();
       this._thermalCpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._thermalCpuFormattingControls =
+        this._createIndicatorFormattingControls("thermalCpu", {
+          stepUpper: 200,
+        });
       this._thermalCpuColorsAddButton = this._createIconButton("list-add");
       this._thermalCpuColorsListbox = this._createListBox();
       this._thermalCpuDevicesColumnView = this._createColumnView();
       this._thermalGpuDisplay = this._createSwitch();
       this._thermalGpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._thermalGpuFormattingControls =
+        this._createIndicatorFormattingControls("thermalGpu", {
+          stepUpper: 200,
+        });
       this._thermalGpuColorsAddButton = this._createIconButton("list-add");
       this._thermalGpuColorsListbox = this._createListBox();
       this._thermalGpuDevicesColumnView = this._createColumnView();
@@ -2881,6 +3291,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._initializeToggleControlledSection(this._thermalGpuDisplay, [
         this._thermalGpuWidthSpinbutton,
       ]);
+      this._initializeIndicatorFormattingControls({
+        display: this._thermalCpuDisplay,
+        controls: this._thermalCpuFormattingControls,
+      });
+      this._initializeIndicatorFormattingControls({
+        display: this._thermalGpuDisplay,
+        controls: this._thermalGpuFormattingControls,
+      });
 
       // CPU
       // ColumnView
@@ -3012,10 +3430,18 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       this._gpuDisplay = this._createSwitch();
       this._gpuWidthSpinbutton = this._createSpinButton({ upper: 500 });
+      this._gpuFormattingControls =
+        this._createIndicatorFormattingControls("gpu", {
+          stepUpper: 100,
+        });
       this._gpuColorsAddButton = this._createIconButton("list-add");
       this._gpuColorsListbox = this._createListBox();
       this._gpuMemoryColorsAddButton = this._createIconButton("list-add");
       this._gpuMemoryColorsListbox = this._createListBox();
+      this._gpuMemoryFormattingControls =
+        this._createIndicatorFormattingControls("gpuMemory", {
+          stepUpper: 1000,
+        });
       this._gpuMemoryUnitCombobox = this._createComboBox(
         this._getNumericOrPercentOptions()
       );
@@ -3064,6 +3490,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._gpuMemoryMonitorCombobox,
         this._gpuDisplayDeviceName,
       ]);
+      this._initializeIndicatorFormattingControls({
+        display: this._gpuDisplay,
+        controls: this._gpuFormattingControls,
+      });
+      this._initializeIndicatorFormattingControls({
+        display: this._gpuDisplay,
+        controls: this._gpuMemoryFormattingControls,
+      });
 
       // ColumnView
       this._gpuDevicesModel = new Gio.ListStore({
