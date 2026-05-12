@@ -11,6 +11,7 @@ function _addStyleClasses(actor, classes) {
 
 function _createGroupBox(name) {
   const box = new St.BoxLayout({
+    x_align: Clutter.ActorAlign.CENTER,
     style_class: "resource-monitor-group",
   });
   box.add_style_class_name(`resource-monitor-group-${name}`);
@@ -98,8 +99,8 @@ export function applySecondarySeparatorStyle(indicator) {
   }
 }
 
-function _appendCpuChildren(indicator, addChild, iconsPosition) {
-  if (iconsPosition === "left") {
+function _appendCpuChildren(indicator, addChild, iconsPosition, iconsStatus) {
+  if (iconsStatus && iconsPosition === "left") {
     addChild(indicator._cpuIcon);
   }
 
@@ -117,32 +118,39 @@ function _appendCpuChildren(indicator, addChild, iconsPosition) {
   addChild(indicator._cpuLoadAverageValue);
   addChild(indicator._cpuLoadAverageBracketEnd);
 
-  if (iconsPosition !== "left") {
+  if (iconsStatus && iconsPosition !== "left") {
     addChild(indicator._cpuIcon);
   }
 }
 
-function _appendSimpleChildren(icon, value, unit, addChild, iconsPosition) {
-  if (iconsPosition === "left") {
+function _appendSimpleChildren(
+  icon,
+  value,
+  unit,
+  addChild,
+  iconsPosition,
+  iconsStatus
+) {
+  if (iconsStatus && iconsPosition === "left") {
     addChild(icon);
   }
 
   addChild(value);
   addChild(unit);
 
-  if (iconsPosition !== "left") {
+  if (iconsStatus && iconsPosition !== "left") {
     addChild(icon);
   }
 }
 
-function _appendSingleBoxChildren(icon, box, addChild, iconsPosition) {
-  if (iconsPosition === "left") {
+function _appendSingleBoxChildren(icon, box, addChild, iconsPosition, iconsStatus) {
+  if (iconsStatus && iconsPosition === "left") {
     addChild(icon);
   }
 
   addChild(box);
 
-  if (iconsPosition !== "left") {
+  if (iconsStatus && iconsPosition !== "left") {
     addChild(icon);
   }
 }
@@ -162,6 +170,7 @@ function _getGroupsByItem(indicator) {
 
 export function createMainGui(indicator) {
   indicator._box = new St.BoxLayout({
+    x_align: Clutter.ActorAlign.CENTER,
     style_class: "resource-monitor-box",
   });
   indicator._cpuGroup = _createGroupBox("cpu");
@@ -244,22 +253,31 @@ export function createMainGui(indicator) {
   indicator._gpuBox = new GpuContainer();
 }
 
-export function buildMainGui(indicator) {
-  indicator._refreshGui();
+export function buildMainGui(indicator, options = {}) {
+  const { refresh = true } = options;
+
+  if (refresh) {
+    indicator._refreshGui();
+  }
 
   const iconsPosition = indicator._iconsPosition;
+  const iconsStatus = indicator._iconsStatus;
   indicator._box.remove_style_class_name("resource-monitor-icons-left");
   indicator._box.remove_style_class_name("resource-monitor-icons-right");
+  indicator._box.remove_style_class_name("resource-monitor-icons-hidden");
   indicator._box.add_style_class_name(
     iconsPosition === "left"
       ? "resource-monitor-icons-left"
       : "resource-monitor-icons-right"
   );
+  if (!iconsStatus) {
+    indicator._box.add_style_class_name("resource-monitor-icons-hidden");
+  }
 
   const groupsByItem = _getGroupsByItem(indicator);
 
   _replaceGroupChildren(indicator._cpuGroup, (addChild) =>
-    _appendCpuChildren(indicator, addChild, iconsPosition)
+    _appendCpuChildren(indicator, addChild, iconsPosition, iconsStatus)
   );
   _replaceGroupChildren(indicator._ramGroup, (addChild) =>
     _appendSimpleChildren(
@@ -267,7 +285,8 @@ export function buildMainGui(indicator) {
       indicator._ramValue,
       indicator._ramUnit,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
   _replaceGroupChildren(indicator._swapGroup, (addChild) =>
@@ -276,7 +295,8 @@ export function buildMainGui(indicator) {
       indicator._swapValue,
       indicator._swapUnit,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
   _replaceGroupChildren(indicator._diskStatsGroup, (addChild) =>
@@ -284,7 +304,8 @@ export function buildMainGui(indicator) {
       indicator._diskStatsIcon,
       indicator._diskStatsBox,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
   _replaceGroupChildren(indicator._diskSpaceGroup, (addChild) =>
@@ -292,7 +313,8 @@ export function buildMainGui(indicator) {
       indicator._diskSpaceIcon,
       indicator._diskSpaceBox,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
   _replaceGroupChildren(indicator._ethGroup, (addChild) =>
@@ -301,7 +323,8 @@ export function buildMainGui(indicator) {
       indicator._ethValue,
       indicator._ethUnit,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
   _replaceGroupChildren(indicator._wlanGroup, (addChild) =>
@@ -310,7 +333,8 @@ export function buildMainGui(indicator) {
       indicator._wlanValue,
       indicator._wlanUnit,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
   _replaceGroupChildren(indicator._gpuGroup, (addChild) =>
@@ -318,7 +342,8 @@ export function buildMainGui(indicator) {
       indicator._gpuIcon,
       indicator._gpuBox,
       addChild,
-      iconsPosition
+      iconsPosition,
+      iconsStatus
     )
   );
 
