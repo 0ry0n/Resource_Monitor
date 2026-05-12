@@ -147,6 +147,19 @@ function _appendSingleBoxChildren(icon, box, addChild, iconsPosition) {
   }
 }
 
+function _getGroupsByItem(indicator) {
+  return {
+    cpu: indicator._cpuGroup,
+    ram: indicator._ramGroup,
+    swap: indicator._swapGroup,
+    stats: indicator._diskStatsGroup,
+    space: indicator._diskSpaceGroup,
+    eth: indicator._ethGroup,
+    wlan: indicator._wlanGroup,
+    gpu: indicator._gpuGroup,
+  };
+}
+
 export function createMainGui(indicator) {
   indicator._box = new St.BoxLayout({
     style_class: "resource-monitor-box",
@@ -243,16 +256,7 @@ export function buildMainGui(indicator) {
       : "resource-monitor-icons-right"
   );
 
-  const groupsByItem = {
-    cpu: indicator._cpuGroup,
-    ram: indicator._ramGroup,
-    swap: indicator._swapGroup,
-    stats: indicator._diskStatsGroup,
-    space: indicator._diskSpaceGroup,
-    eth: indicator._ethGroup,
-    wlan: indicator._wlanGroup,
-    gpu: indicator._gpuGroup,
-  };
+  const groupsByItem = _getGroupsByItem(indicator);
 
   _replaceGroupChildren(indicator._cpuGroup, (addChild) =>
     _appendCpuChildren(indicator, addChild, iconsPosition)
@@ -335,16 +339,7 @@ export function buildMainGui(indicator) {
 
 export function syncMainGuiVisibility(indicator) {
   const visibility = getPanelGroupVisibility(indicator);
-  const groupsByItem = {
-    cpu: indicator._cpuGroup,
-    ram: indicator._ramGroup,
-    swap: indicator._swapGroup,
-    stats: indicator._diskStatsGroup,
-    space: indicator._diskSpaceGroup,
-    eth: indicator._ethGroup,
-    wlan: indicator._wlanGroup,
-    gpu: indicator._gpuGroup,
-  };
+  const groupsByItem = _getGroupsByItem(indicator);
 
   Object.entries(groupsByItem).forEach(([item, group]) => {
     if (!group) {
