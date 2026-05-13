@@ -255,11 +255,7 @@ export function makeThermalColumnView(view, type, onToggle) {
     factory: createLabelFactory((item) => item.name),
     resizable: true,
   });
-  if (typeof nameCol.set_expand === "function") {
-    nameCol.set_expand(true);
-  } else if ("expand" in nameCol) {
-    nameCol.expand = true;
-  }
+  nameCol.set_expand(true);
   view.append_column(nameCol);
 
   const monitorFactory = new Gtk.SignalListItemFactory();
@@ -290,7 +286,7 @@ export function makeThermalColumnView(view, type, onToggle) {
 
   monitorFactory.connect("unbind", (factoryObject, listItem) => {
     const toggle = listItem.get_child();
-    if (toggle?._resourceMonitorToggleHandlerId) {
+    if (toggle && toggle._resourceMonitorToggleHandlerId) {
       toggle.disconnect(toggle._resourceMonitorToggleHandlerId);
       toggle._resourceMonitorToggleHandlerId = null;
     }
@@ -301,11 +297,7 @@ export function makeThermalColumnView(view, type, onToggle) {
     factory: monitorFactory,
     resizable: true,
   });
-  if (typeof monitorCol.set_fixed_width === "function") {
-    monitorCol.set_fixed_width(110);
-  } else if ("fixed_width" in monitorCol) {
-    monitorCol.fixed_width = 110;
-  }
+  monitorCol.set_fixed_width(110);
   view.append_column(monitorCol);
 
   return model;

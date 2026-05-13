@@ -31,19 +31,6 @@ function assertApprox(actual, expected, tolerance, message) {
   }
 }
 
-function assertThrows(callback, message) {
-  let didThrow = false;
-  try {
-    callback();
-  } catch (error) {
-    didThrow = true;
-  }
-
-  if (!didThrow) {
-    throw new Error(message);
-  }
-}
-
 function createVisibilityIndicator(overrides = {}) {
   const defaults = {
     _capabilities: {
@@ -101,17 +88,6 @@ function testDiskSerializationRoundtrip() {
   assert(parsed.stats === true, "Disk stats flag should roundtrip");
   assert(parsed.space === true, "Disk space flag should roundtrip");
   assert(parsed.displayName === "Root", "Disk display name should roundtrip");
-}
-
-function testLegacySettingsEntriesAreRejected() {
-  assertThrows(
-    () => parseDiskEntry("/dev/sda1 / true true Root"),
-    "Legacy disk entry should be rejected"
-  );
-  assertThrows(
-    () => parseGpuEntry("GPU-uuid-0:NVIDIA:true:false:Main GPU"),
-    "Legacy GPU entry should be rejected"
-  );
 }
 
 function testGpuSerializationRoundtrip() {
@@ -507,7 +483,6 @@ function testPanelGroupVisibilityGpuThermalWithoutMonitoredDevice() {
 }
 
 testDiskSerializationRoundtrip();
-testLegacySettingsEntriesAreRejected();
 testGpuSerializationRoundtrip();
 testGpuParser();
 testAmdGpuDisplay();

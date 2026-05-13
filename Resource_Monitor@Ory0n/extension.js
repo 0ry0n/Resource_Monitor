@@ -387,10 +387,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this.accessible_name = accessibleName;
       this.accessible_role = Atk.Role.PUSH_BUTTON;
-
-      if (typeof this.set_accessible_name === "function") {
-        this.set_accessible_name(accessibleName);
-      }
+      this.set_accessible_name(accessibleName);
 
       this._setPanelTooltip(
         _("Left-click launches the configured action.")
@@ -402,11 +399,7 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _setPanelTooltip(text) {
-      if (typeof this.set_tooltip_text === "function") {
-        this.set_tooltip_text(text);
-      } else {
-        this.tooltip_text = text;
-      }
+      this.set_tooltip_text(text);
     }
 
     _isPrimaryActionConfigured() {
@@ -1942,29 +1935,21 @@ export default class ResourceMonitorExtension extends Extension {
     this._disconnectPanelProviderSignals();
 
     const dashToPanel = global?.dashToPanel;
-    if (!dashToPanel || typeof dashToPanel.connect !== "function") {
+    if (!dashToPanel) {
       return;
     }
 
     ["panels-created", "panels-destroyed"].forEach((signalName) => {
-      try {
-        const id = dashToPanel.connect(signalName, () => {
-          if (this._isAllPanelsMode()) {
-            this._queueIndicatorsRebuild();
-          }
-        });
-        this._panelProviderSignals.push({ emitter: dashToPanel, id });
-      } catch (error) {
-        // Signal may not exist in this provider version.
-      }
+      const id = dashToPanel.connect(signalName, () => {
+        if (this._isAllPanelsMode()) {
+          this._queueIndicatorsRebuild();
+        }
+      });
+      this._panelProviderSignals.push({ emitter: dashToPanel, id });
     });
   }
 
   _connectExtensionManagerSignals() {
-    if (typeof Main.extensionManager?.connect !== "function") {
-      return;
-    }
-
     this._extensionManagerHandlerId = Main.extensionManager.connect(
       "extension-state-changed",
       (manager, extension) => {
@@ -2105,16 +2090,14 @@ export default class ResourceMonitorExtension extends Extension {
       })
     );
 
-    if (typeof Main.layoutManager?.connect === "function") {
-      this._layoutManagerHandlerId = Main.layoutManager.connect(
-        "monitors-changed",
-        () => {
-          if (this._isAllPanelsMode()) {
-            this._queueIndicatorsRebuild();
-          }
+    this._layoutManagerHandlerId = Main.layoutManager.connect(
+      "monitors-changed",
+      () => {
+        if (this._isAllPanelsMode()) {
+          this._queueIndicatorsRebuild();
         }
-      );
-    }
+      }
+    );
 
     this._connectExtensionManagerSignals();
     this._syncPanelProviderSignals();
@@ -2136,18 +2119,12 @@ export default class ResourceMonitorExtension extends Extension {
     }
     this._settingsHandlerIds = [];
 
-    if (
-      this._layoutManagerHandlerId &&
-      typeof Main.layoutManager?.disconnect === "function"
-    ) {
+    if (this._layoutManagerHandlerId) {
       Main.layoutManager.disconnect(this._layoutManagerHandlerId);
       this._layoutManagerHandlerId = 0;
     }
 
-    if (
-      this._extensionManagerHandlerId &&
-      typeof Main.extensionManager?.disconnect === "function"
-    ) {
+    if (this._extensionManagerHandlerId) {
       Main.extensionManager.disconnect(this._extensionManagerHandlerId);
       this._extensionManagerHandlerId = 0;
     }
