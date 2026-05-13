@@ -390,7 +390,7 @@ const ResourceMonitor = GObject.registerClass(
       this.set_accessible_name(accessibleName);
 
       this._setPanelTooltip(
-        _("Left-click launches the configured action.")
+        _("Left-click runs the configured action.")
       );
 
       if (this._box) {
@@ -717,7 +717,7 @@ const ResourceMonitor = GObject.registerClass(
       } catch (error) {
         this._notifyMemoryAlert(
           this._metadata?.name ?? _("Resource Monitor"),
-          _("Unable to launch the configured action.")
+          _("Could not run the configured action.")
         );
         this._logger.error(
           `[Resource_Monitor] Error spawning ${action}: ${error}`
