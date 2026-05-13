@@ -88,7 +88,7 @@ export function syncThermalCpuVisibility(indicator) {
 export function syncGpuVisibility(indicator) {
   indicator._basicItemStatus(
     hasVisibleGpu(indicator),
-    !indicator._thermalGpuTemperatureStatus,
+    true,
     indicator._gpuIcon,
     indicator._gpuBox
   );

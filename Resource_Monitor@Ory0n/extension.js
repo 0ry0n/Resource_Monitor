@@ -895,7 +895,7 @@ const ResourceMonitor = GObject.registerClass(
         ) {
           this._wlanIcon.show();
         }
-        if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
+        if (this._hasVisibleGpu()) {
           this._gpuIcon.show();
         }
       } else {

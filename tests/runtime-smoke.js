@@ -477,6 +477,35 @@ function testPanelGroupVisibilityNetworkAutoHide() {
   );
 }
 
+function testPanelGroupVisibilityGpuThermalWithoutMonitoredDevice() {
+  const visibility = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _capabilities: {
+        gpu: true,
+      },
+      _thermalGpuTemperatureStatus: true,
+      _gpuDevices: [
+        {
+          device: "amd:card0",
+          usage: false,
+          memory: false,
+        },
+      ],
+      _thermalGpuTemperatureDevices: [
+        {
+          device: "amd:card1",
+          monitor: true,
+        },
+      ],
+    })
+  );
+
+  assert(
+    visibility.gpu === false,
+    "GPU group should stay hidden when thermal monitoring is enabled but no configured device is actually monitorable"
+  );
+}
+
 testDiskSerializationRoundtrip();
 testLegacySettingsEntriesAreRejected();
 testGpuSerializationRoundtrip();
@@ -493,5 +522,6 @@ testIndicatorValueFormatting();
 testPanelGroupVisibilityRamOnly();
 testPanelGroupVisibilityCpuSecondaryMetric();
 testPanelGroupVisibilityNetworkAutoHide();
+testPanelGroupVisibilityGpuThermalWithoutMonitoredDevice();
 
 console.log("Runtime smoke tests passed.");
