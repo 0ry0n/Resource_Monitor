@@ -9,7 +9,20 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Added
 
-- No changes yet.
+- Decimal precision and step-based rendering controls for all indicators.
+
+### Changed
+
+- Refined wording across preferences, schema metadata, and translation templates for a more consistent UI.
+- Simplified modern GNOME/GTK/GJS code paths by removing obsolete compatibility fallbacks.
+- Refactored panel group visibility and retrieval logic for easier maintenance.
+
+### Fixed
+
+- Indicator click handling on GNOME Shell 50.
+- Empty monitor groups no longer leave unused spacing in the panel.
+- Icon-less panel layouts no longer introduce alignment and spacing issues.
+- GPU icon visibility now matches the actual set of visible GPU metrics.
 
 ## [27] - 2026-03-20
 
