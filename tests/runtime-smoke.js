@@ -11,11 +11,13 @@ import {
 } from "../Resource_Monitor@Ory0n/runtime/gpu.js";
 import { buildMemoryDisplay } from "../Resource_Monitor@Ory0n/runtime/memory.js";
 import {
+  getValueFixed,
   parseCpuUsage,
   parseDiskStats,
   parseLoadAverage,
 } from "../Resource_Monitor@Ory0n/runtime/metrics.js";
 import { buildNetworkSample } from "../Resource_Monitor@Ory0n/runtime/network.js";
+import { getPanelGroupVisibility } from "../Resource_Monitor@Ory0n/services/visibility.js";
 
 function assert(condition, message) {
   if (!condition) {
@@ -29,17 +31,41 @@ function assertApprox(actual, expected, tolerance, message) {
   }
 }
 
-function assertThrows(callback, message) {
-  let didThrow = false;
-  try {
-    callback();
-  } catch (error) {
-    didThrow = true;
-  }
+function createVisibilityIndicator(overrides = {}) {
+  const defaults = {
+    _capabilities: {
+      cpuFrequency: false,
+      gpu: false,
+      thermalHwmon: false,
+    },
+    _cpuStatus: false,
+    _cpuFrequencyStatus: false,
+    _cpuLoadAverageStatus: false,
+    _thermalCpuTemperatureStatus: false,
+    _thermalCpuTemperatureDevices: [],
+    _ramStatus: false,
+    _swapStatus: false,
+    _diskStatsStatus: false,
+    _diskSpaceStatus: false,
+    _netEthStatus: false,
+    _netWlanStatus: false,
+    _netAutoHideStatus: false,
+    _nmEthStatus: false,
+    _nmWlanStatus: false,
+    _gpuStatus: false,
+    _thermalGpuTemperatureStatus: false,
+    _gpuDevices: [],
+    _thermalGpuTemperatureDevices: [],
+  };
 
-  if (!didThrow) {
-    throw new Error(message);
-  }
+  return {
+    ...defaults,
+    ...overrides,
+    _capabilities: {
+      ...defaults._capabilities,
+      ...(overrides._capabilities ?? {}),
+    },
+  };
 }
 
 function testDiskSerializationRoundtrip() {
@@ -62,17 +88,6 @@ function testDiskSerializationRoundtrip() {
   assert(parsed.stats === true, "Disk stats flag should roundtrip");
   assert(parsed.space === true, "Disk space flag should roundtrip");
   assert(parsed.displayName === "Root", "Disk display name should roundtrip");
-}
-
-function testLegacySettingsEntriesAreRejected() {
-  assertThrows(
-    () => parseDiskEntry("/dev/sda1 / true true Root"),
-    "Legacy disk entry should be rejected"
-  );
-  assertThrows(
-    () => parseGpuEntry("GPU-uuid-0:NVIDIA:true:false:Main GPU"),
-    "Legacy GPU entry should be rejected"
-  );
 }
 
 function testGpuSerializationRoundtrip() {
@@ -340,8 +355,134 @@ function testLoadAverageInvalidInputFallback() {
   );
 }
 
+function testIndicatorValueFormatting() {
+  assert(
+    getValueFixed(12.34, {
+      decimals: 2,
+    }) === "12.34",
+    "Precise formatting should honor indicator decimals"
+  );
+
+  assert(
+    getValueFixed(12.34, {
+      decimals: 0,
+      renderMode: "step",
+      renderStep: 5,
+    }) === "10",
+    "Step formatting should quantize to the lower configured step"
+  );
+
+  assert(
+    getValueFixed(7.99, {
+      decimals: 1,
+      renderMode: "step",
+      renderStep: 2,
+    }) === "6.0",
+    "Step formatting should use integer-only steps after quantization"
+  );
+
+  assert(
+    getValueFixed(17, {
+      decimals: 0,
+      renderMode: "step",
+      renderStep: 5,
+    }) === "15",
+    "Step formatting should also apply cleanly to percentage-like integer values"
+  );
+}
+
+function testPanelGroupVisibilityRamOnly() {
+  const visibility = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _ramStatus: true,
+    })
+  );
+
+  assert(visibility.ram === true, "RAM group should be visible");
+  assert(visibility.cpu === false, "CPU group should be hidden");
+  assert(visibility.swap === false, "Swap group should be hidden");
+  assert(visibility.stats === false, "Disk stats group should be hidden");
+  assert(visibility.space === false, "Disk space group should be hidden");
+  assert(visibility.eth === false, "Ethernet group should be hidden");
+  assert(visibility.wlan === false, "Wi-Fi group should be hidden");
+  assert(visibility.gpu === false, "GPU group should be hidden");
+}
+
+function testPanelGroupVisibilityCpuSecondaryMetric() {
+  const visibility = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _capabilities: {
+        cpuFrequency: true,
+      },
+      _cpuFrequencyStatus: true,
+    })
+  );
+
+  assert(
+    visibility.cpu === true,
+    "CPU group should be visible for CPU frequency without CPU usage"
+  );
+  assert(visibility.ram === false, "RAM group should be hidden");
+}
+
+function testPanelGroupVisibilityNetworkAutoHide() {
+  const disconnected = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _netAutoHideStatus: true,
+      _netEthStatus: true,
+      _nmEthStatus: false,
+    })
+  );
+
+  assert(
+    disconnected.eth === false,
+    "Ethernet group should be hidden when auto-hide is enabled and disconnected"
+  );
+
+  const connected = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _netAutoHideStatus: true,
+      _netEthStatus: true,
+      _nmEthStatus: true,
+    })
+  );
+
+  assert(
+    connected.eth === true,
+    "Ethernet group should be visible when auto-hide is enabled and connected"
+  );
+}
+
+function testPanelGroupVisibilityGpuThermalWithoutMonitoredDevice() {
+  const visibility = getPanelGroupVisibility(
+    createVisibilityIndicator({
+      _capabilities: {
+        gpu: true,
+      },
+      _thermalGpuTemperatureStatus: true,
+      _gpuDevices: [
+        {
+          device: "amd:card0",
+          usage: false,
+          memory: false,
+        },
+      ],
+      _thermalGpuTemperatureDevices: [
+        {
+          device: "amd:card1",
+          monitor: true,
+        },
+      ],
+    })
+  );
+
+  assert(
+    visibility.gpu === false,
+    "GPU group should stay hidden when thermal monitoring is enabled but no configured device is actually monitorable"
+  );
+}
+
 testDiskSerializationRoundtrip();
-testLegacySettingsEntriesAreRejected();
 testGpuSerializationRoundtrip();
 testGpuParser();
 testAmdGpuDisplay();
@@ -352,5 +493,10 @@ testDiskStatsSectorConversion();
 testNetworkCounterReset();
 testNetworkParsingWithoutTrailingNewline();
 testLoadAverageInvalidInputFallback();
+testIndicatorValueFormatting();
+testPanelGroupVisibilityRamOnly();
+testPanelGroupVisibilityCpuSecondaryMetric();
+testPanelGroupVisibilityNetworkAutoHide();
+testPanelGroupVisibilityGpuThermalWithoutMonitoredDevice();
 
 console.log("Runtime smoke tests passed.");

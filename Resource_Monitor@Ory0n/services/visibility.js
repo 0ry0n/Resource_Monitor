@@ -36,6 +36,27 @@ export function hasVisibleGpu(indicator) {
   );
 }
 
+export function getPanelGroupVisibility(indicator) {
+  return {
+    cpu:
+      indicator._cpuStatus ||
+      hasVisibleCpuFrequency(indicator) ||
+      indicator._cpuLoadAverageStatus ||
+      hasVisibleThermalCpuTemperature(indicator),
+    ram: indicator._ramStatus,
+    swap: indicator._swapStatus,
+    stats: indicator._diskStatsStatus,
+    space: indicator._diskSpaceStatus,
+    eth:
+      indicator._netEthStatus &&
+      (indicator._nmEthStatus || !indicator._netAutoHideStatus),
+    wlan:
+      indicator._netWlanStatus &&
+      (indicator._nmWlanStatus || !indicator._netAutoHideStatus),
+    gpu: hasVisibleGpu(indicator),
+  };
+}
+
 export function syncCpuFrequencyVisibility(indicator) {
   indicator._basicItemStatus(
     hasVisibleCpuFrequency(indicator),
@@ -67,7 +88,7 @@ export function syncThermalCpuVisibility(indicator) {
 export function syncGpuVisibility(indicator) {
   indicator._basicItemStatus(
     hasVisibleGpu(indicator),
-    !indicator._thermalGpuTemperatureStatus,
+    true,
     indicator._gpuIcon,
     indicator._gpuBox
   );

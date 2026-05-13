@@ -1,9 +1,16 @@
+import {
+  getFormattingKeys,
+  readIndicatorFormattingSettings,
+} from "../indicatorFormatting.js";
+
 export function initializeSettings(indicator, keys) {
   indicator._refreshTime = indicator._settings.get_int(keys.REFRESH_TIME);
-  indicator._decimalsStatus = indicator._settings.get_boolean(keys.DECIMALS_STATUS);
   indicator._dataScaleBase = indicator._settings.get_string(keys.DATA_SCALE_BASE);
   indicator._leftClickStatus = indicator._settings.get_string(keys.LEFT_CLICK_STATUS);
   indicator._rightClickStatus = indicator._settings.get_boolean(keys.RIGHT_CLICK_STATUS);
+  indicator._indicatorFormatting = readIndicatorFormattingSettings(
+    indicator._settings
+  );
 
   indicator._iconsStatus = indicator._settings.get_boolean(keys.ICONS_STATUS);
   indicator._iconsPosition = indicator._settings.get_string(keys.ICONS_POSITION);
@@ -145,7 +152,6 @@ export function initializeSettings(indicator, keys) {
 export function connectSettingsSignals(indicator, keys) {
   const signalMap = [
     [keys.REFRESH_TIME, "_refreshTimeChanged"],
-    [keys.DECIMALS_STATUS, "_decimalsStatusChanged"],
     [keys.DATA_SCALE_BASE, "_dataScaleBaseChanged"],
     [keys.LEFT_CLICK_STATUS, "_leftClickStatusChanged"],
     [keys.RIGHT_CLICK_STATUS, "_rightClickStatusChanged"],
@@ -220,6 +226,10 @@ export function connectSettingsSignals(indicator, keys) {
     [keys.GPU_DISPLAY_DEVICE_NAME, "_gpuDisplayDeviceNameChanged"],
     [keys.GPU_DEVICES_LIST, "_gpuDevicesListChanged"],
   ];
+
+  getFormattingKeys().forEach((key) => {
+    signalMap.push([key, "_indicatorFormattingChanged"]);
+  });
 
   signalMap.forEach(([key, handlerName]) => {
     indicator._handlerIds[indicator._handlerIdsCount++] = indicator._settings.connect(

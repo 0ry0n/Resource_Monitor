@@ -113,7 +113,7 @@ export function makeColorRow(
 
   box.append(
     new Gtk.Label({
-      label: _("Higher than"),
+      label: _("Above"),
       hexpand: true,
       halign: Gtk.Align.START,
     })

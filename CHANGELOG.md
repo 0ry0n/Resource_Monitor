@@ -11,6 +11,25 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 - No changes yet.
 
+## [28] - 2026-05-13
+
+### Added
+
+- Decimal precision and step-based rendering controls for all indicators.
+
+### Changed
+
+- Refined wording across preferences, schema metadata, and translation templates for a more consistent UI.
+- Simplified modern GNOME/GTK/GJS code paths by removing obsolete compatibility fallbacks.
+- Refactored panel group visibility and retrieval logic for easier maintenance.
+
+### Fixed
+
+- Indicator click handling on GNOME Shell 50.
+- Empty monitor groups no longer leave unused spacing in the panel.
+- Icon-less panel layouts no longer introduce alignment and spacing issues.
+- GPU icon visibility now matches the actual set of visible GPU metrics.
+
 ## [27] - 2026-03-20
 
 ### Added
@@ -112,7 +131,8 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 - Left-click custom program behavior.
 - Multiple bug fixes.
 
-[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/27...develop
+[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/28...develop
+[28]: https://github.com/0ry0n/Resource_Monitor/compare/27...28
 [27]: https://github.com/0ry0n/Resource_Monitor/compare/26...27
 [26]: https://github.com/0ry0n/Resource_Monitor/compare/25...26
 [25]: https://github.com/0ry0n/Resource_Monitor/compare/24...25

@@ -1,3 +1,8 @@
+import {
+  normalizeFormattingSettings,
+  RENDER_MODE_STEP,
+} from "../indicatorFormatting.js";
+
 function normalizeColorComponent(component) {
   if (!Number.isFinite(component)) {
     return null;
@@ -68,8 +73,21 @@ export function getUsageColor(value, colors, separator = " ") {
   return "";
 }
 
-export function getValueFixed(value, showDecimals) {
-  return showDecimals ? value.toFixed(1) : value.toFixed(0);
+export function getValueFixed(value, formatting = {}) {
+  const normalizedFormatting =
+    typeof formatting === "boolean"
+      ? normalizeFormattingSettings({
+        decimals: formatting ? 1 : 0,
+      })
+      : normalizeFormattingSettings(formatting);
+
+  const normalizedValue =
+    normalizedFormatting.renderMode === RENDER_MODE_STEP
+      ? Math.floor(value / normalizedFormatting.renderStep) *
+        normalizedFormatting.renderStep
+      : value;
+
+  return normalizedValue.toFixed(normalizedFormatting.decimals);
 }
 
 const DECIMAL_FACTOR = 1000;

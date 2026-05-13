@@ -40,6 +40,7 @@ import {
   parseThermalGpuEntry,
   serializeThermalCpuEntry,
 } from "./common.js";
+import { readIndicatorFormattingSettings } from "./indicatorFormatting.js";
 import {
   convertValuesToUnit,
   getUsageColor,
@@ -53,6 +54,7 @@ import {
   applySecondarySeparatorStyle,
   buildMainGui,
   createMainGui,
+  syncMainGuiVisibility,
 } from "./panel/mainGui.js";
 import {
   detectCapabilities,
@@ -100,7 +102,6 @@ import {
 const REFRESH_TIME = "refreshtime";
 const EXTENSION_POSITION = "extensionposition";
 const DISPLAY_MODE = "displaymode";
-const DECIMALS_STATUS = "decimalsstatus";
 const DATA_SCALE_BASE = "datascalebase";
 const LEFT_CLICK_STATUS = "leftclickstatus";
 const RIGHT_CLICK_STATUS = "rightclickstatus";
@@ -209,7 +210,6 @@ async function _loadNetworkManager() {
 
 const SETTINGS_KEYS = {
   REFRESH_TIME,
-  DECIMALS_STATUS,
   DATA_SCALE_BASE,
   LEFT_CLICK_STATUS,
   RIGHT_CLICK_STATUS,
@@ -366,6 +366,7 @@ const ResourceMonitor = GObject.registerClass(
 
       this._connectSettingsSignals();
 
+      this.clear_actions();
       this.connect("button-press-event", this._clickManager.bind(this));
       this.connect("key-press-event", this._onKeyPressEvent.bind(this));
 
@@ -392,7 +393,7 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       this._setPanelTooltip(
-        _("Left-click launches the configured action.")
+        _("Left-click runs the configured action.")
       );
 
       if (this._box) {
@@ -632,8 +633,8 @@ const ResourceMonitor = GObject.registerClass(
       createMainGui(this);
     }
 
-    _buildMainGui() {
-      buildMainGui(this);
+    _buildMainGui(options = {}) {
+      buildMainGui(this, options);
     }
 
     // SETTINGS
@@ -723,7 +724,7 @@ const ResourceMonitor = GObject.registerClass(
       } catch (error) {
         this._notifyMemoryAlert(
           this._metadata?.name ?? _("Resource Monitor"),
-          _("Unable to launch the configured action.")
+          _("Could not run the configured action.")
         );
         this._logger.error(
           `[Resource_Monitor] Error spawning ${action}: ${error}`
@@ -832,14 +833,13 @@ const ResourceMonitor = GObject.registerClass(
       );
     }
 
-    _decimalsStatusChanged() {
-      this._decimalsStatus = this._settings.get_boolean(DECIMALS_STATUS);
-
+    _dataScaleBaseChanged() {
+      this._dataScaleBase = this._settings.get_string(DATA_SCALE_BASE);
       this._refreshHandler(true);
     }
 
-    _dataScaleBaseChanged() {
-      this._dataScaleBase = this._settings.get_string(DATA_SCALE_BASE);
+    _indicatorFormattingChanged() {
+      this._indicatorFormatting = readIndicatorFormattingSettings(this._settings);
       this._refreshHandler(true);
     }
 
@@ -854,7 +854,13 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _iconsStatusChanged() {
+      const previousIconsStatus = this._iconsStatus;
       this._iconsStatus = this._settings.get_boolean(ICONS_STATUS);
+
+      if (previousIconsStatus !== this._iconsStatus && this._box?.get_parent()) {
+        this._box.remove_all_children();
+        this._buildMainGui({ refresh: false });
+      }
 
       if (this._iconsStatus) {
         if (
@@ -889,7 +895,7 @@ const ResourceMonitor = GObject.registerClass(
         ) {
           this._wlanIcon.show();
         }
-        if (this._gpuStatus || this._thermalGpuTemperatureStatus) {
+        if (this._hasVisibleGpu()) {
           this._gpuIcon.show();
         }
       } else {
@@ -1679,6 +1685,10 @@ const ResourceMonitor = GObject.registerClass(
       syncThermalCpuVisibility(this);
     }
 
+    _syncMainGuiVisibility() {
+      syncMainGuiVisibility(this);
+    }
+
     _refreshHandler(forceGpu = false) {
       return refreshHandler(this, forceGpu);
     }
@@ -1726,6 +1736,7 @@ const ResourceMonitor = GObject.registerClass(
         valueLabel,
         unitLabel,
         colors,
+        formattingId,
       } = options;
 
       if (
@@ -1742,7 +1753,7 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       valueLabel.style = this._getUsageColor(display.value, colors);
-      valueLabel.text = `${this._getValueFixed(display.value)}`;
+      valueLabel.text = `${this._getValueFixed(display.value, formattingId)}`;
       unitLabel.text = display.unit;
     }
 
@@ -1760,8 +1771,11 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     // Decimal precision
-    _getValueFixed(value) {
-      return getValueFixed(value, this._decimalsStatus);
+    _getValueFixed(value, indicatorId) {
+      return getValueFixed(
+        value,
+        indicatorId ? this._indicatorFormatting?.[indicatorId] : {}
+      );
     }
 
     // Conversion of array of values (network/disk)
@@ -1839,6 +1853,8 @@ const ResourceMonitor = GObject.registerClass(
           element.hide();
         });
       }
+
+      this._syncMainGuiVisibility();
     }
 
     _basicItemWidth(width, element) {
