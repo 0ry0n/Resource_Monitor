@@ -12,7 +12,7 @@ It can display CPU load and temperature, RAM and swap usage, disk activity and f
 
 Multi-panel mode is supported through Dash to Panel. Without Dash to Panel, the indicator is shown on the primary panel only.
 
-Current stable release: `27` (`2026-03-20`).
+Current stable release: `28` (`2026-05-13`).
 
 ![Resource Monitor main view](images/main.png)
 

@@ -393,7 +393,7 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       this._setPanelTooltip(
-        _("Left-click launches the configured action.")
+        _("Left-click runs the configured action.")
       );
 
       if (this._box) {

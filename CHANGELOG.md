@@ -9,6 +9,12 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Added
 
+- No changes yet.
+
+## [28] - 2026-05-13
+
+### Added
+
 - Decimal precision and step-based rendering controls for all indicators.
 
 ### Changed
@@ -125,7 +131,8 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 - Left-click custom program behavior.
 - Multiple bug fixes.
 
-[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/27...develop
+[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/28...develop
+[28]: https://github.com/0ry0n/Resource_Monitor/compare/27...28
 [27]: https://github.com/0ry0n/Resource_Monitor/compare/26...27
 [26]: https://github.com/0ry0n/Resource_Monitor/compare/25...26
 [25]: https://github.com/0ry0n/Resource_Monitor/compare/24...25
