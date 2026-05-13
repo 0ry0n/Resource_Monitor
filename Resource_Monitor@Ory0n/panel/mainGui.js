@@ -94,7 +94,9 @@ export function applySecondarySeparatorStyle(indicator) {
     }
   });
 
-  indicator._gpuBox.set_separator_style(style);
+  if (typeof indicator._gpuBox?.set_separator_style === "function") {
+    indicator._gpuBox.set_separator_style(style);
+  }
 }
 
 function _appendCpuChildren(indicator, addChild, iconsPosition, iconsStatus) {

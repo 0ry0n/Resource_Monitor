@@ -225,12 +225,16 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _takeWidget(widget) {
-      const parent = widget.get_parent();
+      const parent = widget?.get_parent?.();
       if (!parent) {
         return widget;
       }
 
-      parent.remove(widget);
+      if (typeof parent.remove === "function") {
+        parent.remove(widget);
+      } else if (typeof parent.set_child === "function") {
+        parent.set_child(null);
+      }
 
       return widget;
     }
@@ -242,7 +246,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
 
       row.add_suffix(this._takeWidget(suffix));
-      row.set_activatable_widget(suffix);
+      if (row.set_activatable_widget) {
+        row.set_activatable_widget(suffix);
+      }
 
       return row;
     }
@@ -736,11 +742,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
     }
 
     _setColumnExpand(column, expand = true) {
-      if (!column) {
-        return;
+      if (typeof column?.set_expand === "function") {
+        column.set_expand(expand);
+      } else if (column && "expand" in column) {
+        column.expand = expand;
       }
-
-      column.set_expand(expand);
     }
 
     _setColumnFixedWidth(column, width) {
@@ -748,7 +754,11 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         return;
       }
 
-      column.set_fixed_width(width);
+      if (typeof column.set_fixed_width === "function") {
+        column.set_fixed_width(width);
+      } else if ("fixed_width" in column) {
+        column.fixed_width = width;
+      }
     }
 
     _prepareEmbeddedWidget(widget, cssClasses = []) {
@@ -814,14 +824,23 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           widget.hexpand = true;
           widget.halign = Gtk.Align.FILL;
 
-          widget.set_maximum_size(2400);
-          widget.set_tightening_threshold(800);
+          if (typeof widget.set_maximum_size === "function") {
+            widget.set_maximum_size(2400);
+          } else if ("maximum_size" in widget) {
+            widget.maximum_size = 2400;
+          }
+
+          if (typeof widget.set_tightening_threshold === "function") {
+            widget.set_tightening_threshold(800);
+          } else if ("tightening_threshold" in widget) {
+            widget.tightening_threshold = 800;
+          }
         }
 
-        let child = widget.get_first_child();
+        let child = widget.get_first_child?.() ?? null;
         while (child) {
           stack.push(child);
-          child = child.get_next_sibling();
+          child = child.get_next_sibling?.() ?? null;
         }
       }
     }

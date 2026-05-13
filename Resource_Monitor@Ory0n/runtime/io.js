@@ -26,15 +26,32 @@ export function readOutput(proc, cancellable = null) {
   return new Promise((resolve, reject) => {
     proc.communicate_utf8_async(null, cancellable, (sourceObject, result) => {
       try {
-        const [, stdout, stderr] = sourceObject.communicate_utf8_finish(result);
-        const successful = sourceObject.get_successful();
+        const communicateResult = sourceObject.communicate_utf8_finish(result);
+        let stdout = "";
+        let stderr = "";
+
+        if (Array.isArray(communicateResult)) {
+          if (communicateResult.length >= 3) {
+            [, stdout, stderr] = communicateResult;
+          } else if (communicateResult.length === 2) {
+            [stdout, stderr] = communicateResult;
+          }
+        }
+
+        const successful =
+          typeof sourceObject.get_successful === "function"
+            ? sourceObject.get_successful()
+            : Boolean(Array.isArray(communicateResult) && communicateResult[0]);
 
         if (successful) {
           resolve(stdout);
           return;
         }
 
-        const exitStatus = sourceObject.get_exit_status();
+        const exitStatus =
+          typeof sourceObject.get_exit_status === "function"
+            ? sourceObject.get_exit_status()
+            : "unknown";
         const reason = (stderr || "").trim();
         reject(
           new Error(
