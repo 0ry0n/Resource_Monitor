@@ -22,7 +22,7 @@ If this extension is useful to you, you can support ongoing development via [Git
 
 ## Supported GNOME Shell Versions
 
-- `45`, `46`, `47`, `48`, `49`, `50`
+- `45`, `46`, `47`, `48`, `49`, `50`, `51`
 
 For older releases, use the dedicated maintenance branches:
 

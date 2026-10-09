@@ -2,7 +2,7 @@
   "name": "Resource Monitor",
   "uuid": "Resource_Monitor@Ory0n",
   "description": "Real-time system monitor for the GNOME Shell top bar. Tracks CPU, RAM, swap, disk, network, and GPU usage with optional thermal metrics and customizable panel formatting.",
-  "shell-version": ["45", "46", "47", "48", "49", "50"],
+  "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
   "url": "https://github.com/0ry0n/Resource_Monitor/",
   "donations": {
     "paypal": "0ry0n"
