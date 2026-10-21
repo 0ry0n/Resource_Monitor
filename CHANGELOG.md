@@ -9,7 +9,7 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Added
 
-- No changes yet.
+- GNOME Shell 51 support.
 
 ## [28] - 2026-05-13
 
