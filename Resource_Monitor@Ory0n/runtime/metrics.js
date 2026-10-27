@@ -73,6 +73,17 @@ export function getUsageColor(value, colors, separator = " ") {
   return "";
 }
 
+// Number of color thresholds the value exceeds (0 = below every threshold).
+export function getUsageLevel(value, colors, separator = " ") {
+  if (!colors || !Number.isFinite(value)) {
+    return 0;
+  }
+
+  return getNormalizedThresholds(colors, separator).filter(
+    (threshold) => value > threshold.threshold
+  ).length;
+}
+
 export function getValueFixed(value, formatting = {}) {
   const normalizedFormatting =
     typeof formatting === "boolean"

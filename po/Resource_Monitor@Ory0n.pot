@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Resource_Monitor 29\n"
 "Report-Msgid-Bugs-To: https://github.com/0ry0n/Resource_Monitor/issues\n"
-"POT-Creation-Date: 2026-11-06 19:43+0100\n"
+"POT-Creation-Date: 2026-11-26 18:20+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,1140 +17,1231 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: Resource_Monitor@Ory0n/extension.js:396
+#: Resource_Monitor@Ory0n/extension.js:419
 msgid "Left-click runs the configured action."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/extension.js:426
-#: Resource_Monitor@Ory0n/extension.js:442
+#: Resource_Monitor@Ory0n/extension.js:449
+#: Resource_Monitor@Ory0n/extension.js:465
 msgid "Disabled"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/extension.js:441
+#: Resource_Monitor@Ory0n/extension.js:464
 msgid "Open preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/extension.js:444
+#: Resource_Monitor@Ory0n/extension.js:467
 msgid "Left-click"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/extension.js:444
+#: Resource_Monitor@Ory0n/extension.js:467
 msgid "Right-click"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/extension.js:726 Resource_Monitor@Ory0n/prefs.js:2318
+#: Resource_Monitor@Ory0n/extension.js:768 Resource_Monitor@Ory0n/prefs.js:2454
 msgid "Resource Monitor"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/extension.js:727
+#: Resource_Monitor@Ory0n/extension.js:769
 msgid "Could not run the configured action."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:389 Resource_Monitor@Ory0n/prefs.js:405
-#: Resource_Monitor@Ory0n/prefs.js:3151
+#: Resource_Monitor@Ory0n/prefs.js:403 Resource_Monitor@Ory0n/prefs.js:419
+#: Resource_Monitor@Ory0n/prefs.js:3341
 msgid "Auto"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:390
+#: Resource_Monitor@Ory0n/prefs.js:404
 msgid "kHz"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:391
+#: Resource_Monitor@Ory0n/prefs.js:405
 msgid "MHz"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:392
+#: Resource_Monitor@Ory0n/prefs.js:406
 msgid "GHz"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:398
+#: Resource_Monitor@Ory0n/prefs.js:412
 msgid "Numeric"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:406 Resource_Monitor@Ory0n/prefs.js:3153
+#: Resource_Monitor@Ory0n/prefs.js:420 Resource_Monitor@Ory0n/prefs.js:3343
 msgid "Kilo"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:407 Resource_Monitor@Ory0n/prefs.js:3154
+#: Resource_Monitor@Ory0n/prefs.js:421 Resource_Monitor@Ory0n/prefs.js:3344
 msgid "Mega"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:408 Resource_Monitor@Ory0n/prefs.js:3155
+#: Resource_Monitor@Ory0n/prefs.js:422 Resource_Monitor@Ory0n/prefs.js:3345
 msgid "Giga"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:409 Resource_Monitor@Ory0n/prefs.js:3156
+#: Resource_Monitor@Ory0n/prefs.js:423 Resource_Monitor@Ory0n/prefs.js:3346
 msgid "Tera"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:415 Resource_Monitor@Ory0n/prefs.js:553
+#: Resource_Monitor@Ory0n/prefs.js:429 Resource_Monitor@Ory0n/prefs.js:574
 msgid "SI (1000)"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:416 Resource_Monitor@Ory0n/prefs.js:553
+#: Resource_Monitor@Ory0n/prefs.js:430 Resource_Monitor@Ory0n/prefs.js:574
 msgid "IEC (1024)"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:422
+#: Resource_Monitor@Ory0n/prefs.js:436
 msgid "Precise"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:423 Resource_Monitor@Ory0n/prefs.js:1346
-#: Resource_Monitor@Ory0n/prefs.js:1402 Resource_Monitor@Ory0n/prefs.js:1451
-#: Resource_Monitor@Ory0n/prefs.js:1541 Resource_Monitor@Ory0n/prefs.js:1651
-#: Resource_Monitor@Ory0n/prefs.js:1767 Resource_Monitor@Ory0n/prefs.js:1816
-#: Resource_Monitor@Ory0n/prefs.js:1912 Resource_Monitor@Ory0n/prefs.js:1984
-#: Resource_Monitor@Ory0n/prefs.js:2078 Resource_Monitor@Ory0n/prefs.js:2136
-#: Resource_Monitor@Ory0n/prefs.js:2219 Resource_Monitor@Ory0n/prefs.js:2277
+#: Resource_Monitor@Ory0n/prefs.js:437 Resource_Monitor@Ory0n/prefs.js:1369
+#: Resource_Monitor@Ory0n/prefs.js:1425 Resource_Monitor@Ory0n/prefs.js:1474
+#: Resource_Monitor@Ory0n/prefs.js:1564 Resource_Monitor@Ory0n/prefs.js:1681
+#: Resource_Monitor@Ory0n/prefs.js:1787 Resource_Monitor@Ory0n/prefs.js:1903
+#: Resource_Monitor@Ory0n/prefs.js:1952 Resource_Monitor@Ory0n/prefs.js:2048
+#: Resource_Monitor@Ory0n/prefs.js:2120 Resource_Monitor@Ory0n/prefs.js:2214
+#: Resource_Monitor@Ory0n/prefs.js:2272 Resource_Monitor@Ory0n/prefs.js:2355
+#: Resource_Monitor@Ory0n/prefs.js:2413
 msgid "Step"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:429
+#: Resource_Monitor@Ory0n/prefs.js:443
 msgid "Minimal Dot"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:430
+#: Resource_Monitor@Ory0n/prefs.js:444
 msgid "Slash"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:431
+#: Resource_Monitor@Ory0n/prefs.js:445
 msgid "Square Brackets"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:452
+#: Resource_Monitor@Ory0n/prefs.js:466
 msgid "Primary Display Only"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:456
+#: Resource_Monitor@Ory0n/prefs.js:470
 msgid "All Dash to Panel Panels"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:457
+#: Resource_Monitor@Ory0n/prefs.js:471
 msgid "All Dash to Panel Panels (Requires Dash to Panel)"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:465
+#: Resource_Monitor@Ory0n/prefs.js:479
 msgid ""
 "Show the indicator only on the primary panel or mirror it on every Dash to "
 "Panel panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:468
+#: Resource_Monitor@Ory0n/prefs.js:482
 msgid ""
 "Show the indicator on the primary panel. Multi-panel mode requires Dash to "
 "Panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:474
-msgid "Used Memory"
-msgstr ""
-
-#: Resource_Monitor@Ory0n/prefs.js:475
-msgid "Free Memory"
-msgstr ""
-
-#: Resource_Monitor@Ory0n/prefs.js:481
-msgid "Used Space"
-msgstr ""
-
-#: Resource_Monitor@Ory0n/prefs.js:482
-msgid "Free Space"
-msgstr ""
-
 #: Resource_Monitor@Ory0n/prefs.js:488
-msgid "B/s"
+msgid "Since Last Refresh"
 msgstr ""
 
 #: Resource_Monitor@Ory0n/prefs.js:489
+msgid "Kernel 10s Average"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:495
+msgid "Used Memory"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:496
+msgid "Free Memory"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:502
+msgid "Used Space"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:503
+msgid "Free Space"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:509
+msgid "B/s"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:510
 msgid "b/s"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:557
+#: Resource_Monitor@Ory0n/prefs.js:578
 #, javascript-format
 msgid "Current unit base: %s."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:580
+#: Resource_Monitor@Ory0n/prefs.js:601
 msgid "Add threshold"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:875
+#: Resource_Monitor@Ory0n/prefs.js:896
 msgid "Yes"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:875
+#: Resource_Monitor@Ory0n/prefs.js:896
 msgid "No"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:880 Resource_Monitor@Ory0n/prefs.js:904
+#: Resource_Monitor@Ory0n/prefs.js:901 Resource_Monitor@Ory0n/prefs.js:925
 msgid "AMD (sysfs)"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:884 Resource_Monitor@Ory0n/prefs.js:907
+#: Resource_Monitor@Ory0n/prefs.js:905 Resource_Monitor@Ory0n/prefs.js:928
 msgid "Intel (sysfs)"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:887 Resource_Monitor@Ory0n/prefs.js:901
+#: Resource_Monitor@Ory0n/prefs.js:908 Resource_Monitor@Ory0n/prefs.js:922
 msgid "NVIDIA (nvidia-smi)"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:911
+#: Resource_Monitor@Ory0n/prefs.js:932
 msgid "None"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:916 Resource_Monitor@Ory0n/prefs.js:930
+#: Resource_Monitor@Ory0n/prefs.js:937 Resource_Monitor@Ory0n/prefs.js:951
 msgid "Detected Backends"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:921 Resource_Monitor@Ory0n/prefs.js:935
+#: Resource_Monitor@Ory0n/prefs.js:942 Resource_Monitor@Ory0n/prefs.js:956
 msgid "Detected GPUs"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:922
+#: Resource_Monitor@Ory0n/prefs.js:943
 msgid "Scanning..."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:942
+#: Resource_Monitor@Ory0n/prefs.js:963
 msgid "No Supported GPU Telemetry"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:944
+#: Resource_Monitor@Ory0n/prefs.js:965
 msgid ""
 "No supported NVIDIA, AMD, or Intel GPU telemetry source was detected on this "
 "system."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:955
+#: Resource_Monitor@Ory0n/prefs.js:976
 #, javascript-format
 msgid "Device: %s | Backend: %s | Usage: %s | Memory: %s | Thermal: %s"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:971
+#: Resource_Monitor@Ory0n/prefs.js:992
 msgid "GPU Diagnostics Error"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:972
+#: Resource_Monitor@Ory0n/prefs.js:993
 msgid "Could not read GPU diagnostics on this system."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1103
+#: Resource_Monitor@Ory0n/prefs.js:1124
 msgid "Threshold Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1105
+#: Resource_Monitor@Ory0n/prefs.js:1126
 msgid ""
 "Rules are matched from the highest threshold downward. Values that do not go "
 "higher than any threshold keep the default color."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1116
+#: Resource_Monitor@Ory0n/prefs.js:1137
 msgid "Threshold Rules"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1118
+#: Resource_Monitor@Ory0n/prefs.js:1139
 msgid "Expand to manage thresholds and colors for this metric."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1133 Resource_Monitor@Ory0n/prefs.js:1300
+#: Resource_Monitor@Ory0n/prefs.js:1154 Resource_Monitor@Ory0n/prefs.js:1323
+#: Resource_Monitor@Ory0n/prefs.js:1639
 msgid "CPU"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1134 Resource_Monitor@Ory0n/prefs.js:1472
+#: Resource_Monitor@Ory0n/prefs.js:1155 Resource_Monitor@Ory0n/prefs.js:1495
 msgid "RAM"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1135 Resource_Monitor@Ory0n/prefs.js:1582
-#: Resource_Monitor@Ory0n/prefs.js:1595
+#: Resource_Monitor@Ory0n/prefs.js:1156 Resource_Monitor@Ory0n/prefs.js:1605
+#: Resource_Monitor@Ory0n/prefs.js:1620
+msgid "Pressure"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1157 Resource_Monitor@Ory0n/prefs.js:1718
+#: Resource_Monitor@Ory0n/prefs.js:1731
 msgid "Swap"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1136
+#: Resource_Monitor@Ory0n/prefs.js:1158
 msgid "Disk Statistics"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1137
+#: Resource_Monitor@Ory0n/prefs.js:1159
 msgid "Disk Space"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1138 Resource_Monitor@Ory0n/prefs.js:1734
+#: Resource_Monitor@Ory0n/prefs.js:1160 Resource_Monitor@Ory0n/prefs.js:1870
 msgid "Ethernet"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1139
+#: Resource_Monitor@Ory0n/prefs.js:1161
 msgid "Wi-Fi"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1140 Resource_Monitor@Ory0n/prefs.js:2166
+#: Resource_Monitor@Ory0n/prefs.js:1162 Resource_Monitor@Ory0n/prefs.js:2302
 msgid "GPU"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1180
+#: Resource_Monitor@Ory0n/prefs.js:1203
 msgid "Global"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1186
+#: Resource_Monitor@Ory0n/prefs.js:1209
 msgid "Global Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1188
+#: Resource_Monitor@Ory0n/prefs.js:1211
 msgid ""
 "Control panel placement, interaction behavior, and shared formatting options."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1195
+#: Resource_Monitor@Ory0n/prefs.js:1218
 msgid "Behavior"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1196
+#: Resource_Monitor@Ory0n/prefs.js:1219
 msgid "Choose how the indicator behaves in GNOME Shell."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1200
+#: Resource_Monitor@Ory0n/prefs.js:1223
 msgid "Refresh Interval"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1201
+#: Resource_Monitor@Ory0n/prefs.js:1224
 msgid "Controls how often resource values are updated."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1207
+#: Resource_Monitor@Ory0n/prefs.js:1230
 msgid "Panel Position"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1208
+#: Resource_Monitor@Ory0n/prefs.js:1231
 msgid "Choose where the indicator appears in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1214
+#: Resource_Monitor@Ory0n/prefs.js:1237
 msgid "Display Mode"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1221
+#: Resource_Monitor@Ory0n/prefs.js:1244
 msgid "Open Preferences on Right-Click"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1222
+#: Resource_Monitor@Ory0n/prefs.js:1245
 msgid "Open the preferences window when the indicator is right-clicked."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1229
+#: Resource_Monitor@Ory0n/prefs.js:1252
 msgid "Appearance"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1230
+#: Resource_Monitor@Ory0n/prefs.js:1253
 msgid "Adjust how values are formatted and shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1234
+#: Resource_Monitor@Ory0n/prefs.js:1257
 msgid "Data Unit Base"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1235
+#: Resource_Monitor@Ory0n/prefs.js:1258
 msgid "Choose whether data units use SI (1000) or IEC (1024) scaling."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1241
+#: Resource_Monitor@Ory0n/prefs.js:1264
 msgid "Show Icons"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1242
+#: Resource_Monitor@Ory0n/prefs.js:1265
 msgid "Display symbolic icons next to monitored resources."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1248
+#: Resource_Monitor@Ory0n/prefs.js:1271
 msgid "Icon Position"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1249
+#: Resource_Monitor@Ory0n/prefs.js:1272
 msgid "Choose whether icons appear before or after the values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1255
+#: Resource_Monitor@Ory0n/prefs.js:1278
 msgid "Secondary Metrics Separator"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1256
+#: Resource_Monitor@Ory0n/prefs.js:1279
 msgid "Choose how secondary metrics are separated in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1263
+#: Resource_Monitor@Ory0n/prefs.js:1286
 msgid "Launch Action"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1264
+#: Resource_Monitor@Ory0n/prefs.js:1287
 msgid "Choose what happens when you left-click the indicator."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1268
+#: Resource_Monitor@Ory0n/prefs.js:1291
 msgid "Left-click Action"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1269
+#: Resource_Monitor@Ory0n/prefs.js:1292
 msgid "Choose which app or command runs on left-click."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1275 Resource_Monitor@Ory0n/prefs.js:2362
+#: Resource_Monitor@Ory0n/prefs.js:1298 Resource_Monitor@Ory0n/prefs.js:2499
 msgid "Custom Command"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1276
+#: Resource_Monitor@Ory0n/prefs.js:1299
 msgid "Used only when Left-click Action is set to Custom Command."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1283
+#: Resource_Monitor@Ory0n/prefs.js:1306
 msgid "Items Order"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1284
+#: Resource_Monitor@Ory0n/prefs.js:1307
 msgid "Reorder the resources shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1306
+#: Resource_Monitor@Ory0n/prefs.js:1329
 msgid "CPU Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1307
+#: Resource_Monitor@Ory0n/prefs.js:1330
 msgid "Configure CPU usage, frequency, and load average indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1313 Resource_Monitor@Ory0n/prefs.js:2179
+#: Resource_Monitor@Ory0n/prefs.js:1336 Resource_Monitor@Ory0n/prefs.js:2315
 msgid "Usage"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1314
+#: Resource_Monitor@Ory0n/prefs.js:1337
 msgid "Configure how CPU usage is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1318 Resource_Monitor@Ory0n/prefs.js:1367
-#: Resource_Monitor@Ory0n/prefs.js:1423 Resource_Monitor@Ory0n/prefs.js:1490
-#: Resource_Monitor@Ory0n/prefs.js:1600 Resource_Monitor@Ory0n/prefs.js:1739
-#: Resource_Monitor@Ory0n/prefs.js:1788 Resource_Monitor@Ory0n/prefs.js:1868
-#: Resource_Monitor@Ory0n/prefs.js:1933 Resource_Monitor@Ory0n/prefs.js:2050
-#: Resource_Monitor@Ory0n/prefs.js:2108 Resource_Monitor@Ory0n/prefs.js:2184
+#: Resource_Monitor@Ory0n/prefs.js:1341 Resource_Monitor@Ory0n/prefs.js:1390
+#: Resource_Monitor@Ory0n/prefs.js:1446 Resource_Monitor@Ory0n/prefs.js:1513
+#: Resource_Monitor@Ory0n/prefs.js:1625 Resource_Monitor@Ory0n/prefs.js:1736
+#: Resource_Monitor@Ory0n/prefs.js:1875 Resource_Monitor@Ory0n/prefs.js:1924
+#: Resource_Monitor@Ory0n/prefs.js:2004 Resource_Monitor@Ory0n/prefs.js:2069
+#: Resource_Monitor@Ory0n/prefs.js:2186 Resource_Monitor@Ory0n/prefs.js:2244
+#: Resource_Monitor@Ory0n/prefs.js:2320
 msgid "Show in Panel"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1319
+#: Resource_Monitor@Ory0n/prefs.js:1342
 msgid "Show CPU usage in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1325 Resource_Monitor@Ory0n/prefs.js:1374
-#: Resource_Monitor@Ory0n/prefs.js:1430 Resource_Monitor@Ory0n/prefs.js:1497
-#: Resource_Monitor@Ory0n/prefs.js:1607 Resource_Monitor@Ory0n/prefs.js:1746
-#: Resource_Monitor@Ory0n/prefs.js:1795 Resource_Monitor@Ory0n/prefs.js:1875
-#: Resource_Monitor@Ory0n/prefs.js:1940 Resource_Monitor@Ory0n/prefs.js:2057
-#: Resource_Monitor@Ory0n/prefs.js:2115 Resource_Monitor@Ory0n/prefs.js:2191
+#: Resource_Monitor@Ory0n/prefs.js:1348 Resource_Monitor@Ory0n/prefs.js:1397
+#: Resource_Monitor@Ory0n/prefs.js:1453 Resource_Monitor@Ory0n/prefs.js:1520
+#: Resource_Monitor@Ory0n/prefs.js:1660 Resource_Monitor@Ory0n/prefs.js:1743
+#: Resource_Monitor@Ory0n/prefs.js:1882 Resource_Monitor@Ory0n/prefs.js:1931
+#: Resource_Monitor@Ory0n/prefs.js:2011 Resource_Monitor@Ory0n/prefs.js:2076
+#: Resource_Monitor@Ory0n/prefs.js:2193 Resource_Monitor@Ory0n/prefs.js:2251
+#: Resource_Monitor@Ory0n/prefs.js:2327
 msgid "Reserved Width"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1326
+#: Resource_Monitor@Ory0n/prefs.js:1349
 msgid "Reserve a fixed amount of space for the CPU value."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1332 Resource_Monitor@Ory0n/prefs.js:1388
-#: Resource_Monitor@Ory0n/prefs.js:1437 Resource_Monitor@Ory0n/prefs.js:1527
-#: Resource_Monitor@Ory0n/prefs.js:1637 Resource_Monitor@Ory0n/prefs.js:1753
-#: Resource_Monitor@Ory0n/prefs.js:1802 Resource_Monitor@Ory0n/prefs.js:1898
-#: Resource_Monitor@Ory0n/prefs.js:1970 Resource_Monitor@Ory0n/prefs.js:2064
-#: Resource_Monitor@Ory0n/prefs.js:2122 Resource_Monitor@Ory0n/prefs.js:2205
-#: Resource_Monitor@Ory0n/prefs.js:2263
+#: Resource_Monitor@Ory0n/prefs.js:1355 Resource_Monitor@Ory0n/prefs.js:1411
+#: Resource_Monitor@Ory0n/prefs.js:1460 Resource_Monitor@Ory0n/prefs.js:1550
+#: Resource_Monitor@Ory0n/prefs.js:1667 Resource_Monitor@Ory0n/prefs.js:1773
+#: Resource_Monitor@Ory0n/prefs.js:1889 Resource_Monitor@Ory0n/prefs.js:1938
+#: Resource_Monitor@Ory0n/prefs.js:2034 Resource_Monitor@Ory0n/prefs.js:2106
+#: Resource_Monitor@Ory0n/prefs.js:2200 Resource_Monitor@Ory0n/prefs.js:2258
+#: Resource_Monitor@Ory0n/prefs.js:2341 Resource_Monitor@Ory0n/prefs.js:2399
 msgid "Decimals"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1333
+#: Resource_Monitor@Ory0n/prefs.js:1356
 msgid "Choose how many decimal digits are shown for CPU usage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1339 Resource_Monitor@Ory0n/prefs.js:1395
-#: Resource_Monitor@Ory0n/prefs.js:1444 Resource_Monitor@Ory0n/prefs.js:1534
-#: Resource_Monitor@Ory0n/prefs.js:1644 Resource_Monitor@Ory0n/prefs.js:1760
-#: Resource_Monitor@Ory0n/prefs.js:1809 Resource_Monitor@Ory0n/prefs.js:1905
-#: Resource_Monitor@Ory0n/prefs.js:1977 Resource_Monitor@Ory0n/prefs.js:2071
-#: Resource_Monitor@Ory0n/prefs.js:2129 Resource_Monitor@Ory0n/prefs.js:2212
-#: Resource_Monitor@Ory0n/prefs.js:2270
+#: Resource_Monitor@Ory0n/prefs.js:1362 Resource_Monitor@Ory0n/prefs.js:1418
+#: Resource_Monitor@Ory0n/prefs.js:1467 Resource_Monitor@Ory0n/prefs.js:1557
+#: Resource_Monitor@Ory0n/prefs.js:1674 Resource_Monitor@Ory0n/prefs.js:1780
+#: Resource_Monitor@Ory0n/prefs.js:1896 Resource_Monitor@Ory0n/prefs.js:1945
+#: Resource_Monitor@Ory0n/prefs.js:2041 Resource_Monitor@Ory0n/prefs.js:2113
+#: Resource_Monitor@Ory0n/prefs.js:2207 Resource_Monitor@Ory0n/prefs.js:2265
+#: Resource_Monitor@Ory0n/prefs.js:2348 Resource_Monitor@Ory0n/prefs.js:2406
 msgid "Render Mode"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1340 Resource_Monitor@Ory0n/prefs.js:1396
-#: Resource_Monitor@Ory0n/prefs.js:1445 Resource_Monitor@Ory0n/prefs.js:1535
-#: Resource_Monitor@Ory0n/prefs.js:1645 Resource_Monitor@Ory0n/prefs.js:1761
-#: Resource_Monitor@Ory0n/prefs.js:1810 Resource_Monitor@Ory0n/prefs.js:1906
-#: Resource_Monitor@Ory0n/prefs.js:1978 Resource_Monitor@Ory0n/prefs.js:2072
-#: Resource_Monitor@Ory0n/prefs.js:2130 Resource_Monitor@Ory0n/prefs.js:2213
-#: Resource_Monitor@Ory0n/prefs.js:2271
+#: Resource_Monitor@Ory0n/prefs.js:1363 Resource_Monitor@Ory0n/prefs.js:1419
+#: Resource_Monitor@Ory0n/prefs.js:1468 Resource_Monitor@Ory0n/prefs.js:1558
+#: Resource_Monitor@Ory0n/prefs.js:1675 Resource_Monitor@Ory0n/prefs.js:1781
+#: Resource_Monitor@Ory0n/prefs.js:1897 Resource_Monitor@Ory0n/prefs.js:1946
+#: Resource_Monitor@Ory0n/prefs.js:2042 Resource_Monitor@Ory0n/prefs.js:2114
+#: Resource_Monitor@Ory0n/prefs.js:2208 Resource_Monitor@Ory0n/prefs.js:2266
+#: Resource_Monitor@Ory0n/prefs.js:2349 Resource_Monitor@Ory0n/prefs.js:2407
 msgid "Choose between precise rendering and quantized step rendering."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1347 Resource_Monitor@Ory0n/prefs.js:1403
-#: Resource_Monitor@Ory0n/prefs.js:1452 Resource_Monitor@Ory0n/prefs.js:1542
-#: Resource_Monitor@Ory0n/prefs.js:1652 Resource_Monitor@Ory0n/prefs.js:1768
-#: Resource_Monitor@Ory0n/prefs.js:1817 Resource_Monitor@Ory0n/prefs.js:1913
-#: Resource_Monitor@Ory0n/prefs.js:1985 Resource_Monitor@Ory0n/prefs.js:2079
-#: Resource_Monitor@Ory0n/prefs.js:2137 Resource_Monitor@Ory0n/prefs.js:2220
-#: Resource_Monitor@Ory0n/prefs.js:2278
+#: Resource_Monitor@Ory0n/prefs.js:1370 Resource_Monitor@Ory0n/prefs.js:1426
+#: Resource_Monitor@Ory0n/prefs.js:1475 Resource_Monitor@Ory0n/prefs.js:1565
+#: Resource_Monitor@Ory0n/prefs.js:1682 Resource_Monitor@Ory0n/prefs.js:1788
+#: Resource_Monitor@Ory0n/prefs.js:1904 Resource_Monitor@Ory0n/prefs.js:1953
+#: Resource_Monitor@Ory0n/prefs.js:2049 Resource_Monitor@Ory0n/prefs.js:2121
+#: Resource_Monitor@Ory0n/prefs.js:2215 Resource_Monitor@Ory0n/prefs.js:2273
+#: Resource_Monitor@Ory0n/prefs.js:2356 Resource_Monitor@Ory0n/prefs.js:2414
 msgid "In step mode, values change only after this increment."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1354 Resource_Monitor@Ory0n/prefs.js:2227
+#: Resource_Monitor@Ory0n/prefs.js:1377 Resource_Monitor@Ory0n/prefs.js:2363
 msgid "Usage Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1355
+#: Resource_Monitor@Ory0n/prefs.js:1378
 msgid "Manage threshold colors for CPU usage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1362
+#: Resource_Monitor@Ory0n/prefs.js:1385
 msgid "Frequency"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1363
+#: Resource_Monitor@Ory0n/prefs.js:1386
 msgid "Configure how CPU frequency is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1368
+#: Resource_Monitor@Ory0n/prefs.js:1391
 msgid "Show the current CPU frequency in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1375
+#: Resource_Monitor@Ory0n/prefs.js:1398
 msgid "Reserve a fixed amount of space for the frequency value."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1381 Resource_Monitor@Ory0n/prefs.js:1511
-#: Resource_Monitor@Ory0n/prefs.js:1621 Resource_Monitor@Ory0n/prefs.js:1724
-#: Resource_Monitor@Ory0n/prefs.js:1889 Resource_Monitor@Ory0n/prefs.js:1954
-#: Resource_Monitor@Ory0n/prefs.js:2247
+#: Resource_Monitor@Ory0n/prefs.js:1404 Resource_Monitor@Ory0n/prefs.js:1534
+#: Resource_Monitor@Ory0n/prefs.js:1757 Resource_Monitor@Ory0n/prefs.js:1860
+#: Resource_Monitor@Ory0n/prefs.js:2025 Resource_Monitor@Ory0n/prefs.js:2090
+#: Resource_Monitor@Ory0n/prefs.js:2383
 msgid "Scale"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1382
+#: Resource_Monitor@Ory0n/prefs.js:1405
 msgid "Choose how CPU frequency values are scaled."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1389
+#: Resource_Monitor@Ory0n/prefs.js:1412
 msgid "Choose how many decimal digits are shown for CPU frequency."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1410
+#: Resource_Monitor@Ory0n/prefs.js:1433
 msgid "Frequency Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1411
+#: Resource_Monitor@Ory0n/prefs.js:1434
 msgid "Manage threshold colors for CPU frequency."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1418
+#: Resource_Monitor@Ory0n/prefs.js:1441
 msgid "Load Average"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1419
+#: Resource_Monitor@Ory0n/prefs.js:1442
 msgid "Configure how system load average is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1424
+#: Resource_Monitor@Ory0n/prefs.js:1447
 msgid "Show the load average in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1431
+#: Resource_Monitor@Ory0n/prefs.js:1454
 msgid "Reserve a fixed amount of space for the load average value."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1438
+#: Resource_Monitor@Ory0n/prefs.js:1461
 msgid "Choose how many decimal digits are shown for load average."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1459
+#: Resource_Monitor@Ory0n/prefs.js:1482
 msgid "Load Average Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1460
+#: Resource_Monitor@Ory0n/prefs.js:1483
 msgid "Manage threshold colors for load average."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1478
+#: Resource_Monitor@Ory0n/prefs.js:1501
 msgid "RAM Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1479
+#: Resource_Monitor@Ory0n/prefs.js:1502
 msgid "Configure memory metrics, scale, and alert thresholds."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1485 Resource_Monitor@Ory0n/prefs.js:2235
+#: Resource_Monitor@Ory0n/prefs.js:1508 Resource_Monitor@Ory0n/prefs.js:1632
+#: Resource_Monitor@Ory0n/prefs.js:2371
 msgid "Memory"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1486
+#: Resource_Monitor@Ory0n/prefs.js:1509
 msgid "Configure how RAM usage is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1491
+#: Resource_Monitor@Ory0n/prefs.js:1514
 msgid "Show RAM usage in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1498
+#: Resource_Monitor@Ory0n/prefs.js:1521
 msgid "Reserve a fixed amount of space for the RAM value."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1504 Resource_Monitor@Ory0n/prefs.js:1614
-#: Resource_Monitor@Ory0n/prefs.js:1947 Resource_Monitor@Ory0n/prefs.js:2240
+#: Resource_Monitor@Ory0n/prefs.js:1527 Resource_Monitor@Ory0n/prefs.js:1750
+#: Resource_Monitor@Ory0n/prefs.js:2083 Resource_Monitor@Ory0n/prefs.js:2376
 msgid "Value Format"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1505 Resource_Monitor@Ory0n/prefs.js:1615
-#: Resource_Monitor@Ory0n/prefs.js:1948 Resource_Monitor@Ory0n/prefs.js:2241
+#: Resource_Monitor@Ory0n/prefs.js:1528 Resource_Monitor@Ory0n/prefs.js:1751
+#: Resource_Monitor@Ory0n/prefs.js:2084 Resource_Monitor@Ory0n/prefs.js:2377
 msgid "Choose between percentage and numeric values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1513
+#: Resource_Monitor@Ory0n/prefs.js:1536
 msgid "Choose how numeric RAM values are formatted."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1520 Resource_Monitor@Ory0n/prefs.js:1630
-#: Resource_Monitor@Ory0n/prefs.js:1963 Resource_Monitor@Ory0n/prefs.js:2256
+#: Resource_Monitor@Ory0n/prefs.js:1543 Resource_Monitor@Ory0n/prefs.js:1766
+#: Resource_Monitor@Ory0n/prefs.js:2099 Resource_Monitor@Ory0n/prefs.js:2392
 msgid "Tracked Value"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1521
+#: Resource_Monitor@Ory0n/prefs.js:1544
 msgid "Choose whether to monitor used or free memory."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1528
+#: Resource_Monitor@Ory0n/prefs.js:1551
 msgid "Choose how many decimal digits are shown for RAM values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1549 Resource_Monitor@Ory0n/prefs.js:2285
+#: Resource_Monitor@Ory0n/prefs.js:1572 Resource_Monitor@Ory0n/prefs.js:2421
 msgid "Memory Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1550
+#: Resource_Monitor@Ory0n/prefs.js:1573
 msgid "Manage threshold colors for RAM usage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1557 Resource_Monitor@Ory0n/prefs.js:1667
+#: Resource_Monitor@Ory0n/prefs.js:1580 Resource_Monitor@Ory0n/prefs.js:1803
 msgid "Alert"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1558
+#: Resource_Monitor@Ory0n/prefs.js:1581
 msgid "Configure the low-memory warning threshold."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1562 Resource_Monitor@Ory0n/prefs.js:1672
+#: Resource_Monitor@Ory0n/prefs.js:1585 Resource_Monitor@Ory0n/prefs.js:1808
 msgid "Enable Alert"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1563
+#: Resource_Monitor@Ory0n/prefs.js:1586
 msgid ""
 "Show a notification when available memory drops below the configured limit."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1569 Resource_Monitor@Ory0n/prefs.js:1679
+#: Resource_Monitor@Ory0n/prefs.js:1592 Resource_Monitor@Ory0n/prefs.js:1815
 msgid "Threshold"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1570
+#: Resource_Monitor@Ory0n/prefs.js:1593
 msgid "Trigger the alert when free memory is lower than this percentage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1588
-msgid "Swap Preferences"
+#: Resource_Monitor@Ory0n/prefs.js:1611
+msgid "Pressure Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1589
-msgid "Configure swap metrics, scale, and low-memory alerts."
+#: Resource_Monitor@Ory0n/prefs.js:1613
+msgid ""
+"Share of time tasks stalled waiting for memory, CPU or disk (PSI). The panel "
+"shows the worst source, prefixed with M, C or D, and only the icon while "
+"every source is below its first threshold."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1596
-msgid "Configure how swap usage is shown in the panel."
+#: Resource_Monitor@Ory0n/prefs.js:1621
+msgid "Configure how pressure is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1601
-msgid "Show swap usage in the panel."
+#: Resource_Monitor@Ory0n/prefs.js:1626
+msgid "Show pressure in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1608
-msgid "Reserve a fixed amount of space for the swap value."
+#: Resource_Monitor@Ory0n/prefs.js:1633
+msgid "Include memory pressure (M)."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1623
-msgid "Choose how numeric swap values are formatted."
+#: Resource_Monitor@Ory0n/prefs.js:1640
+msgid "Include CPU pressure (C)."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1631
-msgid "Choose whether to monitor used or free swap."
+#: Resource_Monitor@Ory0n/prefs.js:1646 Resource_Monitor@Ory0n/prefs.js:1973
+msgid "Disk"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1638
-msgid "Choose how many decimal digits are shown for swap values."
+#: Resource_Monitor@Ory0n/prefs.js:1647
+msgid "Include disk I/O pressure (D)."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1659
-msgid "Swap Colors"
+#: Resource_Monitor@Ory0n/prefs.js:1653
+msgid "Measurement"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1660
-msgid "Manage threshold colors for swap usage."
+#: Resource_Monitor@Ory0n/prefs.js:1654
+msgid ""
+"Measure over the last refresh interval, or use the smoother but slower "
+"kernel 10-second average."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1661
+msgid "Reserve a fixed amount of space for the pressure value."
 msgstr ""
 
 #: Resource_Monitor@Ory0n/prefs.js:1668
+msgid "Choose how many decimal digits are shown for pressure."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1689
+msgid "Memory Pressure Colors"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1690
+msgid "Manage threshold colors for memory pressure."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1697
+msgid "CPU Pressure Colors"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1698
+msgid "Manage threshold colors for CPU pressure."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1705
+msgid "Disk Pressure Colors"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1706
+msgid "Manage threshold colors for disk I/O pressure."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1724
+msgid "Swap Preferences"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1725
+msgid "Configure swap metrics, scale, and low-memory alerts."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1732
+msgid "Configure how swap usage is shown in the panel."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1737
+msgid "Show swap usage in the panel."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1744
+msgid "Reserve a fixed amount of space for the swap value."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1759
+msgid "Choose how numeric swap values are formatted."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1767
+msgid "Choose whether to monitor used or free swap."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1774
+msgid "Choose how many decimal digits are shown for swap values."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1795
+msgid "Swap Colors"
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1796
+msgid "Manage threshold colors for swap usage."
+msgstr ""
+
+#: Resource_Monitor@Ory0n/prefs.js:1804
 msgid "Configure the low-swap warning threshold."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1673
+#: Resource_Monitor@Ory0n/prefs.js:1809
 msgid ""
 "Show a notification when available swap drops below the configured limit."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1680
+#: Resource_Monitor@Ory0n/prefs.js:1816
 msgid "Trigger the alert when free swap is lower than this percentage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1692
+#: Resource_Monitor@Ory0n/prefs.js:1828
 msgid "Network"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1698
+#: Resource_Monitor@Ory0n/prefs.js:1834
 msgid "Network Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1699
+#: Resource_Monitor@Ory0n/prefs.js:1835
 msgid "Configure throughput units and per-interface indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1705 Resource_Monitor@Ory0n/prefs.js:1850
-#: Resource_Monitor@Ory0n/prefs.js:2032
+#: Resource_Monitor@Ory0n/prefs.js:1841 Resource_Monitor@Ory0n/prefs.js:1986
+#: Resource_Monitor@Ory0n/prefs.js:2168
 msgid "Common"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1706
+#: Resource_Monitor@Ory0n/prefs.js:1842
 msgid "Configure shared network display settings."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1710
+#: Resource_Monitor@Ory0n/prefs.js:1846
 msgid "Auto-hide Inactive"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1711
+#: Resource_Monitor@Ory0n/prefs.js:1847
 msgid "Hide interfaces that do not have an active NetworkManager connection."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1717 Resource_Monitor@Ory0n/prefs.js:3152
+#: Resource_Monitor@Ory0n/prefs.js:1853 Resource_Monitor@Ory0n/prefs.js:3342
 msgid "Base Unit"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1718
+#: Resource_Monitor@Ory0n/prefs.js:1854
 msgid "Choose whether throughput is displayed in bytes or bits."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1726
+#: Resource_Monitor@Ory0n/prefs.js:1862
 msgid "Choose how network throughput values are formatted."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1735
+#: Resource_Monitor@Ory0n/prefs.js:1871
 msgid "Configure how wired traffic is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1740
+#: Resource_Monitor@Ory0n/prefs.js:1876
 msgid "Show Ethernet traffic in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1747
+#: Resource_Monitor@Ory0n/prefs.js:1883
 msgid "Reserve a fixed amount of space for Ethernet throughput."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1754
+#: Resource_Monitor@Ory0n/prefs.js:1890
 msgid "Choose how many decimal digits are shown for Ethernet throughput."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1775
+#: Resource_Monitor@Ory0n/prefs.js:1911
 msgid "Ethernet Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1776
+#: Resource_Monitor@Ory0n/prefs.js:1912
 msgid "Manage threshold colors for Ethernet throughput."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1783
+#: Resource_Monitor@Ory0n/prefs.js:1919
 msgid "Wireless"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1784
+#: Resource_Monitor@Ory0n/prefs.js:1920
 msgid "Configure how Wi-Fi traffic is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1789
+#: Resource_Monitor@Ory0n/prefs.js:1925
 msgid "Show Wi-Fi traffic in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1796
+#: Resource_Monitor@Ory0n/prefs.js:1932
 msgid "Reserve a fixed amount of space for Wi-Fi throughput."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1803
+#: Resource_Monitor@Ory0n/prefs.js:1939
 msgid "Choose how many decimal digits are shown for Wi-Fi throughput."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1824
+#: Resource_Monitor@Ory0n/prefs.js:1960
 msgid "Wireless Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1825
+#: Resource_Monitor@Ory0n/prefs.js:1961
 msgid "Manage threshold colors for Wi-Fi throughput."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1837
-msgid "Disk"
-msgstr ""
-
-#: Resource_Monitor@Ory0n/prefs.js:1843
+#: Resource_Monitor@Ory0n/prefs.js:1979
 msgid "Disk Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1844
+#: Resource_Monitor@Ory0n/prefs.js:1980
 msgid "Configure activity, space monitoring, and device selection."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1851
+#: Resource_Monitor@Ory0n/prefs.js:1987
 msgid "Configure shared disk settings for panel indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1855
+#: Resource_Monitor@Ory0n/prefs.js:1991
 msgid "Show Device Name"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1856
+#: Resource_Monitor@Ory0n/prefs.js:1992
 msgid "Display the configured disk label in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1863
+#: Resource_Monitor@Ory0n/prefs.js:1999
 msgid "Statistics"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1864
+#: Resource_Monitor@Ory0n/prefs.js:2000
 msgid "Configure disk activity indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1869
+#: Resource_Monitor@Ory0n/prefs.js:2005
 msgid "Show disk activity statistics in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1876
+#: Resource_Monitor@Ory0n/prefs.js:2012
 msgid "Reserve a fixed amount of space for disk activity values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1882
+#: Resource_Monitor@Ory0n/prefs.js:2018
 msgid "Aggregation"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1883
+#: Resource_Monitor@Ory0n/prefs.js:2019
 msgid "Choose between a single combined value and per-device values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1891
+#: Resource_Monitor@Ory0n/prefs.js:2027
 msgid "Choose how disk activity values are formatted."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1899
+#: Resource_Monitor@Ory0n/prefs.js:2035
 msgid "Choose how many decimal digits are shown for disk activity."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1920
+#: Resource_Monitor@Ory0n/prefs.js:2056
 msgid "Statistics Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1921
+#: Resource_Monitor@Ory0n/prefs.js:2057
 msgid "Manage threshold colors for disk activity."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1928 Resource_Monitor@Ory0n/prefs.js:2942
+#: Resource_Monitor@Ory0n/prefs.js:2064 Resource_Monitor@Ory0n/prefs.js:3132
 msgid "Space"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1929
+#: Resource_Monitor@Ory0n/prefs.js:2065
 msgid "Configure disk space indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1934
+#: Resource_Monitor@Ory0n/prefs.js:2070
 msgid "Show disk space usage in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1941
+#: Resource_Monitor@Ory0n/prefs.js:2077
 msgid "Reserve a fixed amount of space for disk space values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1956
+#: Resource_Monitor@Ory0n/prefs.js:2092
 msgid "Choose how numeric disk space values are formatted."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1964
+#: Resource_Monitor@Ory0n/prefs.js:2100
 msgid "Choose whether to monitor used or free space."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1971
+#: Resource_Monitor@Ory0n/prefs.js:2107
 msgid "Choose how many decimal digits are shown for disk space values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1992
+#: Resource_Monitor@Ory0n/prefs.js:2128
 msgid "Space Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:1993
+#: Resource_Monitor@Ory0n/prefs.js:2129
 msgid "Manage threshold colors for disk space usage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2000 Resource_Monitor@Ory0n/prefs.js:2293
+#: Resource_Monitor@Ory0n/prefs.js:2136 Resource_Monitor@Ory0n/prefs.js:2429
 msgid "Devices"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2001
+#: Resource_Monitor@Ory0n/prefs.js:2137
 msgid "Choose which disks participate in the panel indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2005
+#: Resource_Monitor@Ory0n/prefs.js:2141
 msgid "Display All Devices"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2006
+#: Resource_Monitor@Ory0n/prefs.js:2142
 msgid "Include every detected device in the device list."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2019
+#: Resource_Monitor@Ory0n/prefs.js:2155
 msgid "Thermal"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2025
+#: Resource_Monitor@Ory0n/prefs.js:2161
 msgid "Thermal Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2026
+#: Resource_Monitor@Ory0n/prefs.js:2162
 msgid "Configure CPU and GPU temperature units, sensors, and visibility."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2033
+#: Resource_Monitor@Ory0n/prefs.js:2169
 msgid "Configure shared temperature display settings."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2037
+#: Resource_Monitor@Ory0n/prefs.js:2173
 msgid "Temperature Unit"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2038
+#: Resource_Monitor@Ory0n/prefs.js:2174
 msgid "Choose Celsius or Fahrenheit for all thermal readings."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2045
+#: Resource_Monitor@Ory0n/prefs.js:2181
 msgid "CPU Temperature"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2046
+#: Resource_Monitor@Ory0n/prefs.js:2182
 msgid "Configure how CPU temperature is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2051
+#: Resource_Monitor@Ory0n/prefs.js:2187
 msgid "Show CPU temperature in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2058
+#: Resource_Monitor@Ory0n/prefs.js:2194
 msgid "Reserve a fixed amount of space for CPU temperature values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2065
+#: Resource_Monitor@Ory0n/prefs.js:2201
 msgid "Choose how many decimal digits are shown for CPU temperature."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2086
+#: Resource_Monitor@Ory0n/prefs.js:2222
 msgid "CPU Temperature Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2087
+#: Resource_Monitor@Ory0n/prefs.js:2223
 msgid "Manage threshold colors for CPU temperature."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2094
+#: Resource_Monitor@Ory0n/prefs.js:2230
 msgid "CPU Sensors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2095
+#: Resource_Monitor@Ory0n/prefs.js:2231
 msgid "Choose which CPU thermal sensors are monitored."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2103
+#: Resource_Monitor@Ory0n/prefs.js:2239
 msgid "GPU Temperature"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2104
+#: Resource_Monitor@Ory0n/prefs.js:2240
 msgid "Configure how GPU temperature is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2109
+#: Resource_Monitor@Ory0n/prefs.js:2245
 msgid "Show GPU temperature in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2116
+#: Resource_Monitor@Ory0n/prefs.js:2252
 msgid "Reserve a fixed amount of space for GPU temperature values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2123
+#: Resource_Monitor@Ory0n/prefs.js:2259
 msgid "Choose how many decimal digits are shown for GPU temperature."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2144
+#: Resource_Monitor@Ory0n/prefs.js:2280
 msgid "GPU Temperature Colors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2145
+#: Resource_Monitor@Ory0n/prefs.js:2281
 msgid "Manage threshold colors for GPU temperature."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2152
+#: Resource_Monitor@Ory0n/prefs.js:2288
 msgid "GPU Sensors"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2153
+#: Resource_Monitor@Ory0n/prefs.js:2289
 msgid "Choose which GPU thermal sensors are monitored."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2172
+#: Resource_Monitor@Ory0n/prefs.js:2308
 msgid "GPU Preferences"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2173
+#: Resource_Monitor@Ory0n/prefs.js:2309
 msgid "Configure usage, memory telemetry, devices, and diagnostics."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2180
+#: Resource_Monitor@Ory0n/prefs.js:2316
 msgid "Configure how GPU usage is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2185
+#: Resource_Monitor@Ory0n/prefs.js:2321
 msgid "Show GPU usage in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2192
+#: Resource_Monitor@Ory0n/prefs.js:2328
 msgid "Reserve a fixed amount of space for GPU usage values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2198
+#: Resource_Monitor@Ory0n/prefs.js:2334
 msgid "Display Device Name"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2199
+#: Resource_Monitor@Ory0n/prefs.js:2335
 msgid "Show the selected GPU name next to the panel values."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2206
+#: Resource_Monitor@Ory0n/prefs.js:2342
 msgid "Choose how many decimal digits are shown for GPU usage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2228
+#: Resource_Monitor@Ory0n/prefs.js:2364
 msgid "Manage threshold colors for GPU usage."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2236
+#: Resource_Monitor@Ory0n/prefs.js:2372
 msgid "Configure how GPU memory is shown in the panel."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2249
+#: Resource_Monitor@Ory0n/prefs.js:2385
 msgid "Choose how numeric GPU memory values are formatted."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2257
+#: Resource_Monitor@Ory0n/prefs.js:2393
 msgid "Choose whether to monitor used or free GPU memory."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2264
+#: Resource_Monitor@Ory0n/prefs.js:2400
 msgid "Choose how many decimal digits are shown for GPU memory."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2286
+#: Resource_Monitor@Ory0n/prefs.js:2422
 msgid "Manage threshold colors for GPU memory."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2294
+#: Resource_Monitor@Ory0n/prefs.js:2430
 msgid "Choose which GPUs contribute usage and memory indicators."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2300
+#: Resource_Monitor@Ory0n/prefs.js:2436
 msgid "Diagnostics"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2301
+#: Resource_Monitor@Ory0n/prefs.js:2437
 msgid "Review detected GPU backends and available telemetry capabilities."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2352 Resource_Monitor@Ory0n/prefs.js:2377
+#: Resource_Monitor@Ory0n/prefs.js:2489 Resource_Monitor@Ory0n/prefs.js:2514
 msgid "Left"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2353
+#: Resource_Monitor@Ory0n/prefs.js:2490
 msgid "Center"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2354 Resource_Monitor@Ory0n/prefs.js:2378
+#: Resource_Monitor@Ory0n/prefs.js:2491 Resource_Monitor@Ory0n/prefs.js:2515
 msgid "Right"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2360
+#: Resource_Monitor@Ory0n/prefs.js:2497
 msgid "GNOME System Monitor"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2361
+#: Resource_Monitor@Ory0n/prefs.js:2498
 msgid "GNOME Usage"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2368
+#: Resource_Monitor@Ory0n/prefs.js:2505
 msgid "e.g. gnome-system-monitor"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2508
+#: Resource_Monitor@Ory0n/prefs.js:2645
 msgid "Move up"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2528
+#: Resource_Monitor@Ory0n/prefs.js:2665
 msgid "Move down"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2790
+#: Resource_Monitor@Ory0n/prefs.js:2980
 msgid "Combined"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2791
+#: Resource_Monitor@Ory0n/prefs.js:2981
 msgid "Per Device"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2903 Resource_Monitor@Ory0n/prefs.js:3520
+#: Resource_Monitor@Ory0n/prefs.js:3093 Resource_Monitor@Ory0n/prefs.js:3710
 msgid "Display Name"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2912 Resource_Monitor@Ory0n/prefs.js:3529
+#: Resource_Monitor@Ory0n/prefs.js:3102 Resource_Monitor@Ory0n/prefs.js:3719
 #: Resource_Monitor@Ory0n/prefs/helpers.js:247
 msgid "Device"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2924
+#: Resource_Monitor@Ory0n/prefs.js:3114
 msgid "Mount Point"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:2933
+#: Resource_Monitor@Ory0n/prefs.js:3123
 msgid "Stats"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:3246
+#: Resource_Monitor@Ory0n/prefs.js:3436
 msgid "°C"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:3247
+#: Resource_Monitor@Ory0n/prefs.js:3437
 msgid "°F"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:3539
+#: Resource_Monitor@Ory0n/prefs.js:3729
 #: Resource_Monitor@Ory0n/prefs/helpers.js:254
 msgid "Name"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:3548
+#: Resource_Monitor@Ory0n/prefs.js:3738
 msgid "Monitor Usage"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/prefs.js:3557
+#: Resource_Monitor@Ory0n/prefs.js:3747
 msgid "Monitor Memory"
 msgstr ""
 
@@ -1170,21 +1261,21 @@ msgstr ""
 msgid "Monitor"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/services/refreshers.js:190
+#: Resource_Monitor@Ory0n/services/refreshers.js:208
 msgid "Resource Monitor - Low Memory Alert"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/services/refreshers.js:192
+#: Resource_Monitor@Ory0n/services/refreshers.js:210
 #, javascript-format
 msgid ""
 "Available RAM has dropped below %d%%. Please take action to free up memory."
 msgstr ""
 
-#: Resource_Monitor@Ory0n/services/refreshers.js:235
+#: Resource_Monitor@Ory0n/services/refreshers.js:342
 msgid "Resource Monitor - Low Swap Alert"
 msgstr ""
 
-#: Resource_Monitor@Ory0n/services/refreshers.js:237
+#: Resource_Monitor@Ory0n/services/refreshers.js:344
 #, javascript-format
 msgid ""
 "Available swap has dropped below %d%%. Please take action to free up memory."

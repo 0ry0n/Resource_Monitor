@@ -7,6 +7,10 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ## [Unreleased]
 
+### Added
+
+- Optional Pressure indicator based on Linux Pressure Stall Information (memory, CPU and disk I/O).
+
 ## [29] - 2026-11-06
 
 ### Added

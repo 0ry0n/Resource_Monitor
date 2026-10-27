@@ -44,6 +44,7 @@ export function getPanelGroupVisibility(indicator) {
       indicator._cpuLoadAverageStatus ||
       hasVisibleThermalCpuTemperature(indicator),
     ram: indicator._ramStatus,
+    pressure: indicator._pressureStatus,
     swap: indicator._swapStatus,
     stats: indicator._diskStatsStatus,
     space: indicator._diskSpaceStatus,

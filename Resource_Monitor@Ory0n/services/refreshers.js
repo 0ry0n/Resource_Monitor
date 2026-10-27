@@ -8,6 +8,12 @@ import {
 } from "../runtime/metrics.js";
 import { buildMemoryDisplay } from "../runtime/memory.js";
 import {
+  PRESSURE_SOURCES,
+  parsePressure,
+  pickWorstPressure,
+  updatePressureState,
+} from "../runtime/pressure.js";
+import {
   buildDiskSpaceDisplay,
   parseDiskStatsEntries,
 } from "../runtime/disk.js";
@@ -218,6 +224,89 @@ export function refreshRamValue(indicator) {
             error
           );
         }
+      })
+  );
+}
+
+function _applyPressureDisplay(indicator, worst) {
+  const valueLabel = indicator._pressureValue;
+  const unitLabel = indicator._pressureUnit;
+
+  // Nothing above its first threshold: the icon alone says "all fine".
+  if (worst && worst.level === 0 && indicator._iconsStatus) {
+    valueLabel.hide();
+    unitLabel.hide();
+    return;
+  }
+
+  valueLabel.show();
+  unitLabel.show();
+
+  if (!worst) {
+    valueLabel.style = "";
+    valueLabel.text = "--";
+    return;
+  }
+
+  valueLabel.style = indicator._getUsageColor(
+    worst.value,
+    indicator._pressureColors[worst.source.id]
+  );
+  valueLabel.text = `${worst.source.label}${indicator._getValueFixed(
+    worst.value,
+    "pressure"
+  )}`;
+}
+
+export function refreshPressureValue(indicator) {
+  const sources = PRESSURE_SOURCES.filter(
+    (source) => indicator._pressureSources[source.id]
+  );
+
+  indicator._runRefreshTask("pressure", () =>
+    Promise.allSettled(sources.map((source) => indicator._loadFile(source.path)))
+      .then((results) => {
+        if (!indicator._pressureStatus) {
+          return;
+        }
+
+        const timeUsec = GLib.get_monotonic_time();
+        const readings = [];
+        let failure = null;
+
+        results.forEach((result, index) => {
+          const source = sources[index];
+
+          if (result.status === "rejected") {
+            failure ??= result.reason;
+            return;
+          }
+
+          const { avg10, total } = parsePressure(result.value);
+          const state = (indicator._pressureStates[source.id] ??= {});
+          const interval = updatePressureState(state, { total, timeUsec });
+          const value =
+            indicator._pressureMeasurement === "interval" && interval !== undefined
+              ? interval
+              : avg10;
+
+          readings.push({ source, value });
+        });
+
+        if (failure && !indicator._isCancelledError(failure)) {
+          indicator._logIssueOnce(
+            "pressure-read-error",
+            "[Resource_Monitor] Error reading pressure stall information.",
+            failure
+          );
+        } else if (!failure) {
+          indicator._clearLoggedIssue("pressure-read-error");
+        }
+
+        _applyPressureDisplay(
+          indicator,
+          pickWorstPressure(readings, indicator._pressureColors)
+        );
       })
   );
 }
@@ -854,6 +943,9 @@ export function refreshHandler(indicator, forceGpu = false) {
   }
   if (indicator._ramStatus) {
     refreshRamValue(indicator);
+  }
+  if (indicator._pressureStatus) {
+    refreshPressureValue(indicator);
   }
   if (indicator._swapStatus) {
     refreshSwapValue(indicator);

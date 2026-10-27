@@ -51,6 +51,7 @@ import {
   makeColors,
   makeThermalColumnView,
   parseSettingsArray,
+  readItemsPosition,
   replaceSignalHandler,
   saveArrayToSettings,
 } from "./prefs/helpers.js";
@@ -105,6 +106,16 @@ const RAM_UNIT_MEASURE = "ramunitmeasure";
 const RAM_MONITOR = "rammonitor";
 const RAM_ALERT = "ramalert";
 const RAM_ALERT_THRESHOLD = "ramalertthreshold";
+
+const PRESSURE_STATUS = "pressurestatus";
+const PRESSURE_MEMORY = "pressurememory";
+const PRESSURE_CPU = "pressurecpu";
+const PRESSURE_IO = "pressureio";
+const PRESSURE_MEASUREMENT = "pressuremeasurement";
+const PRESSURE_WIDTH = "pressurewidth";
+const PRESSURE_MEMORY_COLORS = "pressurememorycolors";
+const PRESSURE_CPU_COLORS = "pressurecpucolors";
+const PRESSURE_IO_COLORS = "pressureiocolors";
 
 const SWAP_STATUS = "swapstatus";
 const SWAP_WIDTH = "swapwidth";
@@ -214,6 +225,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
       // RAM FRAME
       this._buildRam();
+
+      // PRESSURE FRAME
+      this._buildPressure();
 
       // SWAP FRAME
       this._buildSwap();
@@ -467,6 +481,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         : _(
             "Show the indicator on the primary panel. Multi-panel mode requires Dash to Panel."
           );
+    }
+
+    _getPressureMeasurementOptions() {
+      return [
+        ["interval", _("Since Last Refresh")],
+        ["avg10", _("Kernel 10s Average")],
+      ];
     }
 
     _getMemoryMonitorOptions() {
@@ -1132,6 +1153,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const labels = {
         cpu: _("CPU"),
         ram: _("RAM"),
+        pressure: _("Pressure"),
         swap: _("Swap"),
         stats: _("Disk Statistics"),
         space: _("Disk Space"),
@@ -1147,6 +1169,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const icons = {
         cpu: "resource-monitor-cpu-symbolic",
         ram: "resource-monitor-ram-symbolic",
+        pressure: "resource-monitor-pressure-symbolic",
         swap: "resource-monitor-swap-symbolic",
         stats: "resource-monitor-disk-stats-symbolic",
         space: "resource-monitor-disk-space-symbolic",
@@ -1572,6 +1595,119 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         )
       );
       page.add(alertGroup);
+
+      return page;
+    }
+
+    _buildNativePressurePage() {
+      const page = this._createSectionPage({
+        name: "pressure",
+        title: _("Pressure"),
+        iconName: "resource-monitor-pressure-symbolic",
+      });
+
+      page.add(
+        this._createPageIntroGroup({
+          title: _("Pressure Preferences"),
+          subtitle: _(
+            "Share of time tasks stalled waiting for memory, CPU or disk (PSI). The panel shows the worst source, prefixed with M, C or D, and only the icon while every source is below its first threshold."
+          ),
+          iconName: "resource-monitor-pressure-symbolic",
+        })
+      );
+
+      const monitorGroup = this._createSettingsGroup(
+        _("Pressure"),
+        _("Configure how pressure is shown in the panel.")
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Show in Panel"),
+          _("Show pressure in the panel."),
+          this._pressureDisplay
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Memory"),
+          _("Include memory pressure (M)."),
+          this._pressureMemorySwitch
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("CPU"),
+          _("Include CPU pressure (C)."),
+          this._pressureCpuSwitch
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Disk"),
+          _("Include disk I/O pressure (D)."),
+          this._pressureIoSwitch
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Measurement"),
+          _("Measure over the last refresh interval, or use the smoother but slower kernel 10-second average."),
+          this._pressureMeasurementCombobox
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Reserved Width"),
+          _("Reserve a fixed amount of space for the pressure value."),
+          this._pressureWidthSpinbutton
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Decimals"),
+          _("Choose how many decimal digits are shown for pressure."),
+          this._pressureFormattingControls.decimals
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Render Mode"),
+          _("Choose between precise rendering and quantized step rendering."),
+          this._pressureFormattingControls.renderMode
+        )
+      );
+      monitorGroup.add(
+        this._createActionRow(
+          _("Step"),
+          _("In step mode, values change only after this increment."),
+          this._pressureFormattingControls.renderStep
+        )
+      );
+      page.add(monitorGroup);
+      page.add(
+        this._createListGroup(
+          _("Memory Pressure Colors"),
+          _("Manage threshold colors for memory pressure."),
+          this._pressureMemoryColorsAddButton,
+          this._pressureMemoryColorsListbox
+        )
+      );
+      page.add(
+        this._createListGroup(
+          _("CPU Pressure Colors"),
+          _("Manage threshold colors for CPU pressure."),
+          this._pressureCpuColorsAddButton,
+          this._pressureCpuColorsListbox
+        )
+      );
+      page.add(
+        this._createListGroup(
+          _("Disk Pressure Colors"),
+          _("Manage threshold colors for disk I/O pressure."),
+          this._pressureIoColorsAddButton,
+          this._pressureIoColorsListbox
+        )
+      );
 
       return page;
     }
@@ -2330,6 +2466,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       window.add(this._buildNativeGlobalPage());
       window.add(this._buildNativeCpuPage());
       window.add(this._buildNativeRamPage());
+      window.add(this._buildNativePressurePage());
       window.add(this._buildNativeSwapPage());
       window.add(this._buildNativeDiskPage());
       window.add(this._buildNativeNetPage());
@@ -2491,7 +2628,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       });
 
       // ListBox
-      let itemsPositionArray = this._settings.get_strv(ITEMS_POSITION);
+      let itemsPositionArray = readItemsPosition(this._settings, ITEMS_POSITION);
 
       for (let i = 0; i < itemsPositionArray.length; i++) {
         const element = itemsPositionArray[i];
@@ -2726,6 +2863,59 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         display: this._ramDisplay,
         controls: this._ramFormattingControls,
       });
+    }
+
+    _buildPressure() {
+      this._pressureDisplay = this._createSwitch();
+      this._pressureMemorySwitch = this._createSwitch();
+      this._pressureCpuSwitch = this._createSwitch();
+      this._pressureIoSwitch = this._createSwitch();
+      this._pressureMeasurementCombobox = this._createComboBox(
+        this._getPressureMeasurementOptions()
+      );
+      this._pressureWidthSpinbutton = this._createSpinButton({ upper: 400 });
+      this._pressureFormattingControls =
+        this._createIndicatorFormattingControls("pressure", {
+          stepUpper: 100,
+        });
+
+      connectSwitchButton(this._settings, PRESSURE_STATUS, this._pressureDisplay);
+      connectSwitchButton(this._settings, PRESSURE_MEMORY, this._pressureMemorySwitch);
+      connectSwitchButton(this._settings, PRESSURE_CPU, this._pressureCpuSwitch);
+      connectSwitchButton(this._settings, PRESSURE_IO, this._pressureIoSwitch);
+      connectComboBox(
+        this._settings,
+        PRESSURE_MEASUREMENT,
+        this._pressureMeasurementCombobox
+      );
+      connectSpinButton(
+        this._settings,
+        PRESSURE_WIDTH,
+        this._pressureWidthSpinbutton
+      );
+      this._initializeToggleControlledSection(this._pressureDisplay, [
+        this._pressureMemorySwitch,
+        this._pressureCpuSwitch,
+        this._pressureIoSwitch,
+        this._pressureMeasurementCombobox,
+        this._pressureWidthSpinbutton,
+      ]);
+      this._initializeIndicatorFormattingControls({
+        display: this._pressureDisplay,
+        controls: this._pressureFormattingControls,
+      });
+
+      for (const [source, key] of [
+        ["Memory", PRESSURE_MEMORY_COLORS],
+        ["Cpu", PRESSURE_CPU_COLORS],
+        ["Io", PRESSURE_IO_COLORS],
+      ]) {
+        const addButton = this._createIconButton("resource-monitor-add-symbolic");
+        const listbox = this._createListBox();
+        this[`_pressure${source}ColorsAddButton`] = addButton;
+        this[`_pressure${source}ColorsListbox`] = listbox;
+        makeColors(this._settings, key, listbox, addButton);
+      }
     }
 
     _buildSwap() {

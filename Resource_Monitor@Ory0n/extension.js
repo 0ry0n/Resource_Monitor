@@ -72,9 +72,11 @@ import {
 import {
   connectSettingsSignals,
   initializeSettings,
+  readPressureColors,
+  readPressureSources,
   refreshGui,
 } from "./services/settings.js";
-import { parseSettingsArray } from "./utils/settings.js";
+import { parseSettingsArray, readItemsPosition } from "./utils/settings.js";
 import {
   hasVisibleCpuFrequency,
   hasVisibleGpu,
@@ -93,6 +95,7 @@ import {
   refreshEthValue,
   refreshGpuValue,
   refreshHandler,
+  refreshPressureValue,
   refreshRamValue,
   refreshSwapValue,
   refreshWlanValue,
@@ -133,6 +136,16 @@ const RAM_UNIT_MEASURE = "ramunitmeasure";
 const RAM_MONITOR = "rammonitor";
 const RAM_ALERT = "ramalert";
 const RAM_ALERT_THRESHOLD = "ramalertthreshold";
+
+const PRESSURE_STATUS = "pressurestatus";
+const PRESSURE_MEMORY = "pressurememory";
+const PRESSURE_CPU = "pressurecpu";
+const PRESSURE_IO = "pressureio";
+const PRESSURE_MEASUREMENT = "pressuremeasurement";
+const PRESSURE_WIDTH = "pressurewidth";
+const PRESSURE_MEMORY_COLORS = "pressurememorycolors";
+const PRESSURE_CPU_COLORS = "pressurecpucolors";
+const PRESSURE_IO_COLORS = "pressureiocolors";
 
 const SWAP_STATUS = "swapstatus";
 const SWAP_WIDTH = "swapwidth";
@@ -235,6 +248,15 @@ const SETTINGS_KEYS = {
   RAM_MONITOR,
   RAM_ALERT,
   RAM_ALERT_THRESHOLD,
+  PRESSURE_STATUS,
+  PRESSURE_MEMORY,
+  PRESSURE_CPU,
+  PRESSURE_IO,
+  PRESSURE_MEASUREMENT,
+  PRESSURE_WIDTH,
+  PRESSURE_MEMORY_COLORS,
+  PRESSURE_CPU_COLORS,
+  PRESSURE_IO_COLORS,
   SWAP_STATUS,
   SWAP_WIDTH,
   SWAP_COLORS,
@@ -327,6 +349,7 @@ const ResourceMonitor = GObject.registerClass(
           this._cpuFrequencyWidthChanged();
           this._cpuLoadAverageWidthChanged();
           this._ramWidthChanged();
+          this._pressureWidthChanged();
           this._swapWidthChanged();
           this._diskStatsWidthChanged();
           this._diskSpaceWidthChanged();
@@ -893,6 +916,9 @@ const ResourceMonitor = GObject.registerClass(
         if (this._ramStatus) {
           this._ramIcon.show();
         }
+        if (this._pressureStatus) {
+          this._pressureIcon.show();
+        }
         if (this._swapStatus) {
           this._swapIcon.show();
         }
@@ -920,6 +946,7 @@ const ResourceMonitor = GObject.registerClass(
       } else {
         this._cpuIcon.hide();
         this._ramIcon.hide();
+        this._pressureIcon.hide();
         this._swapIcon.hide();
         this._diskStatsIcon.hide();
         this._diskSpaceIcon.hide();
@@ -948,7 +975,7 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _itemsPositionChanged() {
-      this._itemsPosition = this._settings.get_strv(ITEMS_POSITION);
+      this._itemsPosition = readItemsPosition(this._settings, ITEMS_POSITION);
 
       this._box.remove_all_children();
 
@@ -1113,6 +1140,53 @@ const ResourceMonitor = GObject.registerClass(
 
     _ramAlertThresholdChanged() {
       this._ramAlertThreshold = this._settings.get_int(RAM_ALERT_THRESHOLD);
+    }
+
+    _pressureStatusChanged() {
+      this._pressureStatus = this._settings.get_boolean(PRESSURE_STATUS);
+      // Drop baselines so re-enabling doesn't average over the time off.
+      this._pressureStates = {};
+
+      this._basicItemStatus(
+        this._pressureStatus,
+        true,
+        this._pressureIcon,
+        this._pressureValue,
+        this._pressureUnit
+      );
+    }
+
+    _pressureSourcesChanged() {
+      this._pressureSources = readPressureSources(this._settings, SETTINGS_KEYS);
+
+      if (this._pressureStatus) {
+        this._refreshPressureValue();
+      }
+    }
+
+    _pressureMeasurementChanged() {
+      this._pressureMeasurement = this._settings.get_string(PRESSURE_MEASUREMENT);
+
+      if (this._pressureStatus) {
+        this._refreshPressureValue();
+      }
+    }
+
+    _pressureWidthChanged() {
+      this._pressureWidth = this._settings.get_int(PRESSURE_WIDTH);
+
+      this._basicItemWidth(
+        this._pressureWidth * this._scaleFactor,
+        this._pressureValue
+      );
+    }
+
+    _pressureColorsChanged() {
+      this._pressureColors = readPressureColors(this._settings, SETTINGS_KEYS);
+
+      if (this._pressureStatus) {
+        this._refreshPressureValue();
+      }
     }
 
     _swapStatusChanged() {
@@ -1831,6 +1905,10 @@ const ResourceMonitor = GObject.registerClass(
 
     _refreshRamValue() {
       refreshRamValue(this);
+    }
+
+    _refreshPressureValue() {
+      refreshPressureValue(this);
     }
 
     _refreshSwapValue() {
