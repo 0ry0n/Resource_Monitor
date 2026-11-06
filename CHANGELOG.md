@@ -18,6 +18,14 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 - GNOME Shell 51 support.
 - Simplified Chinese translation (`zh_CN` locale).
 
+### Changed
+
+- Unified panel and preferences icons using bundled GNOME symbolic artwork.
+
+### Fixed
+
+- Missing preferences icons on systems without the corresponding theme icons (#141).
+
 ## [28] - 2026-05-13
 
 ### Added

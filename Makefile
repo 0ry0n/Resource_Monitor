@@ -63,6 +63,7 @@ install: schema translations
 
 test:
 	gjs -m tests/runtime-smoke.js
+	gjs -m tests/icons-smoke.js
 
 validate: schema test pot check-po
 	git diff --check
