@@ -8,6 +8,8 @@ Artwork: GNOME contributors. License: CC0 1.0 Universal; see `COPYING-CC0.txt`.
 Exported from the legacy 16 px monochrome artwork for GNOME Shell 45–51.
 The original shapes and transforms are preserved; editor metadata is removed,
 individual viewports are set, and filenames are prefixed to avoid theme collisions.
+Invisible canvas rectangles are removed: legacy symbolic recoloring overrides
+`fill:none` on rectangles, turning them into solid tiles that obscure the artwork.
 Icons are installed under `hicolor/scalable/actions` so GTK recognizes them as
 symbolic assets and recolors them for the current theme.
 No runtime download or external icon package is required.

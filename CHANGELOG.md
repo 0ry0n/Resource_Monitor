@@ -7,10 +7,6 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ## [Unreleased]
 
-### Added
-
-- No changes yet.
-
 ## [29] - 2026-11-06
 
 ### Added
@@ -25,6 +21,7 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 ### Fixed
 
 - Missing preferences icons on systems without the corresponding theme icons (#141).
+- Removed invisible SVG canvas rectangles that became solid squares during panel icon recoloring.
 
 ## [28] - 2026-05-13
 

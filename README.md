@@ -47,7 +47,8 @@ Install from [extensions.gnome.org](https://extensions.gnome.org/extension/1634/
 Common local tasks:
 
 - `make schema` compiles GSettings schemas.
-- `make test` runs runtime smoke tests.
+- `make test` runs runtime, icon lookup, and symbolic rendering tests. Tests require
+  GJS and GTK 3/4 introspection (`gjs`, `gir1.2-gtk-3.0`, and `gir1.2-gtk-4.0` on Debian/Ubuntu).
 - `make pot` regenerates `po/Resource_Monitor@Ory0n.pot`.
 - `make po-update` updates translations from the template.
 - `make validate` runs schema, tests, POT refresh, and PO checks.
