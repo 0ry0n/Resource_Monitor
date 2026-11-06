@@ -88,7 +88,7 @@ async function _readNumericFile(indicator, path) {
     const value = parseInt(new TextDecoder().decode(contents).trim(), 10);
     return Number.isFinite(value) ? value : null;
   } catch (error) {
-    if (!indicator._isCancelledError(error)) {
+    if (!indicator._destroyed && !indicator._isCancelledError(error)) {
       indicator._logIssueOnce(
         `sysfs-gpu-read-error:${path}`,
         `[Resource_Monitor] Error reading sysfs GPU metric: ${path}.`,
@@ -136,9 +136,15 @@ async function _readSysfsGpuSamples(indicator, descriptors) {
 }
 
 export function refreshCpuValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("cpu", () =>
     indicator._loadFile("/proc/stat")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         const { usage, sample } = buildCpuUsageSample(contents, {
           total: indicator._cpuTotOld,
           idle: indicator._cpuIdleOld,
@@ -154,7 +160,7 @@ export function refreshCpuValue(indicator) {
         indicator._cpuValue.text = `${indicator._getValueFixed(usage, "cpu")}`;
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "cpu-read-error",
             "[Resource_Monitor] Error reading cpu.",
@@ -166,9 +172,15 @@ export function refreshCpuValue(indicator) {
 }
 
 export function refreshRamValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("ram", () =>
     indicator._loadFile("/proc/meminfo")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         indicator._clearLoggedIssue("ram-read-error");
 
         indicator._applyMemoryDisplay(
@@ -199,7 +211,7 @@ export function refreshRamValue(indicator) {
         );
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "ram-read-error",
             "[Resource_Monitor] Error reading ram.",
@@ -211,9 +223,15 @@ export function refreshRamValue(indicator) {
 }
 
 export function refreshSwapValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("swap", () =>
     indicator._loadFile("/proc/meminfo")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         indicator._clearLoggedIssue("swap-read-error");
 
         indicator._applyMemoryDisplay(
@@ -244,7 +262,7 @@ export function refreshSwapValue(indicator) {
         );
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "swap-read-error",
             "[Resource_Monitor] Error reading swap.",
@@ -256,9 +274,15 @@ export function refreshSwapValue(indicator) {
 }
 
 export function refreshDiskStatsValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("disk-stats", () =>
     indicator._loadFile("/proc/diskstats")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         const entries = parseDiskStatsEntries(contents);
         const idle = GLib.get_monotonic_time() / 1000;
 
@@ -335,7 +359,7 @@ export function refreshDiskStatsValue(indicator) {
         }
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "disk-stats-read-error",
             "[Resource_Monitor] Error reading disk stats.",
@@ -347,6 +371,9 @@ export function refreshDiskStatsValue(indicator) {
 }
 
 export function refreshDiskSpaceValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   const monitoredDevices = indicator._diskDevices.filter(
     (device) => device.space && device.mountPoint
   );
@@ -368,6 +395,9 @@ export function refreshDiskSpaceValue(indicator) {
       })
     )
       .then((results) => {
+        if (indicator._destroyed) {
+          return;
+        }
         let hasSuccess = false;
         let firstError = null;
 
@@ -407,7 +437,7 @@ export function refreshDiskSpaceValue(indicator) {
         }
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "disk-space-read-error",
             "[Resource_Monitor] Error reading disk space.",
@@ -419,9 +449,15 @@ export function refreshDiskSpaceValue(indicator) {
 }
 
 export function refreshEthValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("net-eth", () =>
     indicator._loadFile("/proc/net/dev")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         const sample = buildNetworkSample(contents, {
           pattern: /^(eth[0-9]+|en[a-z0-9]*)$/,
           unit: indicator._netUnit,
@@ -446,7 +482,7 @@ export function refreshEthValue(indicator) {
         )}|${indicator._getValueFixed(sample.values[1], "netEth")}`;
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "net-eth-read-error",
             "[Resource_Monitor] Error reading eth.",
@@ -458,9 +494,15 @@ export function refreshEthValue(indicator) {
 }
 
 export function refreshWlanValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("net-wlan", () =>
     indicator._loadFile("/proc/net/dev")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         const sample = buildNetworkSample(contents, {
           pattern: /^(wlan[0-9]+|wl[a-z0-9]*)$/,
           unit: indicator._netUnit,
@@ -485,7 +527,7 @@ export function refreshWlanValue(indicator) {
         )}|${indicator._getValueFixed(sample.values[1], "netWlan")}`;
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "net-wlan-read-error",
             "[Resource_Monitor] Error reading wlan.",
@@ -497,6 +539,9 @@ export function refreshWlanValue(indicator) {
 }
 
 export function refreshCpuFrequencyValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   const frequencyPaths = getCpuFrequencyPaths();
 
   if (frequencyPaths.length === 0) {
@@ -512,6 +557,9 @@ export function refreshCpuFrequencyValue(indicator) {
   indicator._runRefreshTask("cpu-frequency", () =>
     Promise.allSettled(frequencyPaths.map((path) => indicator._loadFile(path)))
       .then((results) => {
+        if (indicator._destroyed) {
+          return;
+        }
         const contents = results
           .filter((result) => result.status === "fulfilled")
           .map((result) => new TextDecoder().decode(result.value))
@@ -546,7 +594,7 @@ export function refreshCpuFrequencyValue(indicator) {
         indicator._cpuFrequencyUnit.text = display.unit;
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           resetCpuFrequencyDisplay(indicator);
           syncCpuFrequencyVisibility(indicator);
           indicator._logIssueOnce(
@@ -560,9 +608,15 @@ export function refreshCpuFrequencyValue(indicator) {
 }
 
 export function refreshCpuLoadAverageValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   indicator._runRefreshTask("cpu-loadavg", () =>
     indicator._loadFile("/proc/loadavg")
       .then((contents) => {
+        if (indicator._destroyed) {
+          return;
+        }
         const display = parseLoadAverageDisplay(contents);
         indicator._clearLoggedIssue("cpu-loadavg-read-error");
         indicator._cpuLoadAverageValue.style = indicator._getUsageColor(
@@ -574,7 +628,7 @@ export function refreshCpuLoadAverageValue(indicator) {
           .join(" ");
       })
       .catch((error) => {
-        if (!indicator._isCancelledError(error)) {
+        if (!indicator._destroyed && !indicator._isCancelledError(error)) {
           indicator._logIssueOnce(
             "cpu-loadavg-read-error",
             "[Resource_Monitor] Error reading cpu load average.",
@@ -586,6 +640,9 @@ export function refreshCpuLoadAverageValue(indicator) {
 }
 
 export function refreshCpuTemperatureValue(indicator) {
+  if (indicator._destroyed) {
+    return;
+  }
   const activeSensors = indicator._thermalCpuTemperatureDevices.filter(
     (sensor) =>
       sensor.monitor &&
@@ -597,6 +654,9 @@ export function refreshCpuTemperatureValue(indicator) {
     indicator._runRefreshTask("thermal-cpu", () =>
       Promise.allSettled(activeSensors.map((sensor) => indicator._loadFile(sensor.path)))
         .then((results) => {
+          if (indicator._destroyed) {
+            return;
+          }
           const display = buildCpuTemperatureDisplay(
             results,
             indicator._thermalTemperatureUnit
@@ -626,7 +686,7 @@ export function refreshCpuTemperatureValue(indicator) {
           );
         })
         .catch((error) => {
-          if (!indicator._isCancelledError(error)) {
+          if (!indicator._destroyed && !indicator._isCancelledError(error)) {
             resetCpuTemperatureDisplay(indicator);
             syncThermalCpuVisibility(indicator);
             indicator._logIssueOnce(
@@ -644,6 +704,9 @@ export function refreshCpuTemperatureValue(indicator) {
 }
 
 export function refreshGpuValue(indicator, options = {}) {
+  if (indicator._destroyed) {
+    return;
+  }
   const { force = false } = options;
 
   if (!indicator._capabilities.gpu) {
@@ -669,6 +732,9 @@ export function refreshGpuValue(indicator, options = {}) {
           "--query-gpu=uuid,memory.total,memory.used,memory.free,utilization.gpu,temperature.gpu",
           "--format=csv,noheader,nounits",
         ]);
+        if (indicator._destroyed) {
+          return;
+        }
         const nvidiaEntries = parseGpuSmiOutput(contents, {
           memoryMonitor: indicator._gpuMemoryMonitor,
           memoryUnitType: indicator._gpuMemoryUnitType,
@@ -685,6 +751,9 @@ export function refreshGpuValue(indicator, options = {}) {
         const descriptors =
           knownDescriptors.length > 0 ? knownDescriptors : getAmdGpuDescriptors();
         const amdEntries = await _readSysfsGpuSamples(indicator, descriptors);
+        if (indicator._destroyed) {
+          return;
+        }
         amdEntries.forEach((entry) => entryMap.set(entry.uuid, entry));
       }
 
@@ -695,6 +764,9 @@ export function refreshGpuValue(indicator, options = {}) {
             ? knownDescriptors
             : getIntelGpuDescriptors();
         const intelEntries = await _readSysfsGpuSamples(indicator, descriptors);
+        if (indicator._destroyed) {
+          return;
+        }
         intelEntries.forEach((entry) => entryMap.set(entry.uuid, entry));
       }
 
@@ -760,7 +832,7 @@ export function refreshGpuValue(indicator, options = {}) {
         );
       });
     } catch (error) {
-      if (!indicator._isCancelledError(error)) {
+      if (!indicator._destroyed && !indicator._isCancelledError(error)) {
         resetGpuDisplay(indicator);
         syncGpuVisibility(indicator);
         indicator._logIssueOnce(
@@ -774,6 +846,9 @@ export function refreshGpuValue(indicator, options = {}) {
 }
 
 export function refreshHandler(indicator, forceGpu = false) {
+  if (indicator._destroyed) {
+    return GLib.SOURCE_REMOVE;
+  }
   if (indicator._cpuStatus) {
     refreshCpuValue(indicator);
   }

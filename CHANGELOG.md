@@ -20,6 +20,8 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Fixed
 
+- Prevent asynchronous callbacks from updating destroyed indicators, including NetworkManager cancellation (#135).
+
 - Missing preferences icons on systems without the corresponding theme icons (#141).
 - Removed invisible SVG canvas rectangles that became solid squares during panel icon recoloring.
 
