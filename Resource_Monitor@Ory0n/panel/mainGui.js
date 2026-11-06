@@ -182,18 +182,18 @@ export function createMainGui(indicator) {
   indicator._wlanGroup = _createGroupBox("wlan");
   indicator._gpuGroup = _createGroupBox("gpu");
 
-  indicator._cpuIcon = _createIcon(`${indicator._path}/icons/cpu-symbolic.svg`);
-  indicator._ramIcon = _createIcon(`${indicator._path}/icons/ram-symbolic.svg`);
-  indicator._swapIcon = _createIcon(`${indicator._path}/icons/swap-symbolic.svg`);
+  indicator._cpuIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-cpu-symbolic.svg`);
+  indicator._ramIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-ram-symbolic.svg`);
+  indicator._swapIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-swap-symbolic.svg`);
   indicator._diskStatsIcon = _createIcon(
-    `${indicator._path}/icons/disk-stats-symbolic.svg`
+    `${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-disk-stats-symbolic.svg`
   );
   indicator._diskSpaceIcon = _createIcon(
-    `${indicator._path}/icons/disk-space-symbolic.svg`
+    `${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-disk-space-symbolic.svg`
   );
-  indicator._ethIcon = _createIcon(`${indicator._path}/icons/eth-symbolic.svg`);
-  indicator._wlanIcon = _createIcon(`${indicator._path}/icons/wlan-symbolic.svg`);
-  indicator._gpuIcon = _createIcon(`${indicator._path}/icons/gpu-symbolic.svg`);
+  indicator._ethIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-eth-symbolic.svg`);
+  indicator._wlanIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-wlan-symbolic.svg`);
+  indicator._gpuIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-gpu-symbolic.svg`);
 
   indicator._cpuTemperatureUnit = _createUnitLabel("°C");
   indicator._cpuFrequencyUnit = _createUnitLabel("kHz");

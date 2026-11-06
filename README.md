@@ -12,7 +12,7 @@ It can display CPU load and temperature, RAM and swap usage, disk activity and f
 
 Multi-panel mode is supported through Dash to Panel. Without Dash to Panel, the indicator is shown on the primary panel only.
 
-Current stable release: `28` (`2026-05-13`).
+Current stable release: `29` (`2026-11-06`).
 
 ![Resource Monitor main view](images/main.png)
 
@@ -22,7 +22,7 @@ If this extension is useful to you, you can support ongoing development via [Git
 
 ## Supported GNOME Shell Versions
 
-- `45`, `46`, `47`, `48`, `49`, `50`
+- `45`, `46`, `47`, `48`, `49`, `50`, `51`
 
 For older releases, use the dedicated maintenance branches:
 
@@ -47,7 +47,8 @@ Install from [extensions.gnome.org](https://extensions.gnome.org/extension/1634/
 Common local tasks:
 
 - `make schema` compiles GSettings schemas.
-- `make test` runs runtime smoke tests.
+- `make test` runs runtime, icon lookup, and symbolic rendering tests. Tests require
+  GJS and GTK 3/4 introspection (`gjs`, `gir1.2-gtk-3.0`, and `gir1.2-gtk-4.0` on Debian/Ubuntu).
 - `make pot` regenerates `po/Resource_Monitor@Ory0n.pot`.
 - `make po-update` updates translations from the template.
 - `make validate` runs schema, tests, POT refresh, and PO checks.

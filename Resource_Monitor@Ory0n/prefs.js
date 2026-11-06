@@ -190,6 +190,13 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       this._metadata = metadata;
       this._diskReadGeneration = 0;
 
+      // Resolve bundled symbolic icons independently of the system icon theme.
+      const iconTheme = Gtk.IconTheme.get_for_display(Gdk.Display.get_default());
+      const iconPath = this._dir.get_child("icons").get_path();
+      if (!iconTheme.get_search_path().includes(iconPath)) {
+        iconTheme.add_search_path(iconPath);
+      }
+
       // Gtk Css Provider
       this._provider = new Gtk.CssProvider();
       this._provider.load_from_path(this._dir.get_path() + "/prefs.css");
@@ -570,7 +577,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _createIconButton(iconName, tooltip = null) {
       const resolvedTooltip =
-        tooltip ?? (iconName === "list-add" ? _("Add threshold") : null);
+        tooltip ?? (iconName === "resource-monitor-add-symbolic" ? _("Add threshold") : null);
 
       return new Gtk.Button({
         icon_name: iconName,
@@ -1138,17 +1145,17 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
 
     _getPanelItemIconName(item) {
       const icons = {
-        cpu: "utilities-system-monitor-symbolic",
-        ram: "computer-symbolic",
-        swap: "media-floppy-symbolic",
-        stats: "drive-harddisk-symbolic",
-        space: "drive-harddisk-symbolic",
-        eth: "network-wired-symbolic",
-        wlan: "network-wireless-signal-excellent-symbolic",
-        gpu: "video-display-symbolic",
+        cpu: "resource-monitor-cpu-symbolic",
+        ram: "resource-monitor-ram-symbolic",
+        swap: "resource-monitor-swap-symbolic",
+        stats: "resource-monitor-disk-stats-symbolic",
+        space: "resource-monitor-disk-space-symbolic",
+        eth: "resource-monitor-eth-symbolic",
+        wlan: "resource-monitor-wlan-symbolic",
+        gpu: "resource-monitor-gpu-symbolic",
       };
 
-      return icons[item] ?? "applications-system-symbolic";
+      return icons[item] ?? "resource-monitor-global-symbolic";
     }
 
     _resolveLeftClickPreset(activeCommand, customCommand) {
@@ -1171,7 +1178,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "global",
         title: _("Global"),
-        iconName: "preferences-system-symbolic",
+        iconName: "resource-monitor-global-symbolic",
       });
 
       page.add(
@@ -1180,7 +1187,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           subtitle: _(
             "Control panel placement, interaction behavior, and shared formatting options."
           ),
-          iconName: "preferences-system-symbolic",
+          iconName: "resource-monitor-global-symbolic",
         })
       );
 
@@ -1291,14 +1298,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "cpu",
         title: _("CPU"),
-        iconName: "utilities-system-monitor-symbolic",
+        iconName: "resource-monitor-cpu-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("CPU Preferences"),
           subtitle: _("Configure CPU usage, frequency, and load average indicators."),
-          iconName: "utilities-system-monitor-symbolic",
+          iconName: "resource-monitor-cpu-symbolic",
         })
       );
 
@@ -1463,14 +1470,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "ram",
         title: _("RAM"),
-        iconName: "computer-symbolic",
+        iconName: "resource-monitor-ram-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("RAM Preferences"),
           subtitle: _("Configure memory metrics, scale, and alert thresholds."),
-          iconName: "computer-symbolic",
+          iconName: "resource-monitor-ram-symbolic",
         })
       );
 
@@ -1573,14 +1580,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "swap",
         title: _("Swap"),
-        iconName: "media-floppy-symbolic",
+        iconName: "resource-monitor-swap-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("Swap Preferences"),
           subtitle: _("Configure swap metrics, scale, and low-memory alerts."),
-          iconName: "media-floppy-symbolic",
+          iconName: "resource-monitor-swap-symbolic",
         })
       );
 
@@ -1683,14 +1690,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "net",
         title: _("Network"),
-        iconName: "network-workgroup-symbolic",
+        iconName: "resource-monitor-network-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("Network Preferences"),
           subtitle: _("Configure throughput units and per-interface indicators."),
-          iconName: "network-workgroup-symbolic",
+          iconName: "resource-monitor-network-symbolic",
         })
       );
 
@@ -1828,14 +1835,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "disk",
         title: _("Disk"),
-        iconName: "drive-harddisk-symbolic",
+        iconName: "resource-monitor-disk-space-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("Disk Preferences"),
           subtitle: _("Configure activity, space monitoring, and device selection."),
-          iconName: "drive-harddisk-symbolic",
+          iconName: "resource-monitor-disk-space-symbolic",
         })
       );
 
@@ -2010,14 +2017,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "thermal",
         title: _("Thermal"),
-        iconName: "weather-clear-symbolic",
+        iconName: "resource-monitor-thermal-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("Thermal Preferences"),
           subtitle: _("Configure CPU and GPU temperature units, sensors, and visibility."),
-          iconName: "weather-clear-symbolic",
+          iconName: "resource-monitor-thermal-symbolic",
         })
       );
 
@@ -2157,14 +2164,14 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
       const page = this._createSectionPage({
         name: "gpu",
         title: _("GPU"),
-        iconName: "video-display-symbolic",
+        iconName: "resource-monitor-gpu-symbolic",
       });
 
       page.add(
         this._createPageIntroGroup({
           title: _("GPU Preferences"),
           subtitle: _("Configure usage, memory telemetry, devices, and diagnostics."),
-          iconName: "video-display-symbolic",
+          iconName: "resource-monitor-gpu-symbolic",
         })
       );
 
@@ -2497,7 +2504,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         });
 
         const up = new Gtk.Button({
-          icon_name: "go-up",
+          icon_name: "resource-monitor-up-symbolic",
           tooltip_text: _("Move up"),
           valign: Gtk.Align.CENTER,
         });
@@ -2517,7 +2524,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
           }
         });
         const down = new Gtk.Button({
-          icon_name: "go-down",
+          icon_name: "resource-monitor-down-symbolic",
           tooltip_text: _("Move down"),
           valign: Gtk.Align.CENTER,
         });
@@ -2567,7 +2574,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("cpu", {
           stepUpper: 100,
         });
-      this._cpuColorsAddButton = this._createIconButton("list-add");
+      this._cpuColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._cpuColorsListbox = this._createListBox();
       this._cpuFrequencyDisplay = this._createSwitch();
       this._cpuFrequencyWidthSpinbutton = this._createSpinButton({
@@ -2577,7 +2584,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("cpuFrequency", {
           stepUpper: 10000,
         });
-      this._cpuFrequencyColorsAddButton = this._createIconButton("list-add");
+      this._cpuFrequencyColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._cpuFrequencyColorsListbox = this._createListBox();
       this._cpuFrequencyUnitMeasureCombobox = this._createComboBox(
         this._getFrequencyScaleOptions()
@@ -2590,7 +2597,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("cpuLoadAverage", {
           stepUpper: 100,
         });
-      this._cpuLoadAverageColorsAddButton = this._createIconButton("list-add");
+      this._cpuLoadAverageColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._cpuLoadAverageColorsListbox = this._createListBox();
 
       connectSwitchButton(this._settings, CPU_STATUS, this._cpuDisplay);
@@ -2680,7 +2687,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("ram", {
           stepUpper: 1000,
         });
-      this._ramColorsAddButton = this._createIconButton("list-add");
+      this._ramColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._ramColorsListbox = this._createListBox();
       this._ramUnitCombobox = this._createComboBox(
         this._getNumericOrPercentOptions()
@@ -2728,7 +2735,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("swap", {
           stepUpper: 1000,
         });
-      this._swapColorsAddButton = this._createIconButton("list-add");
+      this._swapColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._swapColorsListbox = this._createListBox();
       this._swapUnitCombobox = this._createComboBox(
         this._getNumericOrPercentOptions()
@@ -2777,7 +2784,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("diskStats", {
           stepUpper: 10000,
         });
-      this._diskStatsColorsAddButton = this._createIconButton("list-add");
+      this._diskStatsColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._diskStatsColorsListbox = this._createListBox();
       this._diskStatsModeCombobox = this._createComboBox([
         ["single", _("Combined")],
@@ -2792,7 +2799,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("diskSpace", {
           stepUpper: 1000,
         });
-      this._diskSpaceColorsAddButton = this._createIconButton("list-add");
+      this._diskSpaceColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._diskSpaceColorsListbox = this._createListBox();
       this._diskSpaceUnitCombobox = this._createComboBox(
         this._getNumericOrPercentOptions()
@@ -3154,7 +3161,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("netEth", {
           stepUpper: 10000,
         });
-      this._netEthColorsAddButton = this._createIconButton("list-add");
+      this._netEthColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._netEthColorsListbox = this._createListBox();
       this._netWlanDisplay = this._createSwitch();
       this._netWlanWidthSpinbutton = this._createSpinButton({ upper: 400 });
@@ -3162,7 +3169,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("netWlan", {
           stepUpper: 10000,
         });
-      this._netWlanColorsAddButton = this._createIconButton("list-add");
+      this._netWlanColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._netWlanColorsListbox = this._createListBox();
 
       connectSwitchButton(
@@ -3245,7 +3252,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("thermalCpu", {
           stepUpper: 200,
         });
-      this._thermalCpuColorsAddButton = this._createIconButton("list-add");
+      this._thermalCpuColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._thermalCpuColorsListbox = this._createListBox();
       this._thermalCpuDevicesColumnView = this._createColumnView();
       this._thermalGpuDisplay = this._createSwitch();
@@ -3254,7 +3261,7 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("thermalGpu", {
           stepUpper: 200,
         });
-      this._thermalGpuColorsAddButton = this._createIconButton("list-add");
+      this._thermalGpuColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._thermalGpuColorsListbox = this._createListBox();
       this._thermalGpuDevicesColumnView = this._createColumnView();
       this._thermalGpuDevicesColumnView.sensitive = hasGpuTelemetry;
@@ -3434,9 +3441,9 @@ const ResourceMonitorPrefsWidget = GObject.registerClass(
         this._createIndicatorFormattingControls("gpu", {
           stepUpper: 100,
         });
-      this._gpuColorsAddButton = this._createIconButton("list-add");
+      this._gpuColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._gpuColorsListbox = this._createListBox();
-      this._gpuMemoryColorsAddButton = this._createIconButton("list-add");
+      this._gpuMemoryColorsAddButton = this._createIconButton("resource-monitor-add-symbolic");
       this._gpuMemoryColorsListbox = this._createListBox();
       this._gpuMemoryFormattingControls =
         this._createIndicatorFormattingControls("gpuMemory", {

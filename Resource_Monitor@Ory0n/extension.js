@@ -450,6 +450,9 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     destroy() {
+      if (this._destroyed) {
+        return;
+      }
       this._destroyed = true;
 
       if (this._mainTimer) {
@@ -476,8 +479,15 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     async _initNetworkMonitor() {
+      if (this._destroyed) {
+        return;
+      }
       try {
-        this._nm = await _loadNetworkManager();
+        const nm = await _loadNetworkManager();
+        if (this._destroyed) {
+          return;
+        }
+        this._nm = nm;
         this._networkManagerAvailable = this._nm !== null;
         this._netAutoHideStatusChanged();
 
@@ -485,20 +495,21 @@ const ResourceMonitor = GObject.registerClass(
           return;
         }
 
-        this._nmClient = await new Promise((resolve, reject) => {
-          this._nm.Client.new_async(this._ioCancellable, (source, result) => {
+        const client = await new Promise((resolve, reject) => {
+          nm.Client.new_async(this._ioCancellable, (source, result) => {
             try {
-              resolve(this._nm.Client.new_finish(result));
+              resolve(nm.Client.new_finish(result));
             } catch (error) {
               reject(error);
             }
           });
         });
 
-        if (this._destroyed || !this._nmClient) {
+        if (this._destroyed || !client) {
           return;
         }
 
+        this._nmClient = client;
         this._nmClientHandlerIds.push(
           this._nmClient.connect(
             "active-connection-added",
@@ -514,19 +525,23 @@ const ResourceMonitor = GObject.registerClass(
 
         this._onActiveConnectionRemoved(this._nmClient);
       } catch (error) {
+        if (this._destroyed || this._isCancelledError(error)) {
+          return;
+        }
         this._networkManagerAvailable = false;
         this._netAutoHideStatusChanged();
 
-        if (!this._isCancelledError(error)) {
-          this._logger.error(
-            "[Resource_Monitor] Error initializing NM client:",
-            error
-          );
-        }
+        this._logger.error(
+          "[Resource_Monitor] Error initializing NM client:",
+          error
+        );
       }
     }
 
     async _refreshThermalCpuSensorPaths() {
+      if (this._destroyed) {
+        return;
+      }
       if (!this._capabilities.thermalHwmon) {
         this._logIssueOnce(
           "thermal-cpu-discovery-unavailable",
@@ -551,7 +566,7 @@ const ResourceMonitor = GObject.registerClass(
                 .decode(await this._loadFile(descriptor.namePath))
                 .trim();
 
-              if (!isSupportedCpuThermalChip(chipName)) {
+              if (this._destroyed || !isSupportedCpuThermalChip(chipName)) {
                 return null;
               }
 
@@ -583,6 +598,10 @@ const ResourceMonitor = GObject.registerClass(
             }
           })
         );
+
+        if (this._destroyed) {
+          return;
+        }
 
         sensors.filter(Boolean).forEach((sensor) => {
           sensorPathByName.set(sensor.name, sensor.path);
@@ -618,7 +637,7 @@ const ResourceMonitor = GObject.registerClass(
           );
         }
       } catch (error) {
-        if (!this._isCancelledError(error)) {
+        if (!this._destroyed && !this._isCancelledError(error)) {
           this._logIssueOnce(
             "thermal-cpu-discovery-error",
             "[Resource_Monitor] Error refreshing thermal sensor paths.",
@@ -733,7 +752,7 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _onActiveConnectionAdded(client, activeConnection) {
-      if (!this._nm) {
+      if (this._destroyed || !this._nm) {
         return;
       }
 
@@ -773,7 +792,7 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _onActiveConnectionRemoved(client, activeConnection) {
-      if (!this._nm) {
+      if (this._destroyed || !this._nm) {
         return;
       }
 
@@ -1347,6 +1366,9 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _netAutoHideStatusChanged() {
+      if (this._destroyed) {
+        return;
+      }
       this._netAutoHideStatus =
         this._settings.get_boolean(NET_AUTO_HIDE_STATUS) &&
         this._networkManagerAvailable;
@@ -1686,6 +1708,9 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _syncMainGuiVisibility() {
+      if (this._destroyed) {
+        return;
+      }
       syncMainGuiVisibility(this);
     }
 
@@ -1722,7 +1747,15 @@ const ResourceMonitor = GObject.registerClass(
     }
 
     _runRefreshTask(key, callback) {
-      this._refreshTaskRunner.run(key, callback);
+      if (this._destroyed) {
+        return;
+      }
+      this._refreshTaskRunner.run(key, () => {
+        // The runner queues callbacks in a microtask; destruction may happen first.
+        if (!this._destroyed) {
+          return callback();
+        }
+      });
     }
 
     _applyMemoryDisplay(display, options) {
@@ -1838,6 +1871,9 @@ const ResourceMonitor = GObject.registerClass(
 
     // Common Function
     _basicItemStatus(status, iconCondition, icon, ...elements) {
+      if (this._destroyed) {
+        return;
+      }
       if (status) {
         if (this._iconsStatus) {
           icon.show();

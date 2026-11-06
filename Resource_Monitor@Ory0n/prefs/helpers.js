@@ -163,7 +163,7 @@ export function makeColorRow(
   box.append(colorButton);
 
   const deleteButton = new Gtk.Button({
-    icon_name: "edit-delete",
+    icon_name: "resource-monitor-delete-symbolic",
     tooltip_text: _("Remove threshold"),
   });
   deleteButton.connect("clicked", () => {

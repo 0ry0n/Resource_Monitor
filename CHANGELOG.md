@@ -7,9 +7,23 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ## [Unreleased]
 
+## [29] - 2026-11-06
+
 ### Added
 
-- No changes yet.
+- GNOME Shell 51 support.
+- Simplified Chinese translation (`zh_CN` locale).
+
+### Changed
+
+- Unified panel and preferences icons using bundled GNOME symbolic artwork.
+
+### Fixed
+
+- Prevent asynchronous callbacks from updating destroyed indicators, including NetworkManager cancellation (#135).
+
+- Missing preferences icons on systems without the corresponding theme icons (#141).
+- Removed invisible SVG canvas rectangles that became solid squares during panel icon recoloring.
 
 ## [28] - 2026-05-13
 
@@ -131,7 +145,8 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 - Left-click custom program behavior.
 - Multiple bug fixes.
 
-[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/28...develop
+[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/29...develop
+[29]: https://github.com/0ry0n/Resource_Monitor/compare/28...29
 [28]: https://github.com/0ry0n/Resource_Monitor/compare/27...28
 [27]: https://github.com/0ry0n/Resource_Monitor/compare/26...27
 [26]: https://github.com/0ry0n/Resource_Monitor/compare/25...26
