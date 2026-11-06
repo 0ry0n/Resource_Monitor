@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Resource_Monitor 28\n"
+"Project-Id-Version: Resource_Monitor 29\n"
 "Report-Msgid-Bugs-To: https://github.com/0ry0n/Resource_Monitor/issues\n"
 "POT-Creation-Date: 2026-05-13 22:03+0200\n"
 "PO-Revision-Date: 2026-03-20 22:31+0100\n"
