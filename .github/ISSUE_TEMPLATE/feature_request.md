@@ -1,27 +1,23 @@
 ---
 name: Feature request
-about: Suggest an improvement
+about: Suggest an improvement to Resource Monitor
 title: "[Feature]: "
 labels: enhancement
 assignees:
 ---
 
-## Problem Statement
+## Problem
 
-What user problem are you trying to solve?
+Describe the task or problem this change would help with.
 
-## Proposed Solution
+## Proposed behavior
 
-Describe the behavior you would like.
+Describe how the feature should work and where it should appear.
 
-## Alternatives Considered
+## Alternatives
 
-Describe any alternatives you considered.
+Describe any alternatives or workarounds considered.
 
-## GNOME UX Considerations
+## Additional context
 
-How should this fit GNOME Shell and Libadwaita design patterns?
-
-## Additional Context
-
-Add screenshots, mockups, or extra details if useful.
+Include examples, screenshots or mockups if they help explain the request.

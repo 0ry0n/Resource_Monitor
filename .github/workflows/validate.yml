@@ -9,11 +9,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Install GLib Tools
-        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin gjs gettext gir1.2-gtk-4.0 gir1.2-gtk-3.0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Run Validation Suite
+      - name: Install packaging tools and Shexli
+        run: |
+          sudo apt-get update && sudo apt-get install -y zip gettext
+          python -m pip install --upgrade --index-url https://pypi.org/simple shexli
+
+      - name: Check release ZIP with Shexli
         run: make validate

@@ -5,9 +5,7 @@ import { gettext as _ } from "resource:///org/gnome/Shell/Extensions/js/extensio
 
 export {
   executeCommand,
-  loadContents,
   loadFile,
-  readOutput,
 } from "../runtime/io.js";
 export { parseSettingsArray } from "../utils/settings.js";
 
@@ -164,7 +162,7 @@ export function makeColorRow(
 
   const deleteButton = new Gtk.Button({
     icon_name: "resource-monitor-delete-symbolic",
-    tooltip_text: _("Remove threshold"),
+    tooltip_text: _("Remove Threshold"),
   });
   deleteButton.connect("clicked", () => {
     const index = row.get_index();

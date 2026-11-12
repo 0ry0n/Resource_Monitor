@@ -1,17 +1,11 @@
-# Security Policy
+# Security
 
-## Reporting a Vulnerability
+## Report a vulnerability
 
-Please do not report security issues in public issues.
+Report security vulnerabilities privately. Use the repository’s [vulnerability reporting form](https://github.com/0ry0n/Resource_Monitor/security/advisories/new), if available, or email the maintainer listed in [AUTHORS](AUTHORS).
 
-Use GitHub private vulnerability reporting for this repository:
+Include the affected extension and GNOME Shell versions, the steps needed to reproduce the issue, and its potential impact. Keep sensitive details out of public issues and pull requests until the issue has been addressed.
 
-- Repository page -> Security -> Report a vulnerability
-
-If private reporting is not available in your GitHub view, contact the maintainer privately via GitHub profile:
-
-- https://github.com/0ry0n
-
-## Supported Versions
+## Supported versions
 
 Security fixes are provided for the latest actively maintained branch.

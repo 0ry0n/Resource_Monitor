@@ -1,7 +1,7 @@
 {
   "name": "Resource Monitor",
   "uuid": "Resource_Monitor@Ory0n",
-  "description": "Real-time system monitor for the GNOME Shell top bar. Tracks CPU, RAM, swap, disk, network, and GPU usage with optional thermal metrics and customizable panel formatting.",
+  "description": "Monitor CPU, memory, disk, network, and GPU usage in the GNOME Shell top bar. Choose which resources to display and customize their units, colors, and formatting. Temperature and GPU readings depend on the hardware and drivers. Displaying the indicator on multiple panels requires Dash to Panel.",
   "shell-version": ["45", "46", "47", "48", "49", "50", "51"],
   "url": "https://github.com/0ry0n/Resource_Monitor/",
   "donations": {

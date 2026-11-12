@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     tags:
-      - "v*"
+      - "[0-9]+"
 
 jobs:
   release:
@@ -13,23 +13,51 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v4
 
-      - name: Install Dependencies
-        run: sudo apt-get update && sudo apt-get install -y libglib2.0-bin zip gettext
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-      - name: Build Package
-        run: make package
+      - name: Install packaging tools and Shexli
+        run: |
+          sudo apt-get update && sudo apt-get install -y zip gettext
+          python -m pip install --upgrade --index-url https://pypi.org/simple shexli
 
-      - name: Upload Artifact
+      - name: Build and check release ZIP with Shexli
+        run: make validate
+
+      - name: Prepare release notes
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          version = json.loads(Path("Resource_Monitor@Ory0n/metadata.json").read_text())["version-name"]
+          if os.environ["GITHUB_REF_NAME"] != version:
+              raise SystemExit("The release tag must match metadata.json version-name")
+          changelog = Path("CHANGELOG.md").read_text()
+          match = re.search(rf"^## \[{re.escape(version)}\] - \d{{4}}-\d{{2}}-\d{{2}}\n(.*?)(?=^## |\Z)", changelog, re.M | re.S)
+          if not match or not match[1].strip():
+              raise SystemExit("The release must have a dated changelog entry with release notes")
+          Path("build/release-notes.md").write_text(match[1].strip() + "\n")
+          PY
+
+      - name: Upload package
         uses: actions/upload-artifact@v4
         with:
           name: Resource_Monitor
           path: build/Resource_Monitor@Ory0n.zip
 
-      - name: Create GitHub Release
+      - name: Create GitHub release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          name: Resource Monitor ${{ github.ref_name }}
+          body_path: build/release-notes.md
           files: build/Resource_Monitor@Ory0n.zip

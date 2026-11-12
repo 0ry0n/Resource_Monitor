@@ -1,18 +1,21 @@
 # Bundled GNOME symbolic icons
 
-Source: https://gitlab.gnome.org/Teams/Design/icon-development-kit
+The bundled icons are by GNOME contributors and come from the
+[GNOME Icon Development Kit](https://gitlab.gnome.org/Teams/Design/icon-development-kit),
+revision `dcd904f52cf1c49fa8c1ca39ff1f3c2d96759193`, file `src/icons.svg`.
+They use the CC0 1.0 Universal dedication; see [COPYING-CC0.txt](COPYING-CC0.txt).
 
-Revision: `dcd904f52cf1c49fa8c1ca39ff1f3c2d96759193` (`src/icons.svg`).
-Artwork: GNOME contributors. License: CC0 1.0 Universal; see `COPYING-CC0.txt`.
+The icons were exported from the original 16 px monochrome artwork. Shapes and
+transforms are preserved, editor metadata is removed, and each icon has its own
+viewport. Filenames use the `resource-monitor-` prefix to avoid theme conflicts.
 
-Exported from the legacy 16 px monochrome artwork for GNOME Shell 45–51.
-The original shapes and transforms are preserved; editor metadata is removed,
-individual viewports are set, and filenames are prefixed to avoid theme collisions.
-Invisible canvas rectangles are removed: legacy symbolic recoloring overrides
-`fill:none` on rectangles, turning them into solid tiles that obscure the artwork.
-Icons are installed under `hicolor/scalable/actions` so GTK recognizes them as
-symbolic assets and recolors them for the current theme.
-No runtime download or external icon package is required.
+Invisible canvas rectangles were removed because symbolic recoloring can
+replace `fill:none` and obscure the artwork. The `hicolor/scalable/actions`
+layout allows GTK to recognize and recolor the symbolic icons.
+
+## Source artwork
+
+Each entry identifies the bundled file and its source group in `src/icons.svg`.
 
 - `resource-monitor-cpu-symbolic.svg`: `processor` (group `g5609`).
 - `resource-monitor-ram-symbolic.svg`: `memory` (group `g7112`).

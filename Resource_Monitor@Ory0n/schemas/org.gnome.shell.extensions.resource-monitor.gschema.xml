@@ -10,7 +10,7 @@
         <key name="extensionposition" type="s">
             <default>"right"</default>
             <summary>Panel position</summary>
-            <description>Chooses whether the indicator is added to the left, center or right area of the GNOME Shell panel.</description>
+            <description>Chooses whether the indicator is added to the left, center, or right area of the GNOME Shell panel.</description>
         </key>
         <key name="displaymode" type="s">
             <default>"primary"</default>
@@ -54,7 +54,7 @@
         </key>
         <key name="itemsposition" type="as">
             <default>["cpu", "ram", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
-            <summary>Resource ordering</summary>
+            <summary>Resource order</summary>
             <description>Stores the order of resources displayed by the extension.</description>
         </key>
         <key name="cpustatus" type="b">
@@ -66,23 +66,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>CPU value width</summary>
-            <description>Reserved width in pixels for the CPU usage label. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for the CPU usage label. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="cpudecimals" type="i">
             <default>0</default>
             <range min="0" max="3"/>
-            <summary>CPU decimal digits</summary>
-            <description>Controls the number of decimal digits shown for CPU usage.</description>
+            <summary>CPU decimal places</summary>
+            <description>Controls the number of decimal places shown for CPU usage.</description>
         </key>
         <key name="cpurendermode" type="s">
             <default>"precise"</default>
-            <summary>CPU render mode</summary>
-            <description>Chooses whether CPU usage is rendered directly or quantized to a fixed step.</description>
+            <summary>CPU rounding mode</summary>
+            <description>Chooses whether CPU usage is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="cpurenderstep" type="i">
             <default>1</default>
-            <summary>CPU render step</summary>
-            <description>Step size used when CPU usage is shown in step render mode.</description>
+            <summary>CPU rounding step</summary>
+            <description>Step size used when CPU usage is shown in step mode.</description>
         </key>
         <key name="cpucolors" type="as">
             <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
@@ -98,23 +98,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>CPU frequency width</summary>
-            <description>Reserved width in pixels for the CPU frequency label. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for the CPU frequency label. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="cpufrequencydecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>CPU frequency decimal digits</summary>
-            <description>Controls the number of decimal digits shown for CPU frequency.</description>
+            <summary>CPU frequency decimal places</summary>
+            <description>Controls the number of decimal places shown for CPU frequency.</description>
         </key>
         <key name="cpufrequencyrendermode" type="s">
             <default>"precise"</default>
-            <summary>CPU frequency render mode</summary>
-            <description>Chooses whether CPU frequency is rendered directly or quantized to a fixed step.</description>
+            <summary>CPU frequency rounding mode</summary>
+            <description>Chooses whether CPU frequency is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="cpufrequencyrenderstep" type="i">
             <default>1</default>
-            <summary>CPU frequency render step</summary>
-            <description>Step size used when CPU frequency is shown in step render mode.</description>
+            <summary>CPU frequency rounding step</summary>
+            <description>Step size used when CPU frequency is shown in step mode.</description>
         </key>
         <key name="cpufrequencycolors" type="as">
             <default>[]</default>
@@ -135,23 +135,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>Load average width</summary>
-            <description>Reserved width in pixels for the load average label. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for the load average label. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="cpuloadaveragedecimals" type="i">
             <default>2</default>
             <range min="0" max="3"/>
-            <summary>Load average decimal digits</summary>
-            <description>Controls the number of decimal digits shown for load average.</description>
+            <summary>Load average decimal places</summary>
+            <description>Controls the number of decimal places shown for load average.</description>
         </key>
         <key name="cpuloadaveragerendermode" type="s">
             <default>"precise"</default>
-            <summary>Load average render mode</summary>
-            <description>Chooses whether load average is rendered directly or quantized to a fixed step.</description>
+            <summary>Load average rounding mode</summary>
+            <description>Chooses whether load average is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="cpuloadaveragerenderstep" type="i">
             <default>1</default>
-            <summary>Load average render step</summary>
-            <description>Step size used when load average is shown in step render mode.</description>
+            <summary>Load average rounding step</summary>
+            <description>Step size used when load average is shown in step mode.</description>
         </key>
         <key name="cpuloadaveragecolors" type="as">
             <default>[]</default>
@@ -167,23 +167,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>RAM value width</summary>
-            <description>Reserved width in pixels for the RAM label. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for the RAM label. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="ramdecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>RAM decimal digits</summary>
-            <description>Controls the number of decimal digits shown for RAM values.</description>
+            <summary>RAM decimal places</summary>
+            <description>Controls the number of decimal places shown for RAM values.</description>
         </key>
         <key name="ramrendermode" type="s">
             <default>"precise"</default>
-            <summary>RAM render mode</summary>
-            <description>Chooses whether RAM values are rendered directly or quantized to a fixed step.</description>
+            <summary>RAM rounding mode</summary>
+            <description>Chooses whether RAM values are rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="ramrenderstep" type="i">
             <default>1</default>
-            <summary>RAM render step</summary>
-            <description>Step size used when RAM values are shown in step render mode.</description>
+            <summary>RAM rounding step</summary>
+            <description>Step size used when RAM values are shown in step mode.</description>
         </key>
         <key name="ramcolors" type="as">
             <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
@@ -225,23 +225,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>Swap value width</summary>
-            <description>Reserved width in pixels for the swap label. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for the swap label. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="swapdecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>Swap decimal digits</summary>
-            <description>Controls the number of decimal digits shown for swap values.</description>
+            <summary>Swap decimal places</summary>
+            <description>Controls the number of decimal places shown for swap values.</description>
         </key>
         <key name="swaprendermode" type="s">
             <default>"precise"</default>
-            <summary>Swap render mode</summary>
-            <description>Chooses whether swap values are rendered directly or quantized to a fixed step.</description>
+            <summary>Swap rounding mode</summary>
+            <description>Chooses whether swap values are rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="swaprenderstep" type="i">
             <default>1</default>
-            <summary>Swap render step</summary>
-            <description>Step size used when swap values are shown in step render mode.</description>
+            <summary>Swap rounding step</summary>
+            <description>Step size used when swap values are shown in step mode.</description>
         </key>
         <key name="swapcolors" type="as">
             <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
@@ -281,44 +281,44 @@
         </key>
         <key name="diskstatsstatus" type="b">
             <default>true</default>
-            <summary>Show disk statistics</summary>
+            <summary>Show disk activity</summary>
             <description>Displays disk throughput indicators in the panel.</description>
         </key>
         <key name="diskstatswidth" type="i">
             <default>0</default>
             <range min="0" max="500"/>
-            <summary>Disk statistics width</summary>
-            <description>Reserved width in pixels for disk throughput values. Zero keeps the labels adaptive.</description>
+            <summary>Disk activity width</summary>
+            <description>Reserved width in pixels for disk throughput values. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="diskstatsdecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>Disk statistics decimal digits</summary>
-            <description>Controls the number of decimal digits shown for disk throughput values.</description>
+            <summary>Disk activity decimal places</summary>
+            <description>Controls the number of decimal places shown for disk throughput values.</description>
         </key>
         <key name="diskstatsrendermode" type="s">
             <default>"precise"</default>
-            <summary>Disk statistics render mode</summary>
-            <description>Chooses whether disk throughput values are rendered directly or quantized to a fixed step.</description>
+            <summary>Disk activity rounding mode</summary>
+            <description>Chooses whether disk throughput values are rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="diskstatsrenderstep" type="i">
             <default>1</default>
-            <summary>Disk statistics render step</summary>
-            <description>Step size used when disk throughput values are shown in step render mode.</description>
+            <summary>Disk activity rounding step</summary>
+            <description>Step size used when disk throughput values are shown in step mode.</description>
         </key>
         <key name="diskstatscolors" type="as">
             <default>[]</default>
-            <summary>Disk statistics color thresholds</summary>
+            <summary>Disk activity color thresholds</summary>
             <description>Stores threshold and color rules applied to disk throughput values.</description>
         </key>
         <key name="diskstatsmode" type="s">
             <default>"multiple"</default>
-            <summary>Disk statistics display mode</summary>
+            <summary>Disk activity display mode</summary>
             <description>Chooses whether disk throughput is shown in single or multiple-value mode.</description>
         </key>
         <key name="diskstatsunitmeasure" type="s">
             <default>"auto"</default>
-            <summary>Disk statistics unit</summary>
+            <summary>Disk activity unit</summary>
             <description>Selects the preferred unit used for disk throughput values.</description>
         </key>
         <key name="diskspacestatus" type="b">
@@ -330,23 +330,23 @@
             <default>0</default>
             <range min="0" max="500"/>
             <summary>Disk space width</summary>
-            <description>Reserved width in pixels for disk space values. Zero keeps the labels adaptive.</description>
+            <description>Reserved width in pixels for disk space values. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="diskspacedecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>Disk space decimal digits</summary>
-            <description>Controls the number of decimal digits shown for disk space values.</description>
+            <summary>Disk space decimal places</summary>
+            <description>Controls the number of decimal places shown for disk space values.</description>
         </key>
         <key name="diskspacerendermode" type="s">
             <default>"precise"</default>
-            <summary>Disk space render mode</summary>
-            <description>Chooses whether disk space values are rendered directly or quantized to a fixed step.</description>
+            <summary>Disk space rounding mode</summary>
+            <description>Chooses whether disk space values are rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="diskspacerenderstep" type="i">
             <default>1</default>
-            <summary>Disk space render step</summary>
-            <description>Step size used when disk space values are shown in step render mode.</description>
+            <summary>Disk space rounding step</summary>
+            <description>Step size used when disk space values are shown in step mode.</description>
         </key>
         <key name="diskspacecolors" type="as">
             <default>["0 0.8784313797950745 0.10588235408067703 0.1411764770746231", "15 1 0.47058823704719543 0", "30 0.9647058844566345 0.8274509906768799 0.1764705926179886", "50 0.18039216101169586 0.7607843279838562 0.4941176474094391"]</default>
@@ -402,23 +402,23 @@
             <default>0</default>
             <range min="0" max="500"/>
             <summary>Ethernet width</summary>
-            <description>Reserved width in pixels for Ethernet traffic values. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for Ethernet traffic values. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="netethdecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>Ethernet decimal digits</summary>
-            <description>Controls the number of decimal digits shown for Ethernet throughput.</description>
+            <summary>Ethernet decimal places</summary>
+            <description>Controls the number of decimal places shown for Ethernet throughput.</description>
         </key>
         <key name="netethrendermode" type="s">
             <default>"precise"</default>
-            <summary>Ethernet render mode</summary>
-            <description>Chooses whether Ethernet throughput is rendered directly or quantized to a fixed step.</description>
+            <summary>Ethernet rounding mode</summary>
+            <description>Chooses whether Ethernet throughput is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="netethrenderstep" type="i">
             <default>1</default>
-            <summary>Ethernet render step</summary>
-            <description>Step size used when Ethernet throughput is shown in step render mode.</description>
+            <summary>Ethernet rounding step</summary>
+            <description>Step size used when Ethernet throughput is shown in step mode.</description>
         </key>
         <key name="netethcolors" type="as">
             <default>[]</default>
@@ -434,23 +434,23 @@
             <default>0</default>
             <range min="0" max="500"/>
             <summary>Wi-Fi width</summary>
-            <description>Reserved width in pixels for Wi-Fi traffic values. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for Wi-Fi traffic values. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="netwlandecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>Wi-Fi decimal digits</summary>
-            <description>Controls the number of decimal digits shown for Wi-Fi throughput.</description>
+            <summary>Wi-Fi decimal places</summary>
+            <description>Controls the number of decimal places shown for Wi-Fi throughput.</description>
         </key>
         <key name="netwlanrendermode" type="s">
             <default>"precise"</default>
-            <summary>Wi-Fi render mode</summary>
-            <description>Chooses whether Wi-Fi throughput is rendered directly or quantized to a fixed step.</description>
+            <summary>Wi-Fi rounding mode</summary>
+            <description>Chooses whether Wi-Fi throughput is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="netwlanrenderstep" type="i">
             <default>1</default>
-            <summary>Wi-Fi render step</summary>
-            <description>Step size used when Wi-Fi throughput is shown in step render mode.</description>
+            <summary>Wi-Fi rounding step</summary>
+            <description>Step size used when Wi-Fi throughput is shown in step mode.</description>
         </key>
         <key name="netwlancolors" type="as">
             <default>[]</default>
@@ -471,23 +471,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>CPU temperature width</summary>
-            <description>Reserved width in pixels for the CPU temperature label. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for the CPU temperature label. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="thermalcpudecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>CPU temperature decimal digits</summary>
-            <description>Controls the number of decimal digits shown for CPU temperature.</description>
+            <summary>CPU temperature decimal places</summary>
+            <description>Controls the number of decimal places shown for CPU temperature.</description>
         </key>
         <key name="thermalcpurendermode" type="s">
             <default>"precise"</default>
-            <summary>CPU temperature render mode</summary>
-            <description>Chooses whether CPU temperature is rendered directly or quantized to a fixed step.</description>
+            <summary>CPU temperature rounding mode</summary>
+            <description>Chooses whether CPU temperature is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="thermalcpurenderstep" type="i">
             <default>1</default>
-            <summary>CPU temperature render step</summary>
-            <description>Step size used when CPU temperature is shown in step render mode.</description>
+            <summary>CPU temperature rounding step</summary>
+            <description>Step size used when CPU temperature is shown in step mode.</description>
         </key>
         <key name="thermalcpucolors" type="as">
             <default>[]</default>
@@ -496,8 +496,8 @@
         </key>
         <key name="thermalcputemperaturedeviceslist" type="as">
             <default>[]</default>
-            <summary>Configured CPU thermal sensors</summary>
-            <description>Stores the CPU thermal sensors detected and enabled in preferences.</description>
+            <summary>Configured CPU temperature sensors</summary>
+            <description>Stores the CPU temperature sensors detected and enabled in preferences.</description>
         </key>
         <key name="thermalgputemperaturestatus" type="b">
             <default>false</default>
@@ -508,23 +508,23 @@
             <default>0</default>
             <range min="0" max="400"/>
             <summary>GPU temperature width</summary>
-            <description>Reserved width in pixels for GPU temperature labels. Zero keeps the label adaptive.</description>
+            <description>Reserved width in pixels for GPU temperature labels. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="thermalgpudecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>GPU temperature decimal digits</summary>
-            <description>Controls the number of decimal digits shown for GPU temperature.</description>
+            <summary>GPU temperature decimal places</summary>
+            <description>Controls the number of decimal places shown for GPU temperature.</description>
         </key>
         <key name="thermalgpurendermode" type="s">
             <default>"precise"</default>
-            <summary>GPU temperature render mode</summary>
-            <description>Chooses whether GPU temperature is rendered directly or quantized to a fixed step.</description>
+            <summary>GPU temperature rounding mode</summary>
+            <description>Chooses whether GPU temperature is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="thermalgpurenderstep" type="i">
             <default>1</default>
-            <summary>GPU temperature render step</summary>
-            <description>Step size used when GPU temperature is shown in step render mode.</description>
+            <summary>GPU temperature rounding step</summary>
+            <description>Step size used when GPU temperature is shown in step mode.</description>
         </key>
         <key name="thermalgpucolors" type="as">
             <default>[]</default>
@@ -533,8 +533,8 @@
         </key>
         <key name="thermalgputemperaturedeviceslist" type="as">
             <default>[]</default>
-            <summary>Configured GPU thermal sensors</summary>
-            <description>Stores the GPU devices enabled for thermal monitoring.</description>
+            <summary>Configured GPU temperature sensors</summary>
+            <description>Stores the GPU devices enabled for temperature monitoring.</description>
         </key>
         <key name="gpustatus" type="b">
             <default>false</default>
@@ -545,23 +545,23 @@
             <default>0</default>
             <range min="0" max="500"/>
             <summary>GPU usage width</summary>
-            <description>Reserved width in pixels for GPU usage and memory values. Zero keeps the labels adaptive.</description>
+            <description>Reserved width in pixels for GPU usage and memory values. A value of 0 adjusts the width to the content.</description>
         </key>
         <key name="gpudecimals" type="i">
             <default>0</default>
             <range min="0" max="3"/>
-            <summary>GPU usage decimal digits</summary>
-            <description>Controls the number of decimal digits shown for GPU usage.</description>
+            <summary>GPU usage decimal places</summary>
+            <description>Controls the number of decimal places shown for GPU usage.</description>
         </key>
         <key name="gpurendermode" type="s">
             <default>"precise"</default>
-            <summary>GPU usage render mode</summary>
-            <description>Chooses whether GPU usage is rendered directly or quantized to a fixed step.</description>
+            <summary>GPU usage rounding mode</summary>
+            <description>Chooses whether GPU usage is rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="gpurenderstep" type="i">
             <default>1</default>
-            <summary>GPU usage render step</summary>
-            <description>Step size used when GPU usage is shown in step render mode.</description>
+            <summary>GPU usage rounding step</summary>
+            <description>Step size used when GPU usage is shown in step mode.</description>
         </key>
         <key name="gpucolors" type="as">
             <default>["65 0.9647058844566345 0.8274509906768799 0.1764705926179886", "80 1 0.47058823704719543 0", "92 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
@@ -576,18 +576,18 @@
         <key name="gpumemorydecimals" type="i">
             <default>1</default>
             <range min="0" max="3"/>
-            <summary>GPU memory decimal digits</summary>
-            <description>Controls the number of decimal digits shown for GPU memory values.</description>
+            <summary>GPU memory decimal places</summary>
+            <description>Controls the number of decimal places shown for GPU memory values.</description>
         </key>
         <key name="gpumemoryrendermode" type="s">
             <default>"precise"</default>
-            <summary>GPU memory render mode</summary>
-            <description>Chooses whether GPU memory values are rendered directly or quantized to a fixed step.</description>
+            <summary>GPU memory rounding mode</summary>
+            <description>Chooses whether GPU memory values are rounded to the selected decimal places or rounded down to a fixed step.</description>
         </key>
         <key name="gpumemoryrenderstep" type="i">
             <default>1</default>
-            <summary>GPU memory render step</summary>
-            <description>Step size used when GPU memory values are shown in step render mode.</description>
+            <summary>GPU memory rounding step</summary>
+            <description>Step size used when GPU memory values are shown in step mode.</description>
         </key>
         <key name="gpumemoryunit" type="s">
             <default>"numeric"</default>

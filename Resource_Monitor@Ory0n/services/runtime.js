@@ -1,4 +1,5 @@
 import GLib from "gi://GLib";
+import { loadFile } from "../runtime/io.js";
 
 const AMD_VENDOR_ID = "0x1002";
 const INTEL_VENDOR_ID = "0x8086";
@@ -35,25 +36,20 @@ function _readDirectoryEntries(path, pattern = null) {
   }
 }
 
-function _readTextFile(path) {
+async function _readTextFile(path, cancellable) {
   try {
-    const [ok, contents] = GLib.file_get_contents(path);
-    if (!ok) {
-      return null;
-    }
-
+    const contents = await loadFile(path, cancellable);
     return new TextDecoder().decode(contents).trim();
   } catch (error) {
+    if (cancellable?.is_cancelled()) {
+      throw error;
+    }
     return null;
   }
 }
 
 function _canonicalizePath(path, relativeTo = null) {
-  try {
-    return GLib.canonicalize_filename(path, relativeTo);
-  } catch (error) {
-    return path;
-  }
+  return GLib.canonicalize_filename(path, relativeTo);
 }
 
 function _resolveSymlinkPath(path, maxDepth = 8) {
@@ -134,13 +130,9 @@ export function getDiskStableId(devicePath, stableIdIndex = null) {
   return index.get(resolvedPath) ?? "";
 }
 
-export function getMountedDiskEntries() {
+export async function getMountedDiskEntries(cancellable = null) {
+  const contents = await loadFile("/proc/self/mounts", cancellable);
   const stableIdIndex = getDiskStableIdIndex();
-  const [ok, contents] = GLib.file_get_contents("/proc/self/mounts");
-
-  if (!ok) {
-    return [];
-  }
 
   return new TextDecoder()
     .decode(contents)
@@ -181,13 +173,13 @@ function _findFirstExistingPath(paths) {
   return null;
 }
 
-function _buildGpuDisplayName(vendorLabel, card, basePath) {
-  const productName = _readTextFile(`${basePath}/product_name`);
+async function _buildGpuDisplayName(vendorLabel, card, basePath, cancellable) {
+  const productName = await _readTextFile(`${basePath}/product_name`, cancellable);
   if (productName) {
     return productName;
   }
 
-  const deviceId = _readTextFile(`${basePath}/device`);
+  const deviceId = await _readTextFile(`${basePath}/device`, cancellable);
   if (deviceId) {
     return `${vendorLabel} GPU ${deviceId}`;
   }
@@ -211,17 +203,17 @@ function _findGpuTemperaturePath(basePath) {
   return null;
 }
 
-function _buildSysfsGpuDescriptors({
+async function _buildSysfsGpuDescriptors({
   vendorId,
   vendorPrefix,
   vendorLabel,
   usageCandidates = [],
   memoryCandidates = [],
-}) {
-  return _readDirectoryEntries(DRM_SYSFS_PATH, /^card\d+$/)
-    .map((card) => {
+}, cancellable) {
+  const descriptors = await Promise.all(
+    _readDirectoryEntries(DRM_SYSFS_PATH, /^card\d+$/).map(async (card) => {
       const basePath = `${DRM_SYSFS_PATH}/${card}/device`;
-      const vendor = _readTextFile(`${basePath}/vendor`);
+      const vendor = await _readTextFile(`${basePath}/vendor`, cancellable);
       if (vendor !== vendorId) {
         return null;
       }
@@ -249,18 +241,20 @@ function _buildSysfsGpuDescriptors({
       return {
         card,
         device: `${vendorPrefix}:${card}`,
-        name: _buildGpuDisplayName(vendorLabel, card, basePath),
+        name: await _buildGpuDisplayName(vendorLabel, card, basePath, cancellable),
         usagePath,
         memoryTotalPath,
         memoryUsedPath,
         temperaturePath: _findGpuTemperaturePath(basePath),
       };
     })
+  );
+  return descriptors
     .filter(Boolean)
     .sort((first, second) => first.card.localeCompare(second.card, undefined, { numeric: true }));
 }
 
-export function getAmdGpuDescriptors() {
+export function getAmdGpuDescriptors(cancellable = null) {
   return _buildSysfsGpuDescriptors({
     vendorId: AMD_VENDOR_ID,
     vendorPrefix: "amd",
@@ -272,10 +266,10 @@ export function getAmdGpuDescriptors() {
         used: "mem_info_vram_used",
       },
     ],
-  });
+  }, cancellable);
 }
 
-export function getIntelGpuDescriptors() {
+export function getIntelGpuDescriptors(cancellable = null) {
   return _buildSysfsGpuDescriptors({
     vendorId: INTEL_VENDOR_ID,
     vendorPrefix: "intel",
@@ -295,21 +289,17 @@ export function getIntelGpuDescriptors() {
         used: "local_memory_used_bytes",
       },
     ],
-  });
+  }, cancellable);
 }
 
 export function detectCapabilities() {
-  const amdDescriptors = getAmdGpuDescriptors();
-  const intelDescriptors = getIntelGpuDescriptors();
   const hasNvidiaSmi = GLib.find_program_in_path("nvidia-smi") !== null;
-  const hasAmdGpu = amdDescriptors.length > 0;
-  const hasIntelGpu = intelDescriptors.length > 0;
 
   return {
     nvidiaSmi: hasNvidiaSmi,
-    amdGpu: hasAmdGpu,
-    intelGpu: hasIntelGpu,
-    gpu: hasNvidiaSmi || hasAmdGpu || hasIntelGpu,
+    amdGpu: false,
+    intelGpu: false,
+    gpu: hasNvidiaSmi,
     cpuFrequency: getCpuFrequencyPaths().length > 0,
     thermalHwmon: GLib.file_test("/sys/class/hwmon", GLib.FileTest.IS_DIR),
   };

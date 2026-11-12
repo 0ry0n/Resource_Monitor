@@ -1,36 +1,18 @@
 ## Summary
 
-Describe the goal of this change and the user impact.
-
-## Type of Change
-
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Refactor
-- [ ] Documentation only
-- [ ] Translation update
+Describe the problem and the resulting behavior. Link related issues where applicable.
 
 ## Validation
 
-- [ ] `make validate` passes locally.
-- [ ] I tested this change in GNOME Shell.
-- [ ] Tested on GNOME Shell version(s):
+- Shexli result:
+- GNOME Shell versions checked:
+- Functional checks performed:
+- Known limitations:
 
-## Documentation and i18n
+## Documentation and translations
 
-- [ ] I updated docs where needed (`README`, `CHANGELOG`, etc.).
-- [ ] I updated translatable strings and catalogs when needed.
+- [ ] Updated the documentation and changelog where needed.
+- [ ] Updated affected interface strings and translation catalogs where needed.
+- [ ] Included screenshots for visible interface changes, where applicable.
 
-## GNOME Consistency Checklist
-
-- [ ] UI behavior remains coherent with GNOME conventions.
-- [ ] Preferences follow existing GTK4/Libadwaita patterns.
-- [ ] Schema/settings changes are backward compatible.
-
-## Linked Issues
-
-Fixes #
-
-## Target Branch
-
-Please open this PR against `develop`.
+Open this pull request against `develop`.

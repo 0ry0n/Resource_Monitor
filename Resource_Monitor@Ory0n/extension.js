@@ -307,8 +307,10 @@ const ResourceMonitor = GObject.registerClass(
       this._refreshTaskRunner = new RefreshTaskRunner();
       this._issueLogger = new IssueLogger(this._logger);
       this._capabilities = detectCapabilities();
-      this._amdGpuDescriptors = getAmdGpuDescriptors();
-      this._intelGpuDescriptors = getIntelGpuDescriptors();
+      this._amdGpuDescriptors = [];
+      this._intelGpuDescriptors = [];
+      this._diskReadGeneration = 0;
+      this._gpuReadGeneration = 0;
       this._nm = null;
       this._nmClient = null;
       this._networkManagerAvailable = false;
@@ -393,7 +395,7 @@ const ResourceMonitor = GObject.registerClass(
       }
 
       this._setPanelTooltip(
-        _("Left-click runs the configured action.")
+        _("Left-click runs the configured action")
       );
 
       if (this._box) {
@@ -438,7 +440,7 @@ const ResourceMonitor = GObject.registerClass(
 
     _updatePanelTooltip() {
       const rightClickAction = this._rightClickStatus
-        ? _("Open preferences")
+        ? _("Open Preferences")
         : _("Disabled");
       this._setPanelTooltip(
         `${_("Left-click")}: ${this._getPrimaryActionDisplayName()}\n${_("Right-click")}: ${rightClickAction}`
@@ -742,8 +744,8 @@ const ResourceMonitor = GObject.registerClass(
         Util.spawnCommandLine(action);
       } catch (error) {
         this._notifyMemoryAlert(
-          this._metadata?.name ?? _("Resource Monitor"),
-          _("Could not run the configured action.")
+          this._metadata?.name ?? "Resource Monitor",
+          _("Could not run the configured action")
         );
         this._logger.error(
           `[Resource_Monitor] Error spawning ${action}: ${error}`
@@ -1283,7 +1285,8 @@ const ResourceMonitor = GObject.registerClass(
       }
     }
 
-    _resolveConfiguredDiskDevices(devices) {
+    async _resolveConfiguredDiskDevices(devices) {
+      const mountedEntries = await getMountedDiskEntries(this._ioCancellable);
       const stableIdIndex = getDiskStableIdIndex();
       const stableIdToDevice = new Map();
       stableIdIndex.forEach((stableId, devicePath) => {
@@ -1293,7 +1296,7 @@ const ResourceMonitor = GObject.registerClass(
       });
 
       const mountedByMountPoint = new Map();
-      getMountedDiskEntries().forEach((entry) => {
+      mountedEntries.forEach((entry) => {
         if (entry.mountPoint && !mountedByMountPoint.has(entry.mountPoint)) {
           mountedByMountPoint.set(entry.mountPoint, entry);
         }
@@ -1327,12 +1330,24 @@ const ResourceMonitor = GObject.registerClass(
       });
     }
 
-    _diskDevicesListChanged() {
+    async _diskDevicesListChanged() {
+      const generation = ++this._diskReadGeneration;
       const configuredDevices = this._parseSettingsArray(
         DISK_DEVICES_LIST,
         parseDiskEntry
       );
-      this._diskDevices = this._resolveConfiguredDiskDevices(configuredDevices);
+      let devices = configuredDevices;
+      try {
+        devices = await this._resolveConfiguredDiskDevices(configuredDevices);
+      } catch (error) {
+        if (!this._isCancelledError(error)) {
+          this._logIssueOnce("disk-discovery", "[Resource_Monitor] Error resolving disks.", error);
+        }
+      }
+      if (this._ioCancellable.is_cancelled() || generation !== this._diskReadGeneration) {
+        return;
+      }
+      this._diskDevices = devices;
 
       this._diskStatsBox.cleanup_elements();
       this._diskSpaceBox.cleanup_elements();
@@ -1637,10 +1652,27 @@ const ResourceMonitor = GObject.registerClass(
       this._gpuDevicesListChanged();
     }
 
-    _gpuDevicesListChanged() {
+    async _gpuDevicesListChanged() {
+      const generation = ++this._gpuReadGeneration;
+      let amdDescriptors;
+      let intelDescriptors;
+      try {
+        [amdDescriptors, intelDescriptors] = await Promise.all([
+          getAmdGpuDescriptors(this._ioCancellable),
+          getIntelGpuDescriptors(this._ioCancellable),
+        ]);
+      } catch (error) {
+        if (!this._isCancelledError(error)) {
+          this._logIssueOnce("gpu-discovery", "[Resource_Monitor] Error discovering GPUs.", error);
+        }
+        return;
+      }
+      if (this._ioCancellable.is_cancelled() || generation !== this._gpuReadGeneration) {
+        return;
+      }
       this._gpuDevices = this._parseSettingsArray(GPU_DEVICES_LIST, parseGpuEntry);
-      this._amdGpuDescriptors = getAmdGpuDescriptors();
-      this._intelGpuDescriptors = getIntelGpuDescriptors();
+      this._amdGpuDescriptors = amdDescriptors;
+      this._intelGpuDescriptors = intelDescriptors;
       this._capabilities.amdGpu = this._amdGpuDescriptors.length > 0;
       this._capabilities.intelGpu = this._intelGpuDescriptors.length > 0;
       this._capabilities.gpu =
@@ -2193,5 +2225,6 @@ export default class ResourceMonitorExtension extends Extension {
 
     this._settings = null;
     this._logger = null;
+    networkManagerPromise = null;
   }
 }

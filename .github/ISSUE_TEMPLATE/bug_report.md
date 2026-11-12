@@ -1,44 +1,45 @@
 ---
 name: Bug report
-about: Report a reproducible problem
+about: Report a problem with Resource Monitor
 title: "[Bug]: "
 labels: bug
 assignees:
 ---
 
-## Checklist
+## Before submitting
 
-- [ ] I verified this issue on the latest extension release.
-- [ ] I checked existing issues for duplicates.
-- [ ] I included clear reproduction steps.
+- [ ] Checked for an extension update.
+- [ ] Searched existing issues for the same problem.
 
 ## Environment
 
+- Resource Monitor version:
 - GNOME Shell version:
 - Distribution and version:
-- Session type (Wayland/X11):
-- Extension install source (EGO/manual):
+- Session type (Wayland or X11):
+- Installation source (GNOME Extensions, GitHub release or local build):
+- Other extensions involved, if any:
 
-## Steps to Reproduce
+## Steps to reproduce
 
 1.
 2.
 3.
 
-## Actual Behavior
+## Expected behavior
 
-What happened?
+Describe what should happen.
 
-## Expected Behavior
+## Actual behavior
 
-What should have happened?
+Describe what happens instead.
 
-## Logs and Screenshots
+## Logs and screenshots
 
-If available, include relevant logs and screenshots.
-
-For logs you can use:
+Include relevant logs and screenshots, if available. To read GNOME Shell logs from the current session:
 
 ```bash
-journalctl --user -b --grep gnome-shell
+journalctl --user -b _COMM=gnome-shell
 ```
+
+Remove personal information before sharing logs. Report security vulnerabilities privately; see SECURITY.md.

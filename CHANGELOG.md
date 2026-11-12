@@ -1,11 +1,31 @@
 # Changelog
 
-All notable changes to this project are documented in this file.
+Notable changes to Resource Monitor are recorded here.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
-Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Releases use integer version names and do not follow Semantic Versioning. GNOME Extensions assigns submission version numbers separately.
 
 ## [Unreleased]
+
+## [30] - 2026-11-12
+
+### Changed
+
+- Replaced the custom translation script with GNU gettext commands.
+- Made the latest official PyPI release of Shexli the only automated check in the validation and release workflows.
+- Standardized documentation, interface wording and translations.
+- Kept the Resource Monitor name unchanged in all translations.
+
+### Removed
+
+- Removed the smoke tests and custom translation script.
+
+### Fixed
+
+- Corrected the ZIP layout, included the GPL license and excluded compiled schemas.
+- Made GPU discovery and mounted filesystem reads asynchronous and cancellable.
+- Stopped monitoring subprocesses on cancellation and removed the pending preferences callback when the window closes.
+- Released the cached NetworkManager import when disabling the extension.
 
 ## [29] - 2026-11-06
 
@@ -20,16 +40,15 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Fixed
 
-- Prevent asynchronous callbacks from updating destroyed indicators, including NetworkManager cancellation (#135).
-
-- Missing preferences icons on systems without the corresponding theme icons (#141).
+- Prevented asynchronous callbacks from updating destroyed indicators, including after NetworkManager cancellation (#135).
+- Restored preferences icons on systems without the corresponding theme icons (#141).
 - Removed invisible SVG canvas rectangles that became solid squares during panel icon recoloring.
 
 ## [28] - 2026-05-13
 
 ### Added
 
-- Decimal precision and step-based rendering controls for all indicators.
+- Decimal places and rounding controls for all indicators.
 
 ### Changed
 
@@ -49,27 +68,27 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 ### Added
 
 - Support for GNOME Shell 50.
-- Support for AMD and Intel GPU telemetry backends via sysfs.
+- Support for AMD and Intel GPU monitoring via sysfs.
 - Multi-panel display mode with Dash to Panel integration.
-- Customizable secondary metric separators (Minimal Dot, Slash, Brackets).
-- Multi-language support infrastructure (`gettext` domain/schema alignment, translation catalogs, and packaging workflow).
+- A choice of dot, slash or brackets to separate secondary metrics.
+- Translation support using gettext catalogs and compiled translations in release packages.
 - Italian translation (`it` locale).
 
 ### Changed
 
 - Refactored the codebase into modular `runtime/`, `services/`, `panel/`, and `prefs/` layers.
-- Migrated preferences to native GTK4/Libadwaita pages and models.
+- Migrated preferences to native GTK 4 and libadwaita pages and models.
 - Aligned extension metadata and GSettings schema naming with GNOME extension conventions.
 - Refreshed symbolic icons and modernized repository tooling (validation, packaging, translations).
 
 ### Removed
 
-- Legacy compatibility paths.
-- Legacy `prefs.ui` file after migration to code-built preferences.
+- Older compatibility paths.
+- Older `prefs.ui` file after migration to code-built preferences.
 
 ### Fixed
 
-- Network unit-of-measure selection in bps mode.
+- Corrected network unit selection when displaying bits per second.
 - Disk device naming instability across reboots by introducing stable identifiers.
 - Additional stability and regression fixes during the refactor series.
 
@@ -98,12 +117,12 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Added
 
-- Custom peripheral name support.
+- Custom device names.
 
 ### Changed
 
-- Adjusted width with scale factor for better sizing.
-- Improved preferences UI.
+- Adjusted indicator widths to match the display scale.
+- Improved the preferences interface.
 
 ### Removed
 
@@ -119,7 +138,7 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 - Support for GNOME Shell 47.
 - RAM and swap memory alerts.
-- CPU frequency monitoring based on highest core frequency.
+- CPU frequency monitoring using the highest core frequency.
 - Color customization for all metrics.
 - Zenpower thermal sensor support.
 
@@ -142,10 +161,11 @@ Release identifiers (`21`, `22`, ...) follow GNOME Extensions package versions.
 
 ### Fixed
 
-- Left-click custom program behavior.
+- Corrected the behavior of custom commands launched with a left-click.
 - Multiple bug fixes.
 
-[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/29...develop
+[Unreleased]: https://github.com/0ry0n/Resource_Monitor/compare/30...develop
+[30]: https://github.com/0ry0n/Resource_Monitor/compare/29...30
 [29]: https://github.com/0ry0n/Resource_Monitor/compare/28...29
 [28]: https://github.com/0ry0n/Resource_Monitor/compare/27...28
 [27]: https://github.com/0ry0n/Resource_Monitor/compare/26...27

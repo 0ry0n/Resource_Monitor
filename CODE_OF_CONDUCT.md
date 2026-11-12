@@ -1,7 +1,5 @@
-# Code of Conduct
+# Code of conduct
 
-This project follows the GNOME Code of Conduct:
+This project follows the [GNOME Code of Conduct](https://conduct.gnome.org/).
 
-- https://conduct.gnome.org/
-
-Please be respectful, constructive, and collaborative in all project spaces.
+Treat others with respect, keep feedback constructive, and focus discussions on the project. These expectations apply to issues, pull requests and other project spaces.

@@ -1,70 +1,48 @@
 UUID := Resource_Monitor@Ory0n
-SCHEMA_DIR := $(UUID)/schemas
+.DEFAULT_GOAL := package
 BUILD_DIR := build
-STAGING_DIR := $(BUILD_DIR)/package/$(UUID)
-LOCALE_BUILD_DIR := $(BUILD_DIR)/locale
+STAGING_DIR := $(BUILD_DIR)/package
 PACKAGE_PATH := $(BUILD_DIR)/$(UUID).zip
-LOCAL_EXTENSIONS_DIR := $(HOME)/.local/share/gnome-shell/extensions
-DOMAIN := $(UUID)
-PO_DIR := po
-LINGUAS_FILE := $(PO_DIR)/LINGUAS
-POT_FILE := $(PO_DIR)/$(DOMAIN).pot
-LANGS := $(shell [ -f $(LINGUAS_FILE) ] && sed -e 's/#.*//' -e '/^[[:space:]]*$$/d' $(LINGUAS_FILE))
-PO_FILES := $(foreach lang,$(LANGS),$(PO_DIR)/$(lang).po)
-MO_FILES := $(foreach lang,$(LANGS),$(LOCALE_BUILD_DIR)/$(lang)/LC_MESSAGES/$(DOMAIN).mo)
+POT_FILE := po/$(UUID).pot
+LANGS := $(shell sed -e 's/\#.*//' -e '/^[[:space:]]*$$/d' po/LINGUAS)
+JS_FILES := $(sort $(shell find $(UUID) -type f -name '*.js'))
+SHEXLI ?= shexli
+PYTHON ?= python3
 
-.PHONY: schema clean package install validate test pot po-update check-po translations
-
-schema:
-	glib-compile-schemas $(SCHEMA_DIR)
+.PHONY: clean package install validate pot po-update
 
 clean:
 	rm -rf $(BUILD_DIR)
-	rm -f $(SCHEMA_DIR)/gschemas.compiled
+	rm -f $(UUID)/schemas/gschemas.compiled
 
 pot:
-	./tools/update-pot.sh $(POT_FILE)
+	xgettext --from-code=UTF-8 --language=JavaScript --keyword=_ --add-comments=Translators: \
+		--package-name=Resource_Monitor \
+		--msgid-bugs-address=https://github.com/0ry0n/Resource_Monitor/issues \
+		--output=$(POT_FILE) $(JS_FILES)
 
 po-update: pot
-	@for po in $(PO_FILES); do \
-		msgmerge --update --backup=none "$$po" "$(POT_FILE)"; \
+	@set -e; for lang in $(LANGS); do \
+		msgmerge --update --backup=none "po/$$lang.po" "$(POT_FILE)"; \
 	done
 
-check-po:
-	@for po in $(PO_FILES); do \
-		msgfmt --check --check-format --output-file=/dev/null "$$po"; \
-		msgcmp --use-untranslated "$$po" "$(POT_FILE)"; \
+package:
+	rm -rf "$(STAGING_DIR)"
+	mkdir -p "$(STAGING_DIR)/schemas" "$(STAGING_DIR)/icons"
+	cp $(UUID)/*.js $(UUID)/*.css $(UUID)/metadata.json LICENSE "$(STAGING_DIR)/"
+	cp -r $(UUID)/panel $(UUID)/prefs $(UUID)/runtime $(UUID)/services $(UUID)/utils "$(STAGING_DIR)/"
+	cp $(UUID)/schemas/*.gschema.xml "$(STAGING_DIR)/schemas/"
+	cp -r $(UUID)/icons/hicolor $(UUID)/icons/COPYING-CC0.txt $(UUID)/icons/README.md "$(STAGING_DIR)/icons/"
+	@set -e; for lang in $(LANGS); do \
+		mkdir -p "$(STAGING_DIR)/locale/$$lang/LC_MESSAGES"; \
+		msgfmt --output-file="$(STAGING_DIR)/locale/$$lang/LC_MESSAGES/$(UUID).mo" "po/$$lang.po"; \
 	done
+	rm -f "$(PACKAGE_PATH)"
+	cd "$(STAGING_DIR)" && zip -qr "../$(UUID).zip" .
 
-$(LOCALE_BUILD_DIR)/%/LC_MESSAGES/$(DOMAIN).mo: $(PO_DIR)/%.po
-	mkdir -p $(dir $@)
-	msgfmt --check --check-format --output-file="$@" "$<"
+install: package
+	gnome-extensions install --force "$(PACKAGE_PATH)"
 
-translations: $(MO_FILES)
-
-package: clean schema translations
-	mkdir -p "$(STAGING_DIR)"
-	cp -r "$(UUID)"/* "$(STAGING_DIR)/"
-	@if [ -d "$(LOCALE_BUILD_DIR)" ]; then \
-		mkdir -p "$(STAGING_DIR)/locale"; \
-		cp -r "$(LOCALE_BUILD_DIR)"/* "$(STAGING_DIR)/locale/"; \
-	fi
-	cd "$(BUILD_DIR)/package" && zip -qr ../$(UUID).zip "$(UUID)"
-	rm -f $(SCHEMA_DIR)/gschemas.compiled
-
-install: schema translations
-	mkdir -p $(LOCAL_EXTENSIONS_DIR)
-	rm -rf $(LOCAL_EXTENSIONS_DIR)/$(UUID)
-	cp -r $(UUID) $(LOCAL_EXTENSIONS_DIR)/$(UUID)
-	@if [ -d "$(LOCALE_BUILD_DIR)" ]; then \
-		mkdir -p "$(LOCAL_EXTENSIONS_DIR)/$(UUID)/locale"; \
-		cp -r "$(LOCALE_BUILD_DIR)"/* "$(LOCAL_EXTENSIONS_DIR)/$(UUID)/locale/"; \
-	fi
-
-test:
-	gjs -m tests/runtime-smoke.js
-	gjs -m tests/icons-smoke.js
-
-validate: schema test pot check-po
-	git diff --check
-	rm -f $(SCHEMA_DIR)/gschemas.compiled
+validate: package
+	$(SHEXLI) "$(abspath $(PACKAGE_PATH))" --format json > "$(BUILD_DIR)/shexli.json"
+	@$(PYTHON) -c 'import json, sys; r = json.load(open(sys.argv[1])); print(json.dumps(r["summary"], indent=2)); [print(f["rule_id"], f["severity"], f["message"], f["evidence"]) for f in r["findings"]]; sys.exit(r["summary"]["status"] != "clean" or bool(r["findings"]))' "$(BUILD_DIR)/shexli.json"

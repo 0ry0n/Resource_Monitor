@@ -15,11 +15,7 @@ import { buildNetworkSample } from "../runtime/network.js";
 import { buildSysfsGpuDisplay, parseGpuSmiOutput } from "../runtime/gpu.js";
 import { buildCpuTemperatureDisplay } from "../runtime/thermal.js";
 import { queryFilesystemInfo } from "../runtime/io.js";
-import {
-  getAmdGpuDescriptors,
-  getCpuFrequencyPaths,
-  getIntelGpuDescriptors,
-} from "./runtime.js";
+import { getCpuFrequencyPaths } from "./runtime.js";
 import {
   hasVisibleCpuFrequency,
   hasVisibleThermalCpuTemperature,
@@ -199,9 +195,10 @@ export function refreshRamValue(indicator) {
             setAlertActive: (value) => {
               indicator._ramAlertActive = value;
             },
-            title: _("Resource Monitor - Low Memory Alert"),
+            // Translators: %s is the extension name, Resource Monitor.
+            title: _("%s — Low Memory").format("Resource Monitor"),
             message: _(
-              "Available RAM has dropped below %d%%. Please take action to free up memory."
+              "Available RAM is below %d%%. Close unused applications to free memory."
             ).format(indicator._ramAlertThreshold),
             valueLabel: indicator._ramValue,
             unitLabel: indicator._ramUnit,
@@ -250,9 +247,10 @@ export function refreshSwapValue(indicator) {
             setAlertActive: (value) => {
               indicator._swapAlertActive = value;
             },
-            title: _("Resource Monitor - Low Swap Alert"),
+            // Translators: %s is the extension name, Resource Monitor.
+            title: _("%s — Low Swap").format("Resource Monitor"),
             message: _(
-              "Available swap has dropped below %d%%. Please take action to free up memory."
+              "Free swap is below %d%%. Close unused applications to reduce memory usage."
             ).format(indicator._swapAlertThreshold),
             valueLabel: indicator._swapValue,
             unitLabel: indicator._swapUnit,
@@ -747,10 +745,7 @@ export function refreshGpuValue(indicator, options = {}) {
       }
 
       if (indicator._capabilities.amdGpu) {
-        const knownDescriptors = indicator._amdGpuDescriptors ?? [];
-        const descriptors =
-          knownDescriptors.length > 0 ? knownDescriptors : getAmdGpuDescriptors();
-        const amdEntries = await _readSysfsGpuSamples(indicator, descriptors);
+        const amdEntries = await _readSysfsGpuSamples(indicator, indicator._amdGpuDescriptors);
         if (indicator._destroyed) {
           return;
         }
@@ -758,12 +753,7 @@ export function refreshGpuValue(indicator, options = {}) {
       }
 
       if (indicator._capabilities.intelGpu) {
-        const knownDescriptors = indicator._intelGpuDescriptors ?? [];
-        const descriptors =
-          knownDescriptors.length > 0
-            ? knownDescriptors
-            : getIntelGpuDescriptors();
-        const intelEntries = await _readSysfsGpuSamples(indicator, descriptors);
+        const intelEntries = await _readSysfsGpuSamples(indicator, indicator._intelGpuDescriptors);
         if (indicator._destroyed) {
           return;
         }
