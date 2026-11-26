@@ -9,7 +9,7 @@ export {
   loadFile,
   readOutput,
 } from "../runtime/io.js";
-export { parseSettingsArray } from "../utils/settings.js";
+export { parseSettingsArray, readItemsPosition } from "../utils/settings.js";
 
 export function replaceSignalHandler(widget, propertyName, signalName, callback) {
   if (widget[propertyName]) {

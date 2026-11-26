@@ -159,6 +159,7 @@ function _getGroupsByItem(indicator) {
   return {
     cpu: indicator._cpuGroup,
     ram: indicator._ramGroup,
+    pressure: indicator._pressureGroup,
     swap: indicator._swapGroup,
     stats: indicator._diskStatsGroup,
     space: indicator._diskSpaceGroup,
@@ -175,6 +176,7 @@ export function createMainGui(indicator) {
   });
   indicator._cpuGroup = _createGroupBox("cpu");
   indicator._ramGroup = _createGroupBox("ram");
+  indicator._pressureGroup = _createGroupBox("pressure");
   indicator._swapGroup = _createGroupBox("swap");
   indicator._diskStatsGroup = _createGroupBox("disk-stats");
   indicator._diskSpaceGroup = _createGroupBox("disk-space");
@@ -184,6 +186,7 @@ export function createMainGui(indicator) {
 
   indicator._cpuIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-cpu-symbolic.svg`);
   indicator._ramIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-ram-symbolic.svg`);
+  indicator._pressureIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-pressure-symbolic.svg`);
   indicator._swapIcon = _createIcon(`${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-swap-symbolic.svg`);
   indicator._diskStatsIcon = _createIcon(
     `${indicator._path}/icons/hicolor/scalable/actions/resource-monitor-disk-stats-symbolic.svg`
@@ -199,12 +202,14 @@ export function createMainGui(indicator) {
   indicator._cpuFrequencyUnit = _createUnitLabel("kHz");
   indicator._cpuUnit = _createUnitLabel("%");
   indicator._ramUnit = _createUnitLabel("KB");
+  indicator._pressureUnit = _createUnitLabel("%");
   indicator._swapUnit = _createUnitLabel("KB");
   indicator._ethUnit = _createUnitLabel("B");
   indicator._wlanUnit = _createUnitLabel("B");
 
   indicator._cpuValue = _createValueLabel("--");
   indicator._ramValue = _createValueLabel("--");
+  indicator._pressureValue = _createValueLabel("--");
   indicator._swapValue = _createValueLabel("--");
   indicator._ethValue = _createValueLabel("--|--");
   indicator._wlanValue = _createValueLabel("--|--");
@@ -284,6 +289,16 @@ export function buildMainGui(indicator, options = {}) {
       indicator._ramIcon,
       indicator._ramValue,
       indicator._ramUnit,
+      addChild,
+      iconsPosition,
+      iconsStatus
+    )
+  );
+  _replaceGroupChildren(indicator._pressureGroup, (addChild) =>
+    _appendSimpleChildren(
+      indicator._pressureIcon,
+      indicator._pressureValue,
+      indicator._pressureUnit,
       addChild,
       iconsPosition,
       iconsStatus

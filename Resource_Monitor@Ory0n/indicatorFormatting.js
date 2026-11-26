@@ -33,6 +33,12 @@ export const INDICATOR_FORMATTING_SPECS = Object.freeze([
     renderStepKey: "swaprenderstep",
   },
   {
+    id: "pressure",
+    decimalsKey: "pressuredecimals",
+    renderModeKey: "pressurerendermode",
+    renderStepKey: "pressurerenderstep",
+  },
+  {
     id: "diskStats",
     decimalsKey: "diskstatsdecimals",
     renderModeKey: "diskstatsrendermode",

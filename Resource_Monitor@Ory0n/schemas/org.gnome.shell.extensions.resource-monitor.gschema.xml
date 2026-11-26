@@ -53,7 +53,7 @@
             <description>Chooses how secondary metrics are separated in the panel: dot, slash, or brackets.</description>
         </key>
         <key name="itemsposition" type="as">
-            <default>["cpu", "ram", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
+            <default>["cpu", "ram", "pressure", "swap", "stats", "space", "eth", "wlan", "gpu"]</default>
             <summary>Resource ordering</summary>
             <description>Stores the order of resources displayed by the extension.</description>
         </key>
@@ -215,6 +215,68 @@
             <range min="1" max="99"/>
             <summary>RAM alert threshold</summary>
             <description>Minimum available RAM percentage before a low-memory notification is shown.</description>
+        </key>
+        <key name="pressurestatus" type="b">
+            <default>false</default>
+            <summary>Show pressure</summary>
+            <description>Displays the pressure stall information (PSI) indicator in the panel.</description>
+        </key>
+        <key name="pressurememory" type="b">
+            <default>true</default>
+            <summary>Track memory pressure</summary>
+            <description>Includes memory pressure when picking the value shown in the panel.</description>
+        </key>
+        <key name="pressurecpu" type="b">
+            <default>true</default>
+            <summary>Track CPU pressure</summary>
+            <description>Includes CPU pressure when picking the value shown in the panel.</description>
+        </key>
+        <key name="pressureio" type="b">
+            <default>true</default>
+            <summary>Track disk pressure</summary>
+            <description>Includes I/O pressure when picking the value shown in the panel.</description>
+        </key>
+        <key name="pressuremeasurement" type="s">
+            <default>"interval"</default>
+            <summary>Pressure measurement</summary>
+            <description>Chooses whether pressure is measured over the last refresh interval or taken from the kernel's 10-second average.</description>
+        </key>
+        <key name="pressurewidth" type="i">
+            <default>0</default>
+            <range min="0" max="400"/>
+            <summary>Pressure width</summary>
+            <description>Reserved width in pixels for the pressure label. Zero keeps the label adaptive.</description>
+        </key>
+        <key name="pressuredecimals" type="i">
+            <default>0</default>
+            <range min="0" max="3"/>
+            <summary>Pressure decimal digits</summary>
+            <description>Controls the number of decimal digits shown for pressure.</description>
+        </key>
+        <key name="pressurerendermode" type="s">
+            <default>"precise"</default>
+            <summary>Pressure render mode</summary>
+            <description>Chooses whether pressure is rendered directly or quantized to a fixed step.</description>
+        </key>
+        <key name="pressurerenderstep" type="i">
+            <default>1</default>
+            <summary>Pressure render step</summary>
+            <description>Step size used when pressure is shown in step render mode.</description>
+        </key>
+        <key name="pressurememorycolors" type="as">
+            <default>["1 0.9647058844566345 0.8274509906768799 0.1764705926179886", "10 1 0.47058823704719543 0", "25 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
+            <summary>Memory pressure color thresholds</summary>
+            <description>Stores threshold and color rules applied to memory pressure.</description>
+        </key>
+        <key name="pressurecpucolors" type="as">
+            <default>["10 0.9647058844566345 0.8274509906768799 0.1764705926179886", "30 1 0.47058823704719543 0", "60 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
+            <summary>CPU pressure color thresholds</summary>
+            <description>Stores threshold and color rules applied to CPU pressure.</description>
+        </key>
+        <key name="pressureiocolors" type="as">
+            <default>["5 0.9647058844566345 0.8274509906768799 0.1764705926179886", "20 1 0.47058823704719543 0", "40 0.8784313797950745 0.10588235408067703 0.1411764770746231"]</default>
+            <summary>Disk pressure color thresholds</summary>
+            <description>Stores threshold and color rules applied to I/O pressure.</description>
         </key>
         <key name="swapstatus" type="b">
             <default>false</default>

@@ -2,6 +2,23 @@ import {
   getFormattingKeys,
   readIndicatorFormattingSettings,
 } from "../indicatorFormatting.js";
+import { readItemsPosition } from "../utils/settings.js";
+
+export function readPressureSources(settings, keys) {
+  return {
+    memory: settings.get_boolean(keys.PRESSURE_MEMORY),
+    cpu: settings.get_boolean(keys.PRESSURE_CPU),
+    io: settings.get_boolean(keys.PRESSURE_IO),
+  };
+}
+
+export function readPressureColors(settings, keys) {
+  return {
+    memory: settings.get_strv(keys.PRESSURE_MEMORY_COLORS),
+    cpu: settings.get_strv(keys.PRESSURE_CPU_COLORS),
+    io: settings.get_strv(keys.PRESSURE_IO_COLORS),
+  };
+}
 
 export function initializeSettings(indicator, keys) {
   indicator._refreshTime = indicator._settings.get_int(keys.REFRESH_TIME);
@@ -17,7 +34,10 @@ export function initializeSettings(indicator, keys) {
   indicator._secondarySeparatorStyle = indicator._settings.get_string(
     keys.SECONDARY_SEPARATOR_STYLE
   );
-  indicator._itemsPosition = indicator._settings.get_strv(keys.ITEMS_POSITION);
+  indicator._itemsPosition = readItemsPosition(
+    indicator._settings,
+    keys.ITEMS_POSITION
+  );
 
   indicator._cpuStatus = indicator._settings.get_boolean(keys.CPU_STATUS);
   indicator._cpuWidth = indicator._settings.get_int(keys.CPU_WIDTH);
@@ -52,6 +72,17 @@ export function initializeSettings(indicator, keys) {
   indicator._ramAlertThreshold = indicator._settings.get_int(
     keys.RAM_ALERT_THRESHOLD
   );
+
+  indicator._pressureStatus = indicator._settings.get_boolean(
+    keys.PRESSURE_STATUS
+  );
+  indicator._pressureSources = readPressureSources(indicator._settings, keys);
+  indicator._pressureMeasurement = indicator._settings.get_string(
+    keys.PRESSURE_MEASUREMENT
+  );
+  indicator._pressureWidth = indicator._settings.get_int(keys.PRESSURE_WIDTH);
+  indicator._pressureColors = readPressureColors(indicator._settings, keys);
+  indicator._pressureStates = {};
 
   indicator._swapStatus = indicator._settings.get_boolean(keys.SWAP_STATUS);
   indicator._swapWidth = indicator._settings.get_int(keys.SWAP_WIDTH);
@@ -177,6 +208,15 @@ export function connectSettingsSignals(indicator, keys) {
     [keys.RAM_MONITOR, "_ramMonitorChanged"],
     [keys.RAM_ALERT, "_ramAlertChanged"],
     [keys.RAM_ALERT_THRESHOLD, "_ramAlertThresholdChanged"],
+    [keys.PRESSURE_STATUS, "_pressureStatusChanged"],
+    [keys.PRESSURE_MEMORY, "_pressureSourcesChanged"],
+    [keys.PRESSURE_CPU, "_pressureSourcesChanged"],
+    [keys.PRESSURE_IO, "_pressureSourcesChanged"],
+    [keys.PRESSURE_MEASUREMENT, "_pressureMeasurementChanged"],
+    [keys.PRESSURE_WIDTH, "_pressureWidthChanged"],
+    [keys.PRESSURE_MEMORY_COLORS, "_pressureColorsChanged"],
+    [keys.PRESSURE_CPU_COLORS, "_pressureColorsChanged"],
+    [keys.PRESSURE_IO_COLORS, "_pressureColorsChanged"],
     [keys.SWAP_STATUS, "_swapStatusChanged"],
     [keys.SWAP_WIDTH, "_swapWidthChanged"],
     [keys.SWAP_COLORS, "_swapColorsChanged"],
@@ -251,6 +291,8 @@ export function refreshGui(indicator) {
   indicator._cpuLoadAverageWidthChanged();
   indicator._ramStatusChanged();
   indicator._ramWidthChanged();
+  indicator._pressureStatusChanged();
+  indicator._pressureWidthChanged();
   indicator._swapStatusChanged();
   indicator._swapWidthChanged();
   indicator._diskStatsStatusChanged();

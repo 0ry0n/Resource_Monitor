@@ -29,3 +29,9 @@ No runtime download or external icon package is required.
 - `resource-monitor-delete-symbolic.svg`: `user-trash` (group `g40070`).
 - `resource-monitor-up-symbolic.svg`: `arrow1-up` (group `g7540`).
 - `resource-monitor-down-symbolic.svg`: `arrow1-down` (group `g7550`).
+
+## Custom artwork
+
+- `resource-monitor-pressure-symbolic.svg`: gauge drawn for this extension
+  (not from the Icon Development Kit), dedicated under the same CC0 1.0 terms.
+  Strokes are expanded to filled shapes so symbolic recoloring keeps the outline.
